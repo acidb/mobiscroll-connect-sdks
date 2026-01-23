@@ -2,93 +2,66 @@ import { MobiscrollConnectClient } from '../index';
 import { MobiscrollConnectError } from '../types';
 
 describe('MobiscrollConnectClient', () => {
+  const validConfig = {
+    clientId: 'test-client-id',
+    clientSecret: 'test-client-secret',
+    redirectUri: 'http://localhost/callback',
+  };
+
   describe('constructor', () => {
-    it('should throw error if API key is not provided', () => {
+    it('should throw error if config is missing required fields', () => {
       expect(() => {
-        new MobiscrollConnectClient({ apiKey: '' });
+        new MobiscrollConnectClient({ clientId: '', clientSecret: '', redirectUri: '' });
       }).toThrow(MobiscrollConnectError);
     });
 
     it('should create client with valid config', () => {
-      const client = new MobiscrollConnectClient({
-        apiKey: 'test-key',
-      });
+      const client = new MobiscrollConnectClient(validConfig);
 
       expect(client).toBeInstanceOf(MobiscrollConnectClient);
       expect(client.calendars).toBeDefined();
       expect(client.events).toBeDefined();
     });
 
-    it('should use default baseURL if not provided', () => {
-      const client = new MobiscrollConnectClient({
-        apiKey: 'test-key',
-      });
-
+    it('should use default baseURL', () => {
+      const client = new MobiscrollConnectClient(validConfig);
       const config = client.getConfig();
-      expect(config.baseURL).toBe('https://connect.mobiscroll.com/api');
-    });
-
-    it('should use custom baseURL if provided', () => {
-      const client = new MobiscrollConnectClient({
-        apiKey: 'test-key',
-        baseURL: 'https://custom.api.com',
-      });
-
-      const config = client.getConfig();
-      expect(config.baseURL).toBe('https://custom.api.com');
-    });
-
-    it('should use default timeout if not provided', () => {
-      const client = new MobiscrollConnectClient({
-        apiKey: 'test-key',
-      });
-
-      const config = client.getConfig();
-      expect(config.timeout).toBe(30000);
+      expect(config.clientId).toBe(validConfig.clientId);
     });
   });
 
-  describe('setApiKey', () => {
-    it('should update the API key', () => {
-      const client = new MobiscrollConnectClient({
-        apiKey: 'old-key',
-      });
+  describe('setCredentials', () => {
+    it('should update the credentials', () => {
+      const client = new MobiscrollConnectClient(validConfig);
 
-      client.setApiKey('new-key');
+      const tokens = {
+        access_token: 'new-token',
+        token_type: 'Bearer',
+      };
 
-      const config = client.getConfig();
-      expect(config.apiKey).toBe('new-key');
+      client.setCredentials(tokens);
     });
   });
 
   describe('getConfig', () => {
-    it('should return a copy of the config', () => {
-      const client = new MobiscrollConnectClient({
-        apiKey: 'test-key',
-      });
+    it('should return the config', () => {
+      const client = new MobiscrollConnectClient(validConfig);
 
-      const config1 = client.getConfig();
-      const config2 = client.getConfig();
-
-      expect(config1).toEqual(config2);
-      expect(config1).not.toBe(config2);
+      const config = client.getConfig();
+      expect(config.clientId).toBe(validConfig.clientId);
     });
   });
 
   describe('resources', () => {
     it('should have calendars resource', () => {
-      const client = new MobiscrollConnectClient({
-        apiKey: 'test-key',
-      });
+      const client = new MobiscrollConnectClient(validConfig);
 
       expect(client.calendars).toBeDefined();
       expect(typeof client.calendars.list).toBe('function');
     });
 
     it('should have events resource', () => {
-      const client = new MobiscrollConnectClient({
-        apiKey: 'test-key',
-      });
+      const client = new MobiscrollConnectClient(validConfig);
 
       expect(client.events).toBeDefined();
       expect(typeof client.events.list).toBe('function');

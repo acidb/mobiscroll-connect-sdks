@@ -1,28 +1,43 @@
+import type { calendar_v3 } from 'googleapis';
+import type { DAVCalendar } from 'tsdav';
+import type { VEvent } from 'node-ical';
+import type { Event as MicrosoftGraphEvent } from '@microsoft/microsoft-graph-types';
+
+export type MicrosoftTokens = {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  expires_at?: number;
+  id_token?: string;
+  ext_expires_in?: string | number;
+  scope?: string;
+  token_type?: string;
+  [key: string]: unknown;
+};
+
+export type AppleCredentials = {
+  username: string;
+  password: string;
+};
+
 /**
  * Configuration options for the Mobiscroll Connect client
  */
 export interface MobiscrollConnectConfig {
   /**
-   * API key for authentication
+   * Client ID for OAuth authentication
    */
-  apiKey: string;
+  clientId: string;
 
   /**
-   * Base URL for the API
-   * @default 'https://connect.mobiscroll.com/api'
+   * Client Secret for OAuth authentication
    */
-  baseURL?: string;
+  clientSecret: string;
 
   /**
-   * Request timeout in milliseconds
-   * @default 30000
+   * Redirect URI for OAuth authentication
    */
-  timeout?: number;
-
-  /**
-   * Custom headers to include in requests
-   */
-  headers?: Record<string, string>;
+  redirectUri: string;
 }
 
 export interface ApiResponse<T = unknown> {
@@ -37,365 +52,212 @@ export interface ApiErrorResponse {
   details?: unknown;
 }
 
-/**
- * Calendar resource from calendar providers
- */
-export interface Calendar {
-  id: string;
-  title: string;
-  description?: string;
-  provider: 'google' | 'microsoft' | 'apple';
-  timeZone?: string;
-  color?: string;
-  original?: unknown;
-  accessRole?: string;
-  selected?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  [key: string]: unknown;
+export class MobiscrollConnectError extends Error {
+  constructor(
+    message: string,
+    public code?: string
+  ) {
+    super(message);
+    this.name = 'MobiscrollConnectError';
+  }
 }
 
-/**
- * Event resource from calendar providers
- */
-export interface Event {
+export class AuthenticationError extends MobiscrollConnectError {
+  constructor(message: string) {
+    super(message, 'AUTHENTICATION_ERROR');
+    this.name = 'AuthenticationError';
+  }
+}
+
+export class NotFoundError extends MobiscrollConnectError {
+  constructor(message: string) {
+    super(message, 'NOT_FOUND_ERROR');
+    this.name = 'NotFoundError';
+  }
+}
+
+export class ValidationError extends MobiscrollConnectError {
+  constructor(
+    message: string,
+    public details?: unknown
+  ) {
+    super(message, 'VALIDATION_ERROR');
+    this.name = 'ValidationError';
+  }
+}
+
+export class RateLimitError extends MobiscrollConnectError {
+  constructor(
+    message: string,
+    public retryAfter?: number
+  ) {
+    super(message, 'RATE_LIMIT_ERROR');
+    this.name = 'RateLimitError';
+  }
+}
+
+export class ServerError extends MobiscrollConnectError {
+  constructor(
+    message: string,
+    public status: number
+  ) {
+    super(message, 'SERVER_ERROR');
+    this.name = 'ServerError';
+  }
+}
+
+export class NetworkError extends MobiscrollConnectError {
+  constructor(message: string) {
+    super(message, 'NETWORK_ERROR');
+    this.name = 'NetworkError';
+  }
+}
+
+export enum ProviderEnum {
+  Google = 'google',
+  Microsoft = 'microsoft',
+  Apple = 'apple',
+}
+
+export type ProviderName = ProviderEnum.Google | ProviderEnum.Microsoft | ProviderEnum.Apple;
+
+export const ProviderNames: ProviderName[] = [
+  ProviderEnum.Google,
+  ProviderEnum.Microsoft,
+  ProviderEnum.Apple,
+];
+
+export type Calendar = {
+  provider: ProviderName;
+  id: string;
+  title: string;
+  timeZone: string;
+  color: string;
+  description: string;
+  original:
+    | calendar_v3.Schema$CalendarListEntry
+    | { id?: string; name?: string; [key: string]: unknown }
+    | DAVCalendar;
+};
+
+export type EventAttendee = {
+  email: string;
+  status: 'accepted' | 'declined' | 'tentative' | 'none';
+  organizer?: boolean;
+};
+
+export type CalendarEventAvailability = 'busy' | 'free';
+export type CalendarEventPrivacy = 'public' | 'private' | 'confidential';
+export type CalendarEventStatus = 'confirmed' | 'tentative' | 'cancelled';
+
+export interface CalendarEvent {
+  provider: ProviderName;
   id: string;
   calendarId: string;
   title: string;
-  description?: string;
-  start?: Date;
-  end?: Date;
-  allDay?: boolean;
+  start: Date;
+  end: Date;
+  allDay: boolean;
+  recurringEventId?: string;
+  color?: string;
   location?: string;
-  color?: string;
-  provider?: 'google' | 'microsoft' | 'apple';
-  createdAt?: string;
-  updatedAt?: string;
-  [key: string]: unknown;
+  attendees?: EventAttendee[];
+  custom?: Record<string, unknown>;
+  conference?: string;
+  availability?: CalendarEventAvailability;
+  privacy?: CalendarEventPrivacy;
+  status?: CalendarEventStatus;
+  link?: string;
+  original: calendar_v3.Schema$Event | MicrosoftGraphEvent | VEvent;
 }
 
-export interface ProviderPagingToken {
-  nextPageToken?: string;
-  nextLink?: string;
-  lastIndex?: number;
-}
+export type WebhookEvent = CalendarEvent & {
+  changeType: 'created' | 'updated' | 'deleted';
+};
 
-export interface ProviderPagingState {
-  token?: Record<string, ProviderPagingToken>;
-  isDepleted?: boolean;
-}
+export type RecurrenceFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 
-export interface EventsPagingState {
-  google?: ProviderPagingState;
-  microsoft?: ProviderPagingState;
-  apple?: ProviderPagingState;
-}
-
-export interface ListParams {
-  limit?: number;
-  offset?: number;
-  sort?: string;
-  order?: 'asc' | 'desc';
-}
-
-/**
- * Event filters for querying
- */
-export interface EventFilters {
-  start?: string | null;
-  end?: string | null;
-  calendarIds?: {
-    google: string[];
-    microsoft: string[];
-    apple: string[];
-  };
-}
-
-/**
- * Event list parameters
- */
-export interface EventListParams {
-  /**
-   * Number of events to fetch per request (max 1000)
-   * @default 250
-   */
-  pageSize?: number;
-
-  /**
-   * Filters for querying events
-   */
-  filters?: EventFilters;
-
-  /**
-   * Base64 encoded pagination state from previous response
-   */
-  paging?: string;
-
-  /**
-   * Controls how recurring events are handled
-   * - true: Expands recurring events into individual instances
-   * - false: Returns only the master recurring event
-   * @default true
-   */
-  singleEvents?: boolean;
-
-  /**
-   * Access token for authentication (overrides API key)
-   */
-  accessToken?: string;
-}
-
-/**
- * Events list response
- */
-export interface EventsListResponse {
-  events: Event[];
-  pageSize: number;
-  paging?: string;
-  info?: Record<string, string>;
-}
-
-/**
- * Create calendar data
- */
-export interface CreateCalendarData {
-  title: string;
-  description?: string;
-  timeZone?: string;
-  color?: string;
-}
-
-/**
- * Update calendar data
- */
-export interface UpdateCalendarData {
-  title?: string;
-  description?: string;
-  timeZone?: string;
-  color?: string;
-}
-
-/**
- * Recurrence rule for recurring events
- */
-export interface EventRecurrence {
-  /**
-   * Frequency of recurrence (DAILY, WEEKLY, MONTHLY, YEARLY)
-   */
-  frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
-
-  /**
-   * Interval between occurrences (e.g., every 2 weeks)
-   * @default 1
-   */
+export interface RecurrenceRule {
+  frequency: RecurrenceFrequency;
   interval?: number;
-
   count?: number;
-
-  /**
-   * End date in YYYYMMDDTHHMMSSZ format
-   */
   until?: string;
-
-  /**
-   * Days of the week (MO, TU, WE, TH, FR, SA, SU)
-   */
   byDay?: string[];
+  byMonthDay?: number[];
+  byMonth?: number[];
 }
 
-/**
- * Create event data
- */
-export interface CreateEventData {
+export type RecurrenceUpdateMode = 'this' | 'following' | 'all';
+
+export interface EventCreateData {
   calendarId: string;
   title: string;
+  start: Date | string;
+  end: Date | string;
   description?: string;
-
-  /**
-   * Start date/time in ISO format
-   */
-  start: string;
-
-  /**
-   * End date/time in ISO format
-   */
-  end: string;
-
-  /**
-   * Whether this is an all-day event
-   * @default false
-   */
-  allDay?: boolean;
-
   location?: string;
-
-  /**
-   * Recurrence rule for recurring events
-   */
-  recurrence?: EventRecurrence;
-
-  /**
-   * List of attendee email addresses
-   */
+  allDay?: boolean;
   attendees?: string[];
-
-  /**
-   * Custom provider-specific properties
-   */
+  recurrence?: RecurrenceRule;
   custom?: Record<string, unknown>;
-
-  availability?: 'busy' | 'free';
-  privacy?: 'public' | 'private' | 'confidential';
-  status?: 'confirmed' | 'tentative' | 'cancelled';
+  availability?: CalendarEventAvailability;
+  privacy?: CalendarEventPrivacy;
+  status?: CalendarEventStatus;
 }
 
-/**
- * Update modes for recurring events
- */
-export type UpdateMode = 'this' | 'following' | 'all';
+export interface EventUpdateData extends Partial<EventCreateData> {
+  eventId: string;
+  recurringEventId?: string;
+  updateMode?: RecurrenceUpdateMode;
+}
 
-/**
- * Delete modes for recurring events
- */
-export type DeleteMode = 'this' | 'following' | 'all';
+export type CreateEventData = EventCreateData;
+export type UpdateEventData = EventUpdateData;
 
-/**
- * Update event data
- */
-export interface UpdateEventData {
+export interface EventDeleteData {
   calendarId: string;
   eventId: string;
-
-  /**
-   * Recurring event ID (if editing a recurring event instance)
-   */
   recurringEventId?: string;
+  deleteMode?: RecurrenceUpdateMode;
+}
 
-  /**
-   * Update mode for recurring events (this, following, all)
-   */
-  updateMode?: UpdateMode;
+export type DeleteEventParams = EventDeleteData & { provider: ProviderName };
 
-  title?: string;
-  description?: string;
+export type EventResponse = CalendarEvent;
 
-  /**
-   * Start date/time in ISO format
-   */
-  start?: string;
+export type DeleteEventResponse = void;
 
-  /**
-   * End date/time in ISO format
-   */
-  end?: string;
+export type EventListParams = {
+  pageSize?: number;
+  start?: Date | string;
+  end?: Date | string;
+  calendarIds?: {
+    [key in ProviderName]?: string[];
+  };
+  nextPageToken?: string;
+  appleToken?: Record<string, { lastIndex?: number }>;
+  singleEvents?: boolean;
+};
 
-  allDay?: boolean;
-  location?: string;
-
-  /**
-   * Recurrence rule for recurring events
-   */
-  recurrence?: EventRecurrence;
-
-  /**
-   * List of attendee email addresses
-   */
-  attendees?: string[];
-
-  /**
-   * Custom provider-specific properties
-   */
-  custom?: Record<string, unknown>;
-
-  availability?: 'busy' | 'free';
-  privacy?: 'public' | 'private' | 'confidential';
-  status?: 'confirmed' | 'tentative' | 'cancelled';
+export interface EventsListResponse {
+  events: CalendarEvent[];
+  pageSize?: number;
+  nextPageToken?: string;
 }
 
 /**
- * Delete event parameters
- */
-export interface DeleteEventParams {
-  provider: 'google' | 'microsoft' | 'apple';
-  calendarId: string;
-  eventId: string;
-
-  /**
-   * Recurring event ID (if deleting a recurring event instance)
-   */
-  recurringEventId?: string;
-
-  /**
-   * Delete mode for recurring events (this, following, all)
-   */
-  deleteMode?: DeleteMode;
-}
-
-/**
- * Event response (created or updated event)
- * Successful responses spread the CalendarEvent properties at root level
- * along with the original provider response.
- */
-export interface EventResponse {
-  success: boolean;
-
-  /**
-   * Error message if success is false
-   */
-  message?: string;
-
-  provider?: 'google' | 'microsoft' | 'apple';
-  id?: string;
-  calendarId?: string;
-  title?: string;
-  description?: string;
-  start?: Date;
-  end?: Date;
-  allDay?: boolean;
-  location?: string;
-  color?: string;
-
-  /**
-   * Original provider-specific event data
-   */
-  original?: unknown;
-
-  [key: string]: unknown;
-}
-
-/**
- * Delete event response
- */
-export interface DeleteEventResponse {
-  success: boolean;
-  message?: string;
-}
-
-// ============================================================================
-// Auth Types
-// ============================================================================
-
-/**
- * Parameters for initiating OAuth2 authorization
+ * Common Authorization parameters
  */
 export interface AuthorizeParams {
-  /**
-   * Client application identifier
-   */
-  clientId: string;
-
   /**
    * External user identifier from the client application
    */
   userId: string;
 
-  userName?: string;
-  userEmail?: string;
-
   /**
-   * Callback URL after authorization completes
+   * Optional scope parameter to request specific access levels ('read-write' | 'free-busy' | 'read')
    */
-  redirectUri?: string;
+  scope?: string;
 
   /**
    * Optional state parameter to maintain across the flow
@@ -451,125 +313,17 @@ export interface ConnectionStatusResponse {
   };
 
   /**
-   * Whether the account connection limit has been reached
+   * Whether the account limit has been reached
    */
-  limitReached?: boolean;
-
-  /**
-   * Maximum number of accounts allowed
-   */
-  limit?: number;
+  limitReached: boolean;
 }
 
-/**
- * Parameters for disconnecting a provider account
- */
-export interface DisconnectParams {
+export type DisconnectParams = {
   provider: 'google' | 'microsoft' | 'apple';
-
-  /**
-   * Optional account ID to disconnect.
-   * If omitted, disconnects all accounts for the provider
-   */
   account?: string;
-}
+};
 
-/**
- * Disconnect response
- */
 export interface DisconnectResponse {
   success: boolean;
-}
-
-// ============================================================================
-// Error Classes
-// ============================================================================
-
-/**
- * Base error class for all SDK errors
- */
-export class MobiscrollConnectError extends Error {
-  constructor(
-    message: string,
-    public code?: string
-  ) {
-    super(message);
-    this.name = 'MobiscrollConnectError';
-    Object.setPrototypeOf(this, MobiscrollConnectError.prototype);
-  }
-}
-
-/**
- * Error thrown when authentication fails
- */
-export class AuthenticationError extends MobiscrollConnectError {
-  constructor(message: string = 'Authentication failed') {
-    super(message, 'AUTH_ERROR');
-    this.name = 'AuthenticationError';
-    Object.setPrototypeOf(this, AuthenticationError.prototype);
-  }
-}
-
-/**
- * Error thrown when a resource is not found
- */
-export class NotFoundError extends MobiscrollConnectError {
-  constructor(message: string = 'Resource not found') {
-    super(message, 'NOT_FOUND');
-    this.name = 'NotFoundError';
-    Object.setPrototypeOf(this, NotFoundError.prototype);
-  }
-}
-
-/**
- * Error thrown when a request is invalid
- */
-export class ValidationError extends MobiscrollConnectError {
-  constructor(
-    message: string = 'Validation failed',
-    public details?: unknown
-  ) {
-    super(message, 'VALIDATION_ERROR');
-    this.name = 'ValidationError';
-    Object.setPrototypeOf(this, ValidationError.prototype);
-  }
-}
-
-/**
- * Error thrown when rate limit is exceeded
- */
-export class RateLimitError extends MobiscrollConnectError {
-  constructor(
-    message: string = 'Rate limit exceeded',
-    public retryAfter?: number
-  ) {
-    super(message, 'RATE_LIMIT');
-    this.name = 'RateLimitError';
-    Object.setPrototypeOf(this, RateLimitError.prototype);
-  }
-}
-
-/**
- * Error thrown when the server returns an error
- */
-export class ServerError extends MobiscrollConnectError {
-  constructor(
-    message: string = 'Server error',
-    public statusCode?: number
-  ) {
-    super(message, 'SERVER_ERROR');
-    this.name = 'ServerError';
-    Object.setPrototypeOf(this, ServerError.prototype);
-  }
-}
-
-/**
- * Error thrown when a network request fails
- */
-export class NetworkError extends MobiscrollConnectError {
-  constructor(message: string = 'Network request failed') {
-    super(message, 'NETWORK_ERROR');
-    this.name = 'NetworkError';
-    Object.setPrototypeOf(this, NetworkError.prototype);
-  }
+  message?: string;
 }

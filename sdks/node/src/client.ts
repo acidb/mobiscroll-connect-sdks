@@ -1,4 +1,10 @@
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+import { EventEmitter } from 'events';
+import axios, {
+  AxiosInstance,
+  AxiosError,
+  AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+} from 'axios';
 import {
   MobiscrollConnectConfig,
   ApiResponse,
@@ -10,46 +16,67 @@ import {
   RateLimitError,
   ServerError,
   NetworkError,
+  TokenResponse,
 } from './types';
 
-export class ApiClient {
+export class ApiClient extends EventEmitter {
   private readonly client: AxiosInstance;
-  private readonly config: Required<Omit<MobiscrollConnectConfig, 'headers'>> & {
-    headers?: Record<string, string>;
-  };
+  private readonly config: MobiscrollConnectConfig;
+  private credentials?: TokenResponse;
+  private isRefreshing = false;
+  private refreshSubscribers: ((token: string) => void)[] = [];
 
   constructor(config: MobiscrollConnectConfig) {
-    if (!config.apiKey) {
-      throw new MobiscrollConnectError('API key is required');
+    super();
+    if (!config.clientId || !config.clientSecret || !config.redirectUri) {
+      throw new MobiscrollConnectError('Client ID, Client Secret and Redirect URI are required');
     }
 
-    this.config = {
-      apiKey: config.apiKey,
-      baseURL: config.baseURL || 'https://connect.mobiscroll.com/api',
-      timeout: config.timeout || 30000,
-      headers: config.headers,
+    this.config = config;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
     };
 
     this.client = axios.create({
-      baseURL: this.config.baseURL,
-      timeout: this.config.timeout,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.config.apiKey}`,
-        ...this.config.headers,
-      },
+      baseURL: 'https://connect.mobiscroll.com/api',
+      timeout: 30000,
+      headers,
     });
 
     this.setupInterceptors();
   }
 
+  public setCredentials(tokens: TokenResponse): void {
+    this.credentials = tokens;
+  }
+
+  public getCredentials(): TokenResponse | undefined {
+    return this.credentials;
+  }
+
+  public getConfig(): MobiscrollConnectConfig {
+    return this.config;
+  }
+
+  public get baseURL(): string {
+    return this.client.defaults.baseURL || '';
+  }
+
+  public get axiosInstance(): AxiosInstance {
+    return this.client;
+  }
+
   private setupInterceptors(): void {
     this.client.interceptors.request.use(
       (config) => {
+        if (this.credentials?.access_token) {
+          config.headers.Authorization = `Bearer ${this.credentials.access_token}`;
+        }
         return config;
       },
       (error) => {
-        return Promise.reject(this.handleError(error));
+        return Promise.reject(error);
       }
     );
 
@@ -57,10 +84,90 @@ export class ApiClient {
       (response) => {
         return response;
       },
-      (error) => {
+      async (error: AxiosError<ApiErrorResponse>) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+        if (
+          error.response?.status === 401 &&
+          this.credentials?.refresh_token &&
+          originalRequest &&
+          !originalRequest._retry
+        ) {
+          originalRequest._retry = true;
+
+          if (this.isRefreshing) {
+            return new Promise((resolve) => {
+              this.refreshSubscribers.push((token) => {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                resolve(this.client(originalRequest));
+              });
+            });
+          }
+
+          this.isRefreshing = true;
+
+          try {
+            const accessToken = await this.refreshAccessToken();
+            this.isRefreshing = false;
+            this.onRefreshed(accessToken);
+
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return this.client(originalRequest);
+          } catch {
+            this.isRefreshing = false;
+            this.refreshSubscribers = [];
+            return Promise.reject(this.handleError(error));
+          }
+        }
+
         return Promise.reject(this.handleError(error));
       }
     );
+  }
+
+  private async refreshAccessToken(): Promise<string> {
+    if (!this.credentials?.refresh_token) {
+      throw new AuthenticationError('No refresh token available');
+    }
+
+    const { clientId, clientSecret, redirectUri } = this.config;
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+    try {
+      const response = await axios.post<TokenResponse>(
+        `${this.client.defaults.baseURL}/oauth/token`,
+        new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: this.credentials.refresh_token,
+          redirect_uri: redirectUri,
+        }).toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Basic ${credentials}`,
+            CLIENT_ID: clientId,
+          },
+        }
+      );
+
+      const newTokens = response.data;
+      this.credentials = {
+        ...this.credentials,
+        ...newTokens,
+        refresh_token: newTokens.refresh_token || this.credentials.refresh_token,
+      };
+
+      this.emit('tokens', this.credentials);
+
+      return this.credentials.access_token;
+    } catch {
+      throw new AuthenticationError('Failed to refresh token');
+    }
+  }
+
+  private onRefreshed(token: string): void {
+    this.refreshSubscribers.forEach((callback) => callback(token));
+    this.refreshSubscribers = [];
   }
 
   private handleError(error: AxiosError<ApiErrorResponse>): Error {
@@ -149,18 +256,5 @@ export class ApiClient {
       status: response.status,
       headers: response.headers as Record<string, string>,
     };
-  }
-
-  public setApiKey(apiKey: string): void {
-    this.config.apiKey = apiKey;
-    this.client.defaults.headers.common['Authorization'] = `Bearer ${apiKey}`;
-  }
-
-  public getConfig(): Readonly<typeof this.config> {
-    return { ...this.config };
-  }
-
-  public get baseURL(): string {
-    return this.config.baseURL;
   }
 }

@@ -1,5 +1,5 @@
 import { ApiClient } from './client';
-import { MobiscrollConnectConfig } from './types';
+import { MobiscrollConnectConfig, TokenResponse } from './types';
 import { Calendars } from './resources/calendars';
 import { Events } from './resources/events';
 import { Auth } from './resources/auth';
@@ -22,10 +22,19 @@ export class MobiscrollConnectClient {
   }
 
   /**
-   * Update the API key
+   * Set credentials for authentication
+   * @param tokens - The tokens to use
    */
-  public setApiKey(apiKey: string): void {
-    this.apiClient.setApiKey(apiKey);
+  public setCredentials(tokens: TokenResponse): void {
+    this.apiClient.setCredentials(tokens);
+  }
+
+  /**
+   * Listen to events
+   */
+  public on(event: string, listener: (...args: any[]) => void): this {
+    this.apiClient.on(event, listener);
+    return this;
   }
 
   /**

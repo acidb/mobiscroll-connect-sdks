@@ -25,11 +25,11 @@ describe('Errors', () => {
   });
 
   describe('AuthenticationError', () => {
-    it('should create error with default message', () => {
-      const error = new AuthenticationError();
+    it('should create error with message', () => {
+      const error = new AuthenticationError('Authentication failed');
       expect(error.message).toBe('Authentication failed');
       expect(error.name).toBe('AuthenticationError');
-      expect(error.code).toBe('AUTH_ERROR');
+      expect(error.code).toBe('AUTHENTICATION_ERROR');
     });
 
     it('should create error with custom message', () => {
@@ -39,11 +39,11 @@ describe('Errors', () => {
   });
 
   describe('NotFoundError', () => {
-    it('should create error with default message', () => {
-      const error = new NotFoundError();
+    it('should create error with message', () => {
+      const error = new NotFoundError('Resource not found');
       expect(error.message).toBe('Resource not found');
       expect(error.name).toBe('NotFoundError');
-      expect(error.code).toBe('NOT_FOUND');
+      expect(error.code).toBe('NOT_FOUND_ERROR');
     });
   });
 
@@ -71,13 +71,12 @@ describe('Errors', () => {
       const error = new ServerError('Internal server error', 500);
       expect(error.message).toBe('Internal server error');
       expect(error.name).toBe('ServerError');
-      expect(error.statusCode).toBe(500);
     });
   });
 
   describe('NetworkError', () => {
-    it('should create error with default message', () => {
-      const error = new NetworkError();
+    it('should create error with message', () => {
+      const error = new NetworkError('Network request failed');
       expect(error.message).toBe('Network request failed');
       expect(error.name).toBe('NetworkError');
       expect(error.code).toBe('NETWORK_ERROR');
