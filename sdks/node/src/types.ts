@@ -190,6 +190,7 @@ export interface RecurrenceRule {
 export type RecurrenceUpdateMode = 'this' | 'following' | 'all';
 
 export interface EventCreateData {
+  provider: ProviderName;
   calendarId: string;
   title: string;
   start: Date | string;
