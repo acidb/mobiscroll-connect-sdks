@@ -7,7 +7,6 @@ import {
   EventsListResponse,
   UpdateEventData,
   CreateEventData,
-  ProviderName,
 } from '../types';
 
 /**
@@ -48,7 +47,7 @@ export class Events {
    *
    * @param params - Event creation parameters including provider
    */
-  async create(params: CreateEventData & { provider: ProviderName }): Promise<EventResponse> {
+  async create(params: CreateEventData): Promise<EventResponse> {
     const response = await this.client.post<EventResponse>('/event', params);
     return response.data;
   }
@@ -58,7 +57,7 @@ export class Events {
    *
    * @param params - Event update parameters including provider
    */
-  async update(params: UpdateEventData & { provider: ProviderName }): Promise<EventResponse> {
+  async update(params: UpdateEventData): Promise<EventResponse> {
     const response = await this.client.put<EventResponse>('/event', params);
     return response.data;
   }
