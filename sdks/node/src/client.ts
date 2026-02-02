@@ -23,8 +23,7 @@ export class ApiClient extends EventEmitter {
   private readonly client: AxiosInstance;
   private readonly config: MobiscrollConnectConfig;
   private credentials?: TokenResponse;
-  private isRefreshing = false;
-  private refreshSubscribers: ((token: string) => void)[] = [];
+  private refreshTokenPromise: Promise<string> | null = null;
 
   constructor(config: MobiscrollConnectConfig) {
     super();
@@ -95,27 +94,17 @@ export class ApiClient extends EventEmitter {
         ) {
           originalRequest._retry = true;
 
-          if (this.isRefreshing) {
-            return new Promise((resolve) => {
-              this.refreshSubscribers.push((token) => {
-                originalRequest.headers.Authorization = `Bearer ${token}`;
-                resolve(this.client(originalRequest));
-              });
+          if (!this.refreshTokenPromise) {
+            this.refreshTokenPromise = this.refreshAccessToken().finally(() => {
+              this.refreshTokenPromise = null;
             });
           }
 
-          this.isRefreshing = true;
-
           try {
-            const accessToken = await this.refreshAccessToken();
-            this.isRefreshing = false;
-            this.onRefreshed(accessToken);
-
+            const accessToken = await this.refreshTokenPromise;
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
             return this.client(originalRequest);
           } catch {
-            this.isRefreshing = false;
-            this.refreshSubscribers = [];
             return Promise.reject(this.handleError(error));
           }
         }
@@ -163,11 +152,6 @@ export class ApiClient extends EventEmitter {
     } catch {
       throw new AuthenticationError('Failed to refresh token');
     }
-  }
-
-  private onRefreshed(token: string): void {
-    this.refreshSubscribers.forEach((callback) => callback(token));
-    this.refreshSubscribers = [];
   }
 
   private handleError(error: AxiosError<ApiErrorResponse>): Error {
