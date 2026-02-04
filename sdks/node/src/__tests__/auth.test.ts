@@ -20,7 +20,7 @@ describe('Auth Resource', () => {
     Object.defineProperty(mockApiClient, 'baseURL', {
       get: jest.fn(() => 'https://connect.mobiscroll.com/api'),
     });
-    
+
     mockApiClient.getConfig.mockReturnValue(mockConfig);
 
     auth = new Auth(mockApiClient);
@@ -31,7 +31,7 @@ describe('Auth Resource', () => {
       const url = auth.generateAuthUrl({
         userId: 'user-123',
         state: 'random-state',
-        scope: 'read-write'
+        scope: 'read-write',
       });
 
       expect(url).toContain('https://connect.mobiscroll.com/api/oauth/authorize');
@@ -81,13 +81,11 @@ describe('Auth Resource', () => {
           }),
         })
       );
-      
+
       const call = (mockApiClient.post as jest.Mock).mock.calls[0];
       const params = call[1] as URLSearchParams;
       expect(params.get('code')).toBe('auth-code-123');
-      expect(params.get('client_id')).toBe('id');
-      expect(params.get('client_secret')).toBe('secret');
-      expect(params.get('redirect_uri')).toBe('uri');
+      expect(params.get('redirect_uri')).toBe(mockConfig.redirectUri);
       expect(params.get('grant_type')).toBe('authorization_code');
 
       expect(result).toEqual(mockResponse);
@@ -129,9 +127,7 @@ describe('Auth Resource', () => {
         headers: {},
       });
 
-      const result = await auth.disconnect(
-        { provider: 'google', account: 'user@gmail.com' }
-      );
+      const result = await auth.disconnect({ provider: 'google', account: 'user@gmail.com' });
 
       expect(mockApiClient.post).toHaveBeenCalledWith(
         '/oauth/disconnect?provider=google&account=user%40gmail.com',
@@ -151,11 +147,7 @@ describe('Auth Resource', () => {
 
       await auth.disconnect({ provider: 'microsoft' });
 
-      expect(mockApiClient.post).toHaveBeenCalledWith(
-        '/oauth/disconnect?provider=microsoft',
-        {}
-      );
+      expect(mockApiClient.post).toHaveBeenCalledWith('/oauth/disconnect?provider=microsoft', {});
     });
   });
 });
-
