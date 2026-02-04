@@ -72,7 +72,7 @@ export class Auth {
 
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-    const response = await this.client.post<TokenResponse>('/oauth/token', body.toString(), {
+    const response = await this.client.post<TokenResponse>('/oauth/token', body, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Authorization: `Basic ${credentials}`,
