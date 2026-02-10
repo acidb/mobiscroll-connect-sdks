@@ -20,6 +20,12 @@ export type AppleCredentials = {
   password: string;
 };
 
+export type CalDavCredentials = {
+  username: string;
+  password: string;
+  serverUrl: string;
+};
+
 /**
  * Configuration options for the Mobiscroll Connect client
  */
@@ -117,14 +123,20 @@ export enum ProviderEnum {
   Google = 'google',
   Microsoft = 'microsoft',
   Apple = 'apple',
+  CalDav = 'caldav',
 }
 
-export type ProviderName = ProviderEnum.Google | ProviderEnum.Microsoft | ProviderEnum.Apple;
+export type ProviderName =
+  | ProviderEnum.Google
+  | ProviderEnum.Microsoft
+  | ProviderEnum.Apple
+  | ProviderEnum.CalDav;
 
 export const ProviderNames: ProviderName[] = [
   ProviderEnum.Google,
   ProviderEnum.Microsoft,
   ProviderEnum.Apple,
+  ProviderEnum.CalDav,
 ];
 
 export type Calendar = {
@@ -311,6 +323,7 @@ export interface ConnectionStatusResponse {
     google: ConnectedAccount[];
     microsoft: ConnectedAccount[];
     apple: ConnectedAccount[];
+    caldav: ConnectedAccount[];
   };
 
   /**
@@ -320,7 +333,7 @@ export interface ConnectionStatusResponse {
 }
 
 export type DisconnectParams = {
-  provider: 'google' | 'microsoft' | 'apple';
+  provider: 'google' | 'microsoft' | 'apple' | 'caldav';
   account?: string;
 };
 
