@@ -99,6 +99,7 @@ describe('Auth Resource', () => {
           google: [{ id: 'user@gmail.com', display: 'user@gmail.com' }],
           microsoft: [{ id: 'user@outlook.com', display: 'user@outlook.com' }],
           apple: [],
+          caldav: [],
         },
         limitReached: false,
       };

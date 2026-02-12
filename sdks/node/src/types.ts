@@ -276,6 +276,11 @@ export interface AuthorizeParams {
    * Optional state parameter to maintain across the flow
    */
   state?: string;
+
+  /**
+   * Optional providers parameter (comma-separated list: 'google,apple,microsoft,caldav')
+   */
+  providers?: string;
 }
 
 /**
