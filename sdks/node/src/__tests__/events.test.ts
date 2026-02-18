@@ -49,9 +49,7 @@ describe('Events Resource', () => {
       const params: EventListParams = {
         start: '2023-01-01T00:00:00Z',
         end: '2023-01-31T23:59:59Z',
-        calendarIds: {
-          google: ['cal1', 'cal2'],
-        },
+        calendarIds: JSON.stringify(['cal1', 'cal2']),
         pageSize: 50,
       };
 

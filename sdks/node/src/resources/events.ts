@@ -29,7 +29,7 @@ export class Events {
       if (pageSize) queryParams.append('pageSize', pageSize.toString());
       if (start) queryParams.append('start', start instanceof Date ? start.toISOString() : start);
       if (end) queryParams.append('end', end instanceof Date ? end.toISOString() : end);
-      if (calendarIds) queryParams.append('calendarIds', JSON.stringify(calendarIds));
+      if (calendarIds) queryParams.append('calendarIds', calendarIds);
       if (nextPageToken) queryParams.append('nextPageToken', nextPageToken);
       if (appleToken) queryParams.append('appleToken', JSON.stringify(appleToken));
       if (singleEvents !== undefined) queryParams.append('singleEvents', singleEvents.toString());
