@@ -244,7 +244,9 @@ export type EventListParams = {
   pageSize?: number;
   start?: Date | string;
   end?: Date | string;
-  calendarIds?: string;
+  calendarIds?: {
+    [key in ProviderName]?: string[];
+  };
   nextPageToken?: string;
   appleToken?: Record<string, { lastIndex?: number }>;
   singleEvents?: boolean;
