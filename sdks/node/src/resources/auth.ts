@@ -73,16 +73,22 @@ export class Auth {
 
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-    const response = await this.client.post<TokenResponse>('/oauth/token', body, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${credentials}`,
-        CLIENT_ID: clientId,
-      },
-    });
+    try {
+      const response = await this.client.post<TokenResponse>('/oauth/token', body, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Basic ${credentials}`,
+          CLIENT_ID: clientId,
+        },
+      });
 
-    this.setCredentials(response.data);
-    return response.data;
+      this.setCredentials(response.data);
+      return response.data;
+    } catch {
+      throw new Error(
+        'Error exchanging code for token. Please check your client ID, client secret, and redirect URI configuration and try again.'
+      );
+    }
   }
 
   /**
