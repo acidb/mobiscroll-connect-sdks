@@ -248,6 +248,9 @@ export type EventListParams = {
     [key in ProviderName]?: string[];
   };
   nextPageToken?: string;
+  /**
+   * @deprecated Apple paging state is encoded in nextPageToken; this field is ignored.
+   */
   appleToken?: Record<string, { lastIndex?: number }>;
   singleEvents?: boolean;
 };
