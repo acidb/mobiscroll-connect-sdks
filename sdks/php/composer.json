@@ -2,7 +2,7 @@
   "name": "mobiscroll/connect-php",
   "description": "PHP SDK for Mobiscroll Connect API",
   "type": "library",
-  "license": "ISC",
+  "license": "MIT",
   "authors": [
     {
       "name": "Mobiscroll",
