@@ -419,4 +419,4 @@ new MobiscrollConnectClient(
 
 ## Support
 
-For issues, questions, or feature requests, please contact support@mobiscroll.com or visit https://connect.mobiscroll.com/docs
+For issues, questions, or feature requests, please contact support@mobiscroll.com or visit https://mobiscroll.com/docs/connect/php-sdk
