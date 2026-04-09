@@ -1,0 +1,271 @@
+<?php
+
+declare(strict_types=1);
+
+header('Content-Type: text/html; charset=utf-8');
+?>
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mobiscroll Connect SDK Tester</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --border: #334155;
+      --accent2: #06b6d4;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 500px at 10% -10%, #1e293b 0%, transparent 60%),
+        radial-gradient(800px 400px at 95% 0%, #0c4a6e 0%, transparent 60%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .wrap {
+      width: min(1080px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, #0b1220, var(--panel));
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      min-width: 0;
+    }
+
+    .btn {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      background: #111827;
+      cursor: pointer;
+      text-align: left;
+      margin-bottom: 8px;
+    }
+
+    .links {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .links a {
+      display: block;
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      background: #111827;
+      text-decoration: none;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .badge {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #0b1220;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
+
+    .link {
+      color: var(--accent2);
+      word-break: break-all;
+      text-decoration: none;
+    }
+
+    pre {
+      margin: 0;
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 12px;
+      overflow: auto;
+      min-height: 360px;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 900px) {
+      .wrap {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <section class="panel">
+      <h1>SDK Internal Test UI</h1>
+      <div class="sub">Use this as home. Calendars, events and event edit are now separate pages.</div>
+
+      <button class="btn" id="btnSession">Check Session</button>
+      <button class="btn" id="btnConnectionStatus">Connection Status</button>
+      <button class="btn" id="btnAuthUrl">Generate Auth URL</button>
+      <button class="btn" id="btnConnect" disabled>Open OAuth Page</button>
+      <button class="btn" id="btnClear">Clear Session</button>
+
+      <div class="links">
+        <a href="/?action=calendars-page">Calendars</a>
+        <a href="/?action=events-page">Events</a>
+        <a href="/?action=event-edit-page">Event Edit</a>
+      </div>
+
+      <div style="margin-top: 10px;" class="sub">
+        Configured Redirect URI:<br />
+        <span class="link" id="configuredRedirect">(not loaded)</span><br /><br />
+        OAuth redirect_uri from link:<br />
+        <span class="link" id="oauthRedirect">(not loaded)</span><br /><br />
+        OAuth URL:<br />
+        <a class="link" id="authLink" href="#"></a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="status" id="status">Loading OAuth configuration...</div>
+      <div class="meta">
+        <span class="badge" id="lastAction">action: none</span>
+        <span class="badge" id="lastStatus">status: n/a</span>
+      </div>
+      <pre id="outputLatest">{\n  "hint": "Use this as home and open the dedicated pages"\n}</pre>
+    </section>
+  </div>
+
+  <script>
+    const outputLatest = document.getElementById('outputLatest');
+    const statusEl = document.getElementById('status');
+    const authLink = document.getElementById('authLink');
+    const configuredRedirect = document.getElementById('configuredRedirect');
+    const oauthRedirect = document.getElementById('oauthRedirect');
+    const btnConnect = document.getElementById('btnConnect');
+    const lastAction = document.getElementById('lastAction');
+    const lastStatus = document.getElementById('lastStatus');
+
+    let latestAuthUrl = '';
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function setMeta(action, ok) {
+      lastAction.textContent = 'action: ' + action;
+      lastStatus.textContent = 'status: ' + (ok ? 'ok' : 'error');
+    }
+
+    function print(data) {
+      outputLatest.textContent = JSON.stringify(data, null, 2);
+    }
+
+    function getOAuthRedirectFromUrl(url) {
+      try {
+        const parsed = new URL(url);
+        return parsed.searchParams.get('redirect_uri') || '';
+      } catch (_) {
+        return '';
+      }
+    }
+
+    async function runAction(action) {
+      setStatus('Running ' + action + '...');
+      try {
+        const res = await fetch('/?action=' + encodeURIComponent(action), {
+          credentials: 'same-origin'
+        });
+        const data = await res.json();
+        const isSuccess = res.ok && !(data && data.ok === false);
+        print(data);
+        setMeta(action, isSuccess);
+
+        if (action === 'auth-url' && data.authUrl) {
+          latestAuthUrl = data.authUrl;
+          authLink.href = data.authUrl;
+          authLink.textContent = data.authUrl;
+
+          const configured = typeof data.redirectUri === 'string' ? data.redirectUri : '';
+          const parsedRedirect = getOAuthRedirectFromUrl(data.authUrl);
+          configuredRedirect.textContent = configured || '(missing from response)';
+          oauthRedirect.textContent = parsedRedirect || '(missing redirect_uri query param)';
+          btnConnect.disabled = false;
+          setStatus('Auth URL ready. Open OAuth in a new tab.');
+          return;
+        }
+
+        setStatus(isSuccess ? 'Done: ' + action : 'Action failed: ' + action);
+      } catch (err) {
+        print({
+          ok: false,
+          action,
+          error: err instanceof Error ? err.message : String(err)
+        });
+        setMeta(action, false);
+        setStatus('Request failed. See output.');
+      }
+    }
+
+    document.getElementById('btnSession').addEventListener('click', () => runAction('session'));
+    document.getElementById('btnConnectionStatus').addEventListener('click', () => runAction('connection-status'));
+    document.getElementById('btnAuthUrl').addEventListener('click', () => runAction('auth-url'));
+    document.getElementById('btnClear').addEventListener('click', () => runAction('clear-session'));
+
+    btnConnect.addEventListener('click', () => {
+      if (!latestAuthUrl) {
+        setStatus('Generate auth URL first.');
+        return;
+      }
+      window.open(latestAuthUrl, '_blank', 'noopener,noreferrer');
+      setStatus('OAuth opened in new tab. Complete auth, then continue on dedicated pages.');
+    });
+
+    runAction('auth-url');
+  </script>
+</body>
+
+</html>

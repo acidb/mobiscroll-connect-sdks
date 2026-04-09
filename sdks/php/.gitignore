@@ -1,0 +1,27 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Minimal app local env
+minimal-app/.env
+minimal-app/.env.*
+!minimal-app/.env.example
+
+# Composer dependencies
+/vendor/
+/minimal-app/vendor/
+
+# PHPUnit cache
+.phpunit.result.cache
+
+# Logs
+*.log
+
+# OS/editor artifacts
+.DS_Store
+.idea/
+.vscode/
+
+# Coverage outputs
+coverage/
