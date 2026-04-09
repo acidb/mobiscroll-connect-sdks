@@ -77,7 +77,7 @@ Response:
 ```json
 {
   "ok": true,
-  "authUrl": "https://connect.mobiscroll.com/oauth/authorize?...",
+  "authUrl": "https://connect.mobiscroll.com/api/oauth/authorize?...",
   "redirectUri": "http://localhost:8080"
 }
 ```
@@ -100,23 +100,33 @@ Now you can access calendars and events:
 ```
 http://localhost:8080/?action=calendars
 http://localhost:8080/?action=events
+http://localhost:8080/?action=connection-status
 ```
 
 ## Endpoints
 
 | Endpoint | Auth | Purpose |
 |----------|------|---------|
+| `?action=ui` | ❌ | Open frontend test dashboard |
+| `?action=calendars-page` | ❌ | Open calendars test page |
+| `?action=events-page` | ❌ | Open events test page |
+| `?action=event-edit-page` | ❌ | Open event CRUD test page |
 | `?action=auth-url` | ❌ | Generate OAuth authorization URL |
-| `?action=callback&code=...` | ✅ | OAuth callback handler (auto-called by browser redirect) |
+| `?action=callback&code=...` | ❌ | OAuth callback handler (auto-called by browser redirect) |
 | `?action=calendars` | ✅ | List all calendars from connected providers |
 | `?action=events` | ✅ | List recent events |
+| `?action=connection-status` | ✅ | Get provider connection status and limits |
+| `?action=create-event` | ✅ | Create an event from JSON body |
+| `?action=update-event` | ✅ | Update an event from JSON body |
+| `?action=delete-event` | ✅ | Delete an event from JSON body |
 | `?action=session` | ❌ | Show stored session state (for debugging) |
+| `?action=clear-session` | ❌ | Clear stored session token data |
 
 ## Troubleshooting
 
 **"The requested resource does not exist or is not accessible"**
 - The backend endpoints require a valid Bearer token
-- Make sure you've completed the OAuth flow: visit `?action=auth-url`, authorize, let it redirect back to `/callback`
+- Make sure you've completed the OAuth flow: visit `?action=auth-url`, authorize, let it redirect back to `/?action=callback` (or to `/?code=...`)
 - Check `?action=session` to confirm token is stored
 
 **"Missing env vars"**

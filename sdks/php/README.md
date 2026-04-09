@@ -5,7 +5,7 @@ A PHP client library for the Mobiscroll Connect API, enabling seamless calendar 
 ## Features
 
 - **Multi-provider support**: Google Calendar, Microsoft Outlook, Apple iCal, and more
-- **OAuth2 authentication**: Secure authorization flow with token refresh
+- **OAuth2 authentication**: Secure authorization flow with token exchange
 - **Bearer token support**: Server-side authentication for backend integration
 - **Event management**: Create, read, update, and delete calendar events
 - **Calendar operations**: List and manage connected calendars
@@ -69,9 +69,13 @@ $client = new MobiscrollConnectClient(
 #### Step 1: Generate Authorization URL
 
 ```php
+$userId = 'your-app-user-id'; // Stable app-level user identifier
+
 $authUrl = $client->auth()->generateAuthUrl(
+    userId: $userId,
     scope: 'calendar',
-    state: 'random-state-value'
+    state: 'random-state-value',
+    providers: 'google' // Optional: provider filter
 );
 
 // Redirect user to this URL
@@ -119,7 +123,7 @@ try {
     $calendars = $client->calendars()->list();
     
     foreach ($calendars as $calendar) {
-        echo "Calendar: {$calendar->title} ({$calendar->id})\n";
+        echo "Calendar: {$calendar['title']} ({$calendar['id']})\n";
     }
     
 } catch (\Mobiscroll\Connect\Exceptions\MobiscrollConnectException $e) {
@@ -134,11 +138,11 @@ try {
 $calendars = $client->calendars()->list();
 
 foreach ($calendars as $calendar) {
-    echo "ID: {$calendar->id}\n";
-    echo "Title: {$calendar->title}\n";
-    echo "Provider: {$calendar->provider}\n";
-    echo "Timezone: {$calendar->timeZone}\n";
-    echo "Color: {$calendar->color}\n";
+    echo "ID: {$calendar['id']}\n";
+    echo "Title: {$calendar['title']}\n";
+    echo "Provider: {$calendar['provider']}\n";
+    echo "Timezone: {$calendar['timeZone']}\n";
+    echo "Color: {$calendar['color']}\n";
 }
 ```
 
@@ -157,18 +161,18 @@ $response = $client->events()->list([
     'pageSize' => 50,
 ]);
 
-foreach ($response->events as $event) {
-    echo "Event: {$event->title}\n";
-    echo "Start: " . $event->start->format('Y-m-d H:i:s') . "\n";
-    echo "End: " . $event->end->format('Y-m-d H:i:s') . "\n";
-    echo "Location: {$event->location}\n";
+foreach (($response['events'] ?? []) as $event) {
+    echo "Event: " . ($event['title'] ?? '') . "\n";
+    echo "Start: " . ($event['start'] ?? '') . "\n";
+    echo "End: " . ($event['end'] ?? '') . "\n";
+    echo "Location: " . ($event['location'] ?? '') . "\n";
 }
 
 // Handle pagination
-if ($response->nextPageToken) {
+if (!empty($response['nextPageToken'])) {
     $nextResponse = $client->events()->list([
         'pageSize' => 50,
-        'nextPageToken' => $response->nextPageToken,
+        'nextPageToken' => $response['nextPageToken'],
     ]);
 }
 ```
@@ -176,9 +180,9 @@ if ($response->nextPageToken) {
 #### Create Event
 
 ```php
-$calendarId = 'calendar-id-to-add-to';
-
-$event = $client->events()->create($calendarId, [
+$event = $client->events()->create([
+    'provider' => 'google',
+    'calendarId' => 'calendar-id-to-add-to',
     'title' => 'Team Meeting',
     'start' => '2024-01-15T10:00:00',
     'end' => '2024-01-15T11:00:00',
@@ -192,7 +196,10 @@ echo "Created event: {$event->id}\n";
 #### Update Event
 
 ```php
-$updatedEvent = $client->events()->update($calendarId, $eventId, [
+$updatedEvent = $client->events()->update([
+    'provider' => 'google',
+    'calendarId' => 'calendar-id-to-add-to',
+    'eventId' => 'event-id-to-update',
     'title' => 'Team Meeting (Rescheduled)',
     'start' => '2024-01-15T14:00:00',
     'end' => '2024-01-15T15:00:00',
@@ -204,7 +211,15 @@ echo "Updated event: {$updatedEvent->title}\n";
 #### Delete Event
 
 ```php
-$client->events()->delete($calendarId, $eventId);
+$client->events()->delete([
+    'provider' => 'google',
+    'calendarId' => 'calendar-id-to-add-to',
+    'eventId' => 'event-id-to-delete',
+]);
+
+// Legacy signature is also supported:
+// $client->events()->delete('google', 'calendar-id-to-add-to', 'event-id-to-delete');
+
 echo "Event deleted\n";
 ```
 
@@ -266,8 +281,8 @@ try {
 } catch (ValidationError $e) {
     // Handle 400/422 validation errors
     echo "Validation error: " . $e->getMessage() . "\n";
-    if ($e->details) {
-        echo "Details: " . json_encode($e->details) . "\n";
+    if ($e->getDetails() !== []) {
+        echo "Details: " . json_encode($e->getDetails()) . "\n";
     }
     
 } catch (NotFoundError $e) {
@@ -276,12 +291,12 @@ try {
     
 } catch (RateLimitError $e) {
     // Handle 429 rate limit
-    echo "Rate limited. Retry after: " . $e->retryAfter . " seconds\n";
+    echo "Rate limited. Retry after: " . ($e->getRetryAfter() ?? 'unknown') . " seconds\n";
     
 } catch (ServerError $e) {
     // Handle 5xx server errors
     echo "Server error: " . $e->getMessage() . "\n";
-    echo "Status code: " . $e->statusCode . "\n";
+    echo "Status code: " . $e->getStatusCode() . "\n";
     
 } catch (NetworkError $e) {
     // Handle network connectivity issues
@@ -303,9 +318,6 @@ composer install
 
 # Run all tests
 composer run test
-
-# Run tests with coverage
-composer run test-coverage
 
 # Run specific test file
 vendor/bin/phpunit tests/Unit/AuthTest.php
@@ -382,44 +394,28 @@ new MobiscrollConnectClient(
 ### Auth Resource
 
 **Methods:**
-- `generateAuthUrl(string $scope = 'calendar', ?string $state = null): string`
+- `generateAuthUrl(string $userId, string $scope = 'calendar', ?string $state = null, ?string $providers = null): string`
 - `getToken(string $code): TokenResponse`
 - `setCredentials(TokenResponse $tokens): void`
 - `getConnectionStatus(): ConnectionStatusResponse`
-- `disconnect(string $provider): DisconnectResponse`
+- `disconnect(string $provider, ?string $account = null): DisconnectResponse`
 
 ### Calendars Resource
 
 **Methods:**
-- `list(): Calendar[]` - Get all connected calendars
+- `list(): array<int, array<string, mixed>>` - Get all connected calendars
 
 ### Events Resource
 
 **Methods:**
-- `list(?array $params = null): EventsListResponse`
-- `create(string $calendarId, array $event): CalendarEvent`
-- `update(string $calendarId, string $eventId, array $event): CalendarEvent`
-- `delete(string $calendarId, string $eventId): void`
-
-## Comparison with Node.js SDK
-
-This PHP SDK mirrors the architecture and interface of the Node.js SDK:
-
-| Feature | Node.js SDK | PHP SDK |
-|---------|------------|---------|
-| HTTP Client | Axios | Guzzle HTTP |
-| Test Framework | Jest | PHPUnit |
-| Package Manager | npm | Composer |
-| Token Refresh | Auto-refresh on 401 | Built-in error handling |
-| Type Safety | TypeScript | PHP 8.1+ strict types |
-| OAuth2 Support | ✅ | ✅ |
-| Bearer Auth | ✅ | ✅ |
-| Event Management | ✅ | ✅ |
-| Calendar Management | ✅ | ✅ |
+- `list(?array $params = null): array<string, mixed>`
+- `create(array $event): CalendarEvent`
+- `update(array $event): CalendarEvent`
+- `delete(array|string $paramsOrProvider, ?string $calendarId = null, ?string $eventId = null): array<string, mixed>`
 
 ## License
 
-ISC
+[MIT](LICENSE)
 
 ## Support
 
