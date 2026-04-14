@@ -133,6 +133,51 @@ header('Content-Type: text/html; charset=utf-8');
       overflow-wrap: anywhere;
     }
 
+    .btn-toggle {
+      background: #1e293b;
+      border-color: #475569;
+      margin-bottom: 10px;
+    }
+
+    .btn-save {
+      margin-top: 4px;
+    }
+
+    .config-group {
+      margin-bottom: 10px;
+    }
+
+    .config-label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .config-input {
+      width: 100%;
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 9px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .config-checkboxes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .config-checkboxes label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+
     @media (max-width: 900px) {
       .wrap {
         grid-template-columns: 1fr;
@@ -146,6 +191,42 @@ header('Content-Type: text/html; charset=utf-8');
     <section class="panel">
       <h1>SDK Internal Test UI</h1>
       <div class="sub">Use this as home. Calendars, events and event edit are now separate pages.</div>
+
+      <button class="btn btn-toggle" id="btnToggleConfig" onclick="toggleConfig()">&#9881; Configuration</button>
+
+      <div id="configSection" style="display:none; margin-bottom: 12px;">
+        <div class="config-group">
+          <label class="config-label" for="cfgClientId">Client ID</label>
+          <input class="config-input" type="text" id="cfgClientId" placeholder="Your OAuth client ID" />
+        </div>
+        <div class="config-group">
+          <label class="config-label" for="cfgClientSecret">Client Secret</label>
+          <input class="config-input" type="text" id="cfgClientSecret" placeholder="Your OAuth client secret" />
+        </div>
+        <div class="config-group">
+          <label class="config-label" for="cfgUserId">User ID</label>
+          <input class="config-input" type="text" id="cfgUserId" placeholder="Unique identifier for the user" />
+        </div>
+        <div class="config-group">
+          <label class="config-label" for="cfgScope">Access Mode</label>
+          <select class="config-input" id="cfgScope">
+            <option value="read-write">Read &amp; Write</option>
+            <option value="read">Read Only</option>
+            <option value="free-busy">Free/Busy</option>
+          </select>
+        </div>
+        <div class="config-group">
+          <label class="config-label">Providers</label>
+          <div class="config-checkboxes">
+            <label><input type="checkbox" name="providers" value="google" /> Google</label>
+            <label><input type="checkbox" name="providers" value="apple" /> Apple</label>
+            <label><input type="checkbox" name="providers" value="microsoft" /> Microsoft</label>
+            <label><input type="checkbox" name="providers" value="caldav" /> CalDAV</label>
+          </div>
+        </div>
+        <button class="btn btn-save" onclick="saveConfig()">Save Configuration</button>
+        <span id="configSaved" style="display:none; color:#4ade80; font-size:13px; margin-left:8px;">&#10003; Saved</span>
+      </div>
 
       <button class="btn" id="btnSession">Check Session</button>
       <button class="btn" id="btnConnectionStatus">Connection Status</button>
@@ -191,6 +272,75 @@ header('Content-Type: text/html; charset=utf-8');
 
     let latestAuthUrl = '';
 
+    // --- Config panel ---
+
+    function toggleConfig() {
+      const s = document.getElementById('configSection');
+      s.style.display = s.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function getConfig() {
+      const providers = localStorage.getItem('mbsc_providers') || 'google,apple,microsoft,caldav';
+      return {
+        clientId: localStorage.getItem('mbsc_client_id') || '',
+        clientSecret: localStorage.getItem('mbsc_client_secret') || '',
+        userId: localStorage.getItem('mbsc_user_id') || '',
+        scope: localStorage.getItem('mbsc_scope') || 'read-write',
+        providers,
+      };
+    }
+
+    async function loadConfig() {
+      let envDefaults = {};
+      try {
+        const res = await fetch('/?action=config', { credentials: 'same-origin' });
+        if (res.ok) envDefaults = await res.json();
+      } catch (_) {}
+
+      document.getElementById('cfgClientId').value =
+        localStorage.getItem('mbsc_client_id') || envDefaults.clientId || '';
+      document.getElementById('cfgClientSecret').value =
+        localStorage.getItem('mbsc_client_secret') || envDefaults.clientSecret || '';
+      document.getElementById('cfgUserId').value =
+        localStorage.getItem('mbsc_user_id') || envDefaults.userId || '';
+      document.getElementById('cfgScope').value =
+        localStorage.getItem('mbsc_scope') || envDefaults.scope || 'read-write';
+
+      const storedProviders = localStorage.getItem('mbsc_providers');
+      const envProviders = envDefaults.providers || '';
+      const providerStr = storedProviders || envProviders || 'google,apple,microsoft,caldav';
+      const selected = new Set(providerStr.split(',').map(p => p.trim()).filter(Boolean));
+      document.querySelectorAll('input[name="providers"]').forEach(cb => {
+        cb.checked = selected.has(cb.value);
+      });
+    }
+
+    function saveConfig() {
+      const clientId = document.getElementById('cfgClientId').value.trim();
+      const clientSecret = document.getElementById('cfgClientSecret').value.trim();
+      const userId = document.getElementById('cfgUserId').value.trim();
+      const scope = document.getElementById('cfgScope').value;
+      const providers = Array.from(document.querySelectorAll('input[name="providers"]:checked'))
+        .map(cb => cb.value).join(',') || 'google,apple,microsoft,caldav';
+
+      if (!clientId || !clientSecret || !userId) {
+        alert('Client ID, Client Secret, and User ID are required.');
+        return;
+      }
+
+      localStorage.setItem('mbsc_client_id', clientId);
+      localStorage.setItem('mbsc_client_secret', clientSecret);
+      localStorage.setItem('mbsc_user_id', userId);
+      localStorage.setItem('mbsc_scope', scope);
+      localStorage.setItem('mbsc_providers', providers);
+
+      const indicator = document.getElementById('configSaved');
+      indicator.style.display = 'inline';
+      setTimeout(() => { indicator.style.display = 'none'; }, 2000);
+    }
+
+    // --- Actions ---
+
     function setStatus(text) {
       statusEl.textContent = text;
     }
@@ -216,9 +366,20 @@ header('Content-Type: text/html; charset=utf-8');
     async function runAction(action) {
       setStatus('Running ' + action + '...');
       try {
-        const res = await fetch('/?action=' + encodeURIComponent(action), {
-          credentials: 'same-origin'
-        });
+        let url = '/?action=' + encodeURIComponent(action);
+
+        if (action === 'auth-url') {
+          const cfg = getConfig();
+          const params = new URLSearchParams({ action });
+          if (cfg.clientId) params.set('client_id', cfg.clientId);
+          if (cfg.clientSecret) params.set('client_secret', cfg.clientSecret);
+          if (cfg.userId) params.set('user_id', cfg.userId);
+          if (cfg.scope) params.set('scope', cfg.scope);
+          if (cfg.providers) params.set('providers', cfg.providers);
+          url = '/?' + params.toString();
+        }
+
+        const res = await fetch(url, { credentials: 'same-origin' });
         const data = await res.json();
         const isSuccess = res.ok && !(data && data.ok === false);
         print(data);
@@ -264,6 +425,7 @@ header('Content-Type: text/html; charset=utf-8');
       setStatus('OAuth opened in new tab. Complete auth, then continue on dedicated pages.');
     });
 
+    loadConfig();
     runAction('auth-url');
   </script>
 </body>
