@@ -1,264 +1,239 @@
 # Mobiscroll Connect PHP SDK
 
-A PHP client library for the Mobiscroll Connect API, enabling seamless calendar and event management across multiple providers (Google Calendar, Microsoft Outlook, Apple iCal, etc.).
+A PHP client library for the Mobiscroll Connect API, enabling seamless calendar and event management across multiple providers (Google Calendar, Microsoft Outlook, Apple Calendar, CalDAV).
 
 ## Features
 
-- **Multi-provider support**: Google Calendar, Microsoft Outlook, Apple iCal, and more
-- **OAuth2 authentication**: Secure authorization flow with token exchange
-- **Bearer token support**: Server-side authentication for backend integration
+- **Multi-provider support**: Google Calendar, Microsoft Outlook, Apple Calendar, CalDAV
+- **OAuth2 authentication**: Full authorization code flow with token exchange
+- **Automatic token refresh**: Silently refreshes expired access tokens and retries the original request
 - **Event management**: Create, read, update, and delete calendar events
-- **Calendar operations**: List and manage connected calendars
-- **Type-safe**: Built with PHP 8.1+ with strict typing
-- **Tested**: Comprehensive PHPUnit test suite included
+- **Calendar operations**: List calendars from all connected providers
+- **Connection management**: Check provider connection status and disconnect accounts
+- **Typed exceptions**: Distinct error classes for authentication, validation, rate limiting, and more
+- **Type-safe**: PHP 8.1+ with strict typing throughout
 
-## Installation
-
-### Prerequisites
+## Requirements
 
 - PHP 8.1 or higher
 - Composer
 
-### Setup
+## Installation
 
-1. Install PHP (if not already installed):
-```bash
-# macOS with Homebrew
-brew install php
-
-# Or use a Docker container
-docker run -it php:8.1-cli
-```
-
-2. Install Composer:
-```bash
-# macOS with Homebrew
-brew install composer
-
-# Or download from https://getcomposer.org
-```
-
-3. Install the SDK:
 ```bash
 composer require mobiscroll/connect-php
 ```
 
-## Configuration
+## Setup
 
-Create a Mobiscroll Connect application at https://connect.mobiscroll.com/admin to get your credentials:
-- Client ID
-- Client Secret
-- Redirect URI
+Create a Mobiscroll Connect application at the [Mobiscroll Connect dashboard](https://app.mobiscroll.com/connect) to obtain your **Client ID**, **Client Secret**, and configure your **Redirect URI**.
 
 ## Usage
 
-### Basic Setup
+### Initialize the Client
 
 ```php
 use Mobiscroll\Connect\MobiscrollConnectClient;
 
 $client = new MobiscrollConnectClient(
-    clientId: 'your-client-id',
-    clientSecret: 'your-client-secret',
-    redirectUri: 'http://localhost:3000/callback'
+    clientId: 'YOUR_CLIENT_ID',
+    clientSecret: 'YOUR_CLIENT_SECRET',
+    redirectUri: 'YOUR_REDIRECT_URI',
 );
 ```
 
-### OAuth2 Authorization Flow
+### Token Refresh
 
-#### Step 1: Generate Authorization URL
+The SDK automatically refreshes expired access tokens. When a request returns `401 Unauthorized` and a refresh token is available, the SDK silently exchanges it for a new access token and retries the request.
+
+Register a callback to persist the updated tokens — this is required so the new tokens survive future requests:
 
 ```php
-$userId = 'your-app-user-id'; // Stable app-level user identifier
+$client->onTokensRefreshed(function (\Mobiscroll\Connect\TokenResponse $updatedTokens): void {
+    // Persist in your database or session store
+    $_SESSION['access_token'] = $updatedTokens->access_token;
+    $_SESSION['refresh_token'] = $updatedTokens->refresh_token;
+    $_SESSION['expires_in'] = $updatedTokens->expires_in;
+});
+```
 
+If the refresh token is invalid or revoked, the SDK throws `AuthenticationError` and the user must re-authorize.
+
+### OAuth2 Flow
+
+#### Step 1: Generate the authorization URL
+
+```php
 $authUrl = $client->auth()->generateAuthUrl(
-    userId: $userId,
-    scope: 'calendar',
-    state: 'random-state-value',
-    providers: 'google' // Optional: provider filter
+    userId: 'your-app-user-id',
+    // Optional:
+    // scope: 'read-write',
+    // state: 'csrf-protection-value',
+    // providers: 'google,microsoft',
 );
 
-// Redirect user to this URL
-header("Location: $authUrl");
+header('Location: ' . $authUrl);
 ```
 
-#### Step 2: Handle Authorization Callback
+#### Step 2: Handle the callback and exchange the code for tokens
 
 ```php
-// In your callback route handler
 $code = $_GET['code'] ?? null;
 
-if (!$code) {
-    throw new Exception('Authorization code missing');
-}
+$tokenResponse = $client->auth()->getToken($code);
 
-try {
-    $tokenResponse = $client->auth()->getToken($code);
-    
-    // Store the token securely (e.g., in session, database, or secure cookie)
-    $_SESSION['mobiscroll_token'] = $tokenResponse->access_token;
-    $_SESSION['mobiscroll_refresh'] = $tokenResponse->refresh_token;
-    $_SESSION['mobiscroll_expires'] = time() + ($tokenResponse->expires_in ?? 3600);
-    
-} catch (\Mobiscroll\Connect\Exceptions\AuthenticationError $e) {
-    throw new Exception('Failed to get token: ' . $e->getMessage());
-}
+// Persist all token fields — you need the refresh_token for auto-refresh
+$_SESSION['access_token'] = $tokenResponse->access_token;
+$_SESSION['token_type'] = $tokenResponse->token_type;
+$_SESSION['expires_in'] = $tokenResponse->expires_in;
+$_SESSION['refresh_token'] = $tokenResponse->refresh_token;
 ```
 
-#### Step 3: Use the Token for API Calls
+#### Step 3: Restore credentials and make API calls
 
 ```php
-// Restore token from storage
-$tokenResponse = new \Mobiscroll\Connect\TokenResponse(
-    access_token: $_SESSION['mobiscroll_token'],
-    token_type: 'Bearer',
-    expires_in: $_SESSION['mobiscroll_expires'] - time(),
-    refresh_token: $_SESSION['mobiscroll_refresh']
-);
+$client->auth()->setCredentials(new \Mobiscroll\Connect\TokenResponse(
+    access_token: $_SESSION['access_token'],
+    token_type: $_SESSION['token_type'] ?? 'Bearer',
+    expires_in: $_SESSION['expires_in'] ?? null,
+    refresh_token: $_SESSION['refresh_token'] ?? null,
+));
 
-$client->auth()->setCredentials($tokenResponse);
-
-// Now you can make API calls
-try {
-    $calendars = $client->calendars()->list();
-    
-    foreach ($calendars as $calendar) {
-        echo "Calendar: {$calendar['title']} ({$calendar['id']})\n";
-    }
-    
-} catch (\Mobiscroll\Connect\Exceptions\MobiscrollConnectException $e) {
-    echo "API Error: " . $e->getMessage() . "\n";
-}
+// The client is now authenticated — make API calls
+$calendars = $client->calendars()->list();
 ```
 
-### Working with Calendars
+### Calendars
 
 ```php
-// List all calendars
 $calendars = $client->calendars()->list();
 
 foreach ($calendars as $calendar) {
-    echo "ID: {$calendar['id']}\n";
-    echo "Title: {$calendar['title']}\n";
-    echo "Provider: {$calendar['provider']}\n";
-    echo "Timezone: {$calendar['timeZone']}\n";
-    echo "Color: {$calendar['color']}\n";
+    echo "{$calendar['provider']}: {$calendar['title']} ({$calendar['id']})\n";
 }
 ```
 
-### Working with Events
+### Events
 
-#### List Events
+#### List events
 
 ```php
-$start = new DateTime('2024-01-01 00:00:00', new DateTimeZone('UTC'));
-$end = new DateTime('2024-01-31 23:59:59', new DateTimeZone('UTC'));
-
 $response = $client->events()->list([
-    'start' => $start,
-    'end' => $end,
-    'calendars' => ['calendar-id-1', 'calendar-id-2'],
+    'start' => new DateTime('2024-01-01'),
+    'end' => new DateTime('2024-01-31'),
+    'calendarIds' => ['google' => ['primary']],
     'pageSize' => 50,
 ]);
 
-foreach (($response['events'] ?? []) as $event) {
-    echo "Event: " . ($event['title'] ?? '') . "\n";
-    echo "Start: " . ($event['start'] ?? '') . "\n";
-    echo "End: " . ($event['end'] ?? '') . "\n";
-    echo "Location: " . ($event['location'] ?? '') . "\n";
+foreach ($response['events'] as $event) {
+    echo "{$event['title']}: {$event['start']} – {$event['end']}\n";
 }
 
-// Handle pagination
+// Load the next page
 if (!empty($response['nextPageToken'])) {
-    $nextResponse = $client->events()->list([
+    $next = $client->events()->list([
         'pageSize' => 50,
         'nextPageToken' => $response['nextPageToken'],
     ]);
 }
 ```
 
-#### Create Event
+#### Create an event
 
 ```php
 $event = $client->events()->create([
     'provider' => 'google',
-    'calendarId' => 'calendar-id-to-add-to',
+    'calendarId' => 'primary',
     'title' => 'Team Meeting',
-    'start' => '2024-01-15T10:00:00',
-    'end' => '2024-01-15T11:00:00',
+    'start' => '2024-06-15T10:00:00Z',
+    'end' => '2024-06-15T11:00:00Z',
+    'description' => 'Quarterly review',
     'location' => 'Conference Room A',
-    'description' => 'Weekly team sync',
 ]);
 
-echo "Created event: {$event->id}\n";
+echo "Created: {$event->id}\n";
 ```
 
-#### Update Event
+#### Update an event
 
 ```php
-$updatedEvent = $client->events()->update([
+$updated = $client->events()->update([
     'provider' => 'google',
-    'calendarId' => 'calendar-id-to-add-to',
+    'calendarId' => 'primary',
     'eventId' => 'event-id-to-update',
     'title' => 'Team Meeting (Rescheduled)',
-    'start' => '2024-01-15T14:00:00',
-    'end' => '2024-01-15T15:00:00',
+    'start' => '2024-06-15T14:00:00Z',
+    'end' => '2024-06-15T15:00:00Z',
 ]);
-
-echo "Updated event: {$updatedEvent->title}\n";
 ```
 
-#### Delete Event
+#### Delete an event
 
 ```php
 $client->events()->delete([
     'provider' => 'google',
-    'calendarId' => 'calendar-id-to-add-to',
+    'calendarId' => 'primary',
     'eventId' => 'event-id-to-delete',
 ]);
+```
 
-// Legacy signature is also supported:
-// $client->events()->delete('google', 'calendar-id-to-add-to', 'event-id-to-delete');
+#### Recurring events
 
-echo "Event deleted\n";
+```php
+// Update only this instance of a recurring event
+$client->events()->update([
+    'provider' => 'google',
+    'calendarId' => 'primary',
+    'eventId' => 'instance-id',
+    'recurringEventId' => 'series-id',
+    'updateMode' => 'this',
+    'title' => 'One-off title change',
+]);
+
+// Delete this and all following instances
+$client->events()->delete([
+    'provider' => 'google',
+    'calendarId' => 'primary',
+    'eventId' => 'instance-id',
+    'recurringEventId' => 'series-id',
+    'deleteMode' => 'following',
+]);
 ```
 
 ### Connection Management
 
 ```php
-// Check connection status
-try {
-    $status = $client->auth()->getConnectionStatus();
-    
-    echo "Connections: \n";
-    foreach ($status->connections as $provider => $calendars) {
-        echo "  {$provider}: " . count($calendars) . " calendars\n";
-    }
-    
-    if ($status->limitReached) {
-        echo "Calendar limit reached: {$status->limit}\n";
-    }
-    
-} catch (\Mobiscroll\Connect\Exceptions\MobiscrollConnectException $e) {
-    echo "Failed to get status: " . $e->getMessage() . "\n";
+// Check which providers are connected
+$status = $client->auth()->getConnectionStatus();
+
+foreach ($status->connections as $provider => $accounts) {
+    echo "{$provider}: " . count($accounts) . " account(s)\n";
+}
+
+if ($status->limitReached) {
+    echo "Connection limit of {$status->limit} reached\n";
 }
 
 // Disconnect a provider
-try {
-    $result = $client->auth()->disconnect('google');
-    
-    if ($result->success) {
-        echo "Disconnected successfully\n";
-    }
-    
-} catch (\Mobiscroll\Connect\Exceptions\MobiscrollConnectException $e) {
-    echo "Failed to disconnect: " . $e->getMessage() . "\n";
+$result = $client->auth()->disconnect(provider: 'google');
+
+if ($result->success) {
+    echo "Disconnected successfully\n";
 }
 ```
 
 ## Error Handling
 
-The SDK provides typed exceptions for different error scenarios:
+All SDK methods throw exceptions that extend `MobiscrollConnectException`:
+
+| Exception | HTTP Status | Extra method |
+|---|---|---|
+| `AuthenticationError` | 401, 403 | — |
+| `ValidationError` | 400, 422 | `getDetails(): array` |
+| `NotFoundError` | 404 | — |
+| `RateLimitError` | 429 | `getRetryAfter(): ?int` |
+| `ServerError` | 5xx | `getStatusCode(): int` |
+| `NetworkError` | — | — |
 
 ```php
 use Mobiscroll\Connect\Exceptions\{
@@ -272,45 +247,25 @@ use Mobiscroll\Connect\Exceptions\{
 };
 
 try {
-    $client->calendars()->list();
-    
+    $events = $client->events()->list();
 } catch (AuthenticationError $e) {
-    // Handle 401/403 authentication failures
-    echo "Authentication failed: " . $e->getMessage() . "\n";
-    
+    // Token expired and refresh failed — re-authorize the user
 } catch (ValidationError $e) {
-    // Handle 400/422 validation errors
-    echo "Validation error: " . $e->getMessage() . "\n";
-    if ($e->getDetails() !== []) {
-        echo "Details: " . json_encode($e->getDetails()) . "\n";
-    }
-    
+    $details = $e->getDetails(); // field-level errors
 } catch (NotFoundError $e) {
-    // Handle 404 not found
-    echo "Resource not found: " . $e->getMessage() . "\n";
-    
+    // Calendar or event not found
 } catch (RateLimitError $e) {
-    // Handle 429 rate limit
-    echo "Rate limited. Retry after: " . ($e->getRetryAfter() ?? 'unknown') . " seconds\n";
-    
+    $retryAfter = $e->getRetryAfter(); // seconds
 } catch (ServerError $e) {
-    // Handle 5xx server errors
-    echo "Server error: " . $e->getMessage() . "\n";
-    echo "Status code: " . $e->getStatusCode() . "\n";
-    
+    $status = $e->getStatusCode(); // 500, 502, 503, 504
 } catch (NetworkError $e) {
-    // Handle network connectivity issues
-    echo "Network error: " . $e->getMessage() . "\n";
-    
+    // Connection failed
 } catch (MobiscrollConnectException $e) {
-    // Handle other SDK errors
-    echo "SDK error: " . $e->getMessage() . "\n";
+    // Catch-all
 }
 ```
 
 ## Testing
-
-Run the test suite:
 
 ```bash
 # Install dependencies
@@ -319,104 +274,46 @@ composer install
 # Run all tests
 composer run test
 
-# Run specific test file
+# Run a specific test file
 vendor/bin/phpunit tests/Unit/AuthTest.php
-
-# Run with watch (auto-rerun on file changes)
-composer run test:watch
 ```
 
-## Development
-
-### Project Structure
+## Project Structure
 
 ```
-mobiscroll-connect-php/
-├── src/
-│   ├── Exceptions/
-│   │   ├── MobiscrollConnectException.php
-│   │   ├── AuthenticationError.php
-│   │   ├── ValidationError.php
-│   │   ├── NotFoundError.php
-│   │   ├── RateLimitError.php
-│   │   ├── ServerError.php
-│   │   └── NetworkError.php
-│   ├── Resources/
-│   │   ├── Auth.php
-│   │   ├── Calendars.php
-│   │   └── Events.php
-│   ├── ApiClient.php
-│   ├── Config.php
-│   ├── MobiscrollConnectClient.php
-│   ├── TokenResponse.php
-│   ├── Calendar.php
-│   ├── CalendarEvent.php
-│   ├── EventsListResponse.php
-│   ├── ConnectionStatusResponse.php
-│   └── DisconnectResponse.php
-├── tests/
-│   └── Unit/
-│       ├── AuthTest.php
-│       ├── CalendarsTest.php
-│       └── EventsTest.php
-├── composer.json
-├── phpunit.xml
-└── README.md
+src/
+├── Exceptions/
+│   ├── MobiscrollConnectException.php
+│   ├── AuthenticationError.php
+│   ├── ValidationError.php
+│   ├── NotFoundError.php
+│   ├── RateLimitError.php
+│   ├── ServerError.php
+│   └── NetworkError.php
+├── Resources/
+│   ├── Auth.php
+│   ├── Calendars.php
+│   └── Events.php
+├── ApiClient.php
+├── Config.php
+├── MobiscrollConnectClient.php
+├── TokenResponse.php
+├── Calendar.php
+├── CalendarEvent.php
+├── EventsListResponse.php
+├── ConnectionStatusResponse.php
+└── DisconnectResponse.php
+tests/
+├── Unit/
+│   ├── AuthTest.php
+│   ├── CalendarsTest.php
+│   ├── ConnectionStatusResponseTest.php
+│   ├── EventsTest.php
+│   └── ExceptionsTest.php
+└── Smoke/
+    └── MinimalAppSmokeTest.php
 ```
-
-### Running PHPStan Code Analysis
-
-```bash
-composer run stan      # Level 0 analysis
-composer run lint      # Level 8 strict analysis
-```
-
-## API Reference
-
-### MobiscrollConnectClient
-
-Main client class for interacting with Mobiscroll Connect APIs.
-
-**Constructor:**
-```php
-new MobiscrollConnectClient(
-    string $clientId,
-    string $clientSecret,
-    string $redirectUri
-)
-```
-
-**Methods:**
-- `auth(): Auth` - Access authentication and connection management
-- `calendars(): Calendars` - Access calendar operations
-- `events(): Events` - Access event operations
-
-### Auth Resource
-
-**Methods:**
-- `generateAuthUrl(string $userId, string $scope = 'calendar', ?string $state = null, ?string $providers = null): string`
-- `getToken(string $code): TokenResponse`
-- `setCredentials(TokenResponse $tokens): void`
-- `getConnectionStatus(): ConnectionStatusResponse`
-- `disconnect(string $provider, ?string $account = null): DisconnectResponse`
-
-### Calendars Resource
-
-**Methods:**
-- `list(): array<int, array<string, mixed>>` - Get all connected calendars
-
-### Events Resource
-
-**Methods:**
-- `list(?array $params = null): array<string, mixed>`
-- `create(array $event): CalendarEvent`
-- `update(array $event): CalendarEvent`
-- `delete(array|string $paramsOrProvider, ?string $calendarId = null, ?string $eventId = null): array<string, mixed>`
 
 ## License
 
 [MIT](LICENSE)
-
-## Support
-
-For issues, questions, or feature requests, please contact support@mobiscroll.com or visit https://mobiscroll.com/docs/connect/php-sdk

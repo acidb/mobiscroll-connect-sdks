@@ -76,17 +76,37 @@ function calendarEventToArray(\Mobiscroll\Connect\CalendarEvent $event): array
     ];
 }
 
-$clientId = envValue('MOBISCROLL_CLIENT_ID');
-$clientSecret = envValue('MOBISCROLL_CLIENT_SECRET');
+$envClientId = envValue('MOBISCROLL_CLIENT_ID');
+$envClientSecret = envValue('MOBISCROLL_CLIENT_SECRET');
 $redirectUri = envValue('MOBISCROLL_REDIRECT_URI', 'http://localhost:8080/?action=callback');
-$userId = envValue('MOBISCROLL_USER_ID', 'test-user-123');
-$provider = envValue('MOBISCROLL_PROVIDER', 'google');
+
+if (isset($_GET['client_id']) && $_GET['client_id'] !== '') {
+    $_SESSION['cfg_client_id'] = (string)$_GET['client_id'];
+}
+if (isset($_GET['client_secret']) && $_GET['client_secret'] !== '') {
+    $_SESSION['cfg_client_secret'] = (string)$_GET['client_secret'];
+}
+if (isset($_GET['user_id']) && $_GET['user_id'] !== '') {
+    $_SESSION['cfg_user_id'] = (string)$_GET['user_id'];
+}
+if (isset($_GET['scope']) && $_GET['scope'] !== '') {
+    $_SESSION['cfg_scope'] = (string)$_GET['scope'];
+}
+if (isset($_GET['providers']) && $_GET['providers'] !== '') {
+    $_SESSION['cfg_providers'] = (string)$_GET['providers'];
+}
+
+$clientId = $_SESSION['cfg_client_id'] ?? $envClientId;
+$clientSecret = $_SESSION['cfg_client_secret'] ?? $envClientSecret;
+$userId = $_SESSION['cfg_user_id'] ?? envValue('MOBISCROLL_USER_ID', 'test-user-123');
+$scope = $_SESSION['cfg_scope'] ?? 'read-write';
+$provider = $_SESSION['cfg_providers'] ?? envValue('MOBISCROLL_PROVIDER', 'google');
 
 if ($clientId === '' || $clientSecret === '') {
     jsonResponse([
         'ok' => false,
-        'error' => 'Missing env vars. Set MOBISCROLL_CLIENT_ID and MOBISCROLL_CLIENT_SECRET before running.',
-        'hint' => 'Copy .env.example values into your shell before starting php -S',
+        'error' => 'No client credentials configured. Open the Configuration panel in the UI and save your Client ID and Client Secret.',
+        'hint' => 'Visit /?action=ui and expand the Configuration panel, or set MOBISCROLL_CLIENT_ID and MOBISCROLL_CLIENT_SECRET in your .env file.',
     ], 400);
     exit;
 }
@@ -97,8 +117,26 @@ $client = new MobiscrollConnectClient(
     redirectUri: $redirectUri,
 );
 
+$client->onTokensRefreshed(function (\Mobiscroll\Connect\TokenResponse $updatedTokens): void {
+    $_SESSION['access_token'] = $updatedTokens->access_token;
+    $_SESSION['token_type'] = $updatedTokens->token_type;
+    $_SESSION['expires_in'] = $updatedTokens->expires_in;
+    $_SESSION['refresh_token'] = $updatedTokens->refresh_token;
+});
+
 $code = $_GET['code'] ?? null;
 $action = $_GET['action'] ?? ($code !== null ? 'callback' : 'auth-url');
+
+if ($action === 'config') {
+    jsonResponse([
+        'clientId' => $envClientId,
+        'clientSecret' => $envClientSecret,
+        'userId' => envValue('MOBISCROLL_USER_ID', ''),
+        'scope' => envValue('MOBISCROLL_SCOPE', 'read-write'),
+        'providers' => envValue('MOBISCROLL_PROVIDER', ''),
+    ]);
+    exit;
+}
 
 try {
     if ($action === 'callback' && $code !== null) {
@@ -146,7 +184,7 @@ try {
         exit;
     }
 
-    if (in_array($action, ['calendars', 'events', 'connection-status', 'create-event', 'update-event', 'delete-event'], true)) {
+    if (in_array($action, ['calendars', 'events', 'connection-status', 'create-event', 'update-event', 'delete-event', 'disconnect'], true)) {
         if (empty($_SESSION['access_token'])) {
             jsonResponse([
                 'ok' => false,
@@ -171,6 +209,7 @@ try {
         case 'auth-url':
             $authUrl = $client->auth()->generateAuthUrl(
                 userId: $userId,
+                scope: $scope,
                 providers: $provider,
             );
             $callbackPreview = $redirectUri . (str_contains($redirectUri, '?') ? '&' : '?') . 'code=...';
@@ -270,6 +309,21 @@ try {
             jsonResponse($deleteResponse !== [] ? $deleteResponse : ['success' => true]);
             break;
 
+        case 'disconnect':
+            $body = requestJsonBody();
+            $disconnectProvider = $body['provider'] ?? $provider;
+            $disconnectAccount = $body['account'] ?? null;
+
+            $disconnectResponse = $client->auth()->disconnect(
+                provider: $disconnectProvider,
+                account: $disconnectAccount !== '' ? $disconnectAccount : null,
+            );
+            jsonResponse([
+                'success' => $disconnectResponse->success,
+                'message' => $disconnectResponse->message,
+            ]);
+            break;
+
         case 'session':
             jsonResponse([
                 'ok' => true,
@@ -297,7 +351,7 @@ try {
             jsonResponse([
                 'ok' => false,
                 'error' => 'Unknown action',
-                'supportedActions' => ['ui', 'calendars-page', 'events-page', 'event-edit-page', 'auth-url', 'callback', 'calendars', 'events', 'connection-status', 'create-event', 'update-event', 'delete-event', 'session', 'clear-session'],
+                'supportedActions' => ['config', 'ui', 'calendars-page', 'events-page', 'event-edit-page', 'auth-url', 'callback', 'calendars', 'events', 'connection-status', 'create-event', 'update-event', 'delete-event', 'disconnect', 'session', 'clear-session'],
             ], 400);
             break;
     }

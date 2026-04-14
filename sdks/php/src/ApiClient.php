@@ -23,6 +23,8 @@ class ApiClient
     /** @var array<string, mixed>|null */
     private ?array $credentials = null;
     private GuzzleClient $httpClient;
+    /** @var callable(TokenResponse): void|null */
+    private $onTokensRefreshed = null;
 
     public function __construct(private Config $config)
     {
@@ -61,6 +63,68 @@ class ApiClient
     }
 
     /**
+     * Register a callback to be invoked whenever tokens are automatically refreshed.
+     * Use this to persist the new tokens in your session or database.
+     *
+     * @param callable(TokenResponse): void $callback
+     */
+    public function onTokensRefreshed(callable $callback): void
+    {
+        $this->onTokensRefreshed = $callback;
+    }
+
+    /**
+     * Exchange the stored refresh token for a new access token.
+     * Updates stored credentials and invokes the onTokensRefreshed callback.
+     *
+     * @throws AuthenticationError if no refresh token is available or the exchange fails
+     */
+    private function refreshAccessToken(): void
+    {
+        $refreshToken = $this->credentials['refresh_token'] ?? null;
+
+        if (empty($refreshToken)) {
+            throw new AuthenticationError('No refresh token available');
+        }
+
+        $credentials = base64_encode($this->config->clientId . ':' . $this->config->clientSecret);
+        $body = http_build_query([
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $refreshToken,
+            'redirect_uri' => $this->config->redirectUri,
+        ]);
+
+        try {
+            $response = $this->httpClient->post('oauth/token', [
+                'headers' => [
+                    'Content-Type' => 'application/x-www-form-urlencoded',
+                    'Authorization' => "Basic {$credentials}",
+                ],
+                'body' => $body,
+            ]);
+
+            /** @var array<string, mixed> $data */
+            $data = json_decode((string)$response->getBody(), true) ?? [];
+            $newTokens = TokenResponse::fromArray($data);
+
+            // Merge: keep existing refresh_token if the server didn't issue a new one
+            $this->credentials = array_merge(
+                $this->credentials ?? [],
+                $newTokens->toArray(),
+                $newTokens->refresh_token !== null ? [] : ['refresh_token' => $refreshToken],
+            );
+
+            if ($this->onTokensRefreshed !== null) {
+                ($this->onTokensRefreshed)(TokenResponse::fromArray($this->credentials));
+            }
+        } catch (MobiscrollConnectException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            throw new AuthenticationError('Failed to refresh token: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * GET request
      * @param array<string, string|null>|null $query
      * @return array<string, mixed>|object|null
@@ -77,7 +141,18 @@ class ApiClient
             $response = $this->httpClient->get($path, $options);
             return $this->parseResponse($response, $responseClass);
         } catch (RequestException $e) {
-            throw $this->handleRequestException($e);
+            $error = $this->handleRequestException($e);
+            if ($error instanceof AuthenticationError && !empty($this->credentials['refresh_token'])) {
+                $this->refreshAccessToken();
+                $options['headers'] = $this->getAuthHeaders();
+                try {
+                    $response = $this->httpClient->get($path, $options);
+                    return $this->parseResponse($response, $responseClass);
+                } catch (RequestException $retryException) {
+                    throw $this->handleRequestException($retryException);
+                }
+            }
+            throw $error;
         } catch (GuzzleException $e) {
             throw new NetworkError($e->getMessage());
         }
@@ -105,7 +180,18 @@ class ApiClient
             $response = $this->httpClient->post($path, $options);
             return $this->parseResponse($response, $responseClass);
         } catch (RequestException $e) {
-            throw $this->handleRequestException($e);
+            $error = $this->handleRequestException($e);
+            if ($error instanceof AuthenticationError && !empty($this->credentials['refresh_token'])) {
+                $this->refreshAccessToken();
+                $options['headers'] = array_merge($options['headers'], $this->getAuthHeaders());
+                try {
+                    $response = $this->httpClient->post($path, $options);
+                    return $this->parseResponse($response, $responseClass);
+                } catch (RequestException $retryException) {
+                    throw $this->handleRequestException($retryException);
+                }
+            }
+            throw $error;
         } catch (GuzzleException $e) {
             throw new NetworkError($e->getMessage());
         }
@@ -155,7 +241,18 @@ class ApiClient
             $response = $this->httpClient->put($path, $options);
             return $this->parseResponse($response, $responseClass);
         } catch (RequestException $e) {
-            throw $this->handleRequestException($e);
+            $error = $this->handleRequestException($e);
+            if ($error instanceof AuthenticationError && !empty($this->credentials['refresh_token'])) {
+                $this->refreshAccessToken();
+                $options['headers'] = $this->getAuthHeaders();
+                try {
+                    $response = $this->httpClient->put($path, $options);
+                    return $this->parseResponse($response, $responseClass);
+                } catch (RequestException $retryException) {
+                    throw $this->handleRequestException($retryException);
+                }
+            }
+            throw $error;
         } catch (GuzzleException $e) {
             throw new NetworkError($e->getMessage());
         }
@@ -183,7 +280,18 @@ class ApiClient
             $response = $this->httpClient->delete($path, $options);
             return $this->parseResponse($response, $responseClass);
         } catch (RequestException $e) {
-            throw $this->handleRequestException($e);
+            $error = $this->handleRequestException($e);
+            if ($error instanceof AuthenticationError && !empty($this->credentials['refresh_token'])) {
+                $this->refreshAccessToken();
+                $options['headers'] = $this->getAuthHeaders();
+                try {
+                    $response = $this->httpClient->delete($path, $options);
+                    return $this->parseResponse($response, $responseClass);
+                } catch (RequestException $retryException) {
+                    throw $this->handleRequestException($retryException);
+                }
+            }
+            throw $error;
         } catch (GuzzleException $e) {
             throw new NetworkError($e->getMessage());
         }
