@@ -1,6 +1,6 @@
 {
   "name": "@mobiscroll/connect-sdk",
-  "version": "0.1.4",
+  "version": "1.0.0",
   "description": "Mobiscroll Connect SDK for Node.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,7 +32,7 @@
     "client"
   ],
   "author": "Mobiscroll",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@microsoft/microsoft-graph-types": "^2.43.1",
     "@types/jest": "^30.0.0",
