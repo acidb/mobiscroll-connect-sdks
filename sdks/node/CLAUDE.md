@@ -1,22 +1,24 @@
 # CLAUDE.md — Mobiscroll Connect Node.js SDK
 
-## Personal preferences
+## AI Assistant Guidelines
 
-I am a Medior Full Stack Engineer at Mobiscroll working on the "Connect" product. I am an experienced developer, so do not explain basic programming concepts; focus on architectural patterns, edge cases, and optimization. My work involves UI components, data synchronization, and integration features, where performance and a smooth user experience are critical.
-Communication Style:
+Communication:
 
 - Be extremely concise. Skip introductory and concluding fluff (e.g., "Here is the code," "I'd be happy to help"). Get straight to the answer.
 - If a question is about code, provide the code block first, then explain the logic briefly afterward.
-- Never hallucinate. If you don't know something or a library version is too new, tell me immediately.
-  Coding Standards:
-- Default to TypeScript for all frontend and backend examples using modern ES6+ syntax unless specified otherwise.
-- Favor modular, reusable code. Prioritize component lifecycle efficiency and minimizing re-renders.
-- Always consider WCAG compliance and touch-responsiveness in all UI-related code.
-- Include proper error handling and edge cases; do not just provide the "happy path."
-- Keep logic decoupled from framework-specific hooks where possible, or provide clean "vanilla" logic explanations if the context allows.
-  Formatting Guidelines:
-- When modifying existing code, provide the entire function or component for easy copy-pasting. Never truncate code with comments like // ... rest of code unless the file is excessively long.
-- Use JSDoc for complex functions to explain parameters and return types.
+- Never hallucinate. If you don't know something or a library version is too new, say so immediately.
+- Focus on architectural patterns, edge cases, and optimization. Do not explain basic programming concepts.
+
+Coding Standards:
+
+- Default to TypeScript with modern ES6+ syntax for all examples.
+- Favor modular, reusable code. Include proper error handling and edge cases; do not just provide the "happy path."
+- Keep logic decoupled from framework-specific concerns where possible.
+
+Formatting:
+
+- When modifying existing code, provide the entire function or class for easy copy-pasting. Never truncate code with comments like `// ... rest of code` unless the file is excessively long.
+- Use JSDoc for public methods to explain parameters and return types.
 
 ## Project Overview
 
