@@ -1,0 +1,13 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+.vscode/
+*.nupkg
+*.snupkg
+TestResults/
+coverage/
+appsettings.Development.json
+appsettings.*.local.json

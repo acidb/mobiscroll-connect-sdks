@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/MinimalApp/MinimalApp.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Mobiscroll.Connect/Mobiscroll.Connect.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Mobiscroll.Connect.Tests/Mobiscroll.Connect.Tests.csproj" />
+  </Folder>
+</Solution>
