@@ -25,6 +25,3 @@ minimal-app/.env.*
 
 # Coverage outputs
 coverage/
-
-# Local dev docs
-CLAUDE.md
