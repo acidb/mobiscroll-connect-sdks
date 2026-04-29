@@ -2,6 +2,8 @@
 
 Node.js SDK for Mobiscroll Connect.
 
+📖 **[Full documentation](https://mobiscroll.com/docs/connect/node-sdk)**
+
 `@mobiscroll/connect-sdk` provides a typed client for:
 
 - OAuth authorization and token exchange
