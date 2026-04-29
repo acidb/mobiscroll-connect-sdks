@@ -1,0 +1,19 @@
+# Per-SDK .gitignore files under sdks/<lang>/ handle language-specific artifacts.
+# This root file covers cross-cutting OS/editor noise and a global .env safety net.
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files (safety net — never commit real credentials anywhere in the tree)
+.env
+.env.local
+.env.*.local
+!**/.env.example
