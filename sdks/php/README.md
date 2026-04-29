@@ -2,6 +2,8 @@
 
 A PHP client library for the Mobiscroll Connect API, enabling seamless calendar and event management across multiple providers (Google Calendar, Microsoft Outlook, Apple Calendar, CalDAV).
 
+📖 **[Full documentation](https://mobiscroll.com/docs/connect/php-sdk)**
+
 ## Features
 
 - **Multi-provider support**: Google Calendar, Microsoft Outlook, Apple Calendar, CalDAV
