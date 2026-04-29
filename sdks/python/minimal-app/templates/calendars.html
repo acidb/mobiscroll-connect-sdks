@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Calendars - Mobiscroll Connect SDK Tester</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --text:#e5e7eb; --muted:#94a3b8; --border:#334155; --accent2:#06b6d4; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif; color:var(--text);
+      background: radial-gradient(1200px 500px at 10% -10%,#1e293b 0%,transparent 60%),
+                  radial-gradient(800px 400px at 95% 0%,#0c4a6e 0%,transparent 60%), var(--bg);
+      min-height:100vh; padding:24px; }
+    .wrap { width:min(1080px,100%); margin:0 auto; }
+    .nav { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+    .nav a { color:var(--accent2); text-decoration:none; border:1px solid var(--border); border-radius:999px; padding:6px 10px; font-size:13px; }
+    .panel { background:linear-gradient(180deg,#0b1220,var(--panel)); border:1px solid var(--border); border-radius:12px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,.3); }
+    .btn { border:1px solid var(--border); border-radius:10px; padding:10px 12px; color:var(--text); background:#111827; cursor:pointer; margin-right:8px; margin-bottom:8px; }
+    pre { margin:0; background:#020617; border:1px solid #1e293b; border-radius:10px; padding:12px; overflow:auto; min-height:360px; font-size:12px; line-height:1.4; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .status { color:var(--muted); font-size:13px; margin:8px 0 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/?action=ui">Home</a>
+      <a href="/?action=calendars-page">Calendars</a>
+      <a href="/?action=events-page">Events</a>
+      <a href="/?action=event-edit-page">Event Edit</a>
+    </div>
+    <section class="panel">
+      <h1>Calendars</h1>
+      <button class="btn" id="btnAuthUrl">Generate Auth URL</button>
+      <button class="btn" id="btnSession">Check Session</button>
+      <button class="btn" id="btnCalendars">Load Calendars</button>
+      <div class="status" id="status">Ready</div>
+      <pre id="output">{\n  "hint": "Click Load Calendars"\n}</pre>
+    </section>
+  </div>
+  <script>
+    const statusEl = document.getElementById('status');
+    const output = document.getElementById('output');
+    function setStatus(t) { statusEl.textContent = t; }
+    async function runAction(action) {
+      setStatus('Running ' + action + '...');
+      try {
+        const res = await fetch('/?action=' + encodeURIComponent(action), { credentials: 'same-origin' });
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+        setStatus(res.ok ? 'Done: ' + action : 'Action failed: ' + action);
+      } catch (err) {
+        output.textContent = JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }, null, 2);
+        setStatus('Request failed');
+      }
+    }
+    document.getElementById('btnAuthUrl').addEventListener('click', () => runAction('auth-url'));
+    document.getElementById('btnSession').addEventListener('click', () => runAction('session'));
+    document.getElementById('btnCalendars').addEventListener('click', () => runAction('calendars'));
+  </script>
+</body>
+</html>

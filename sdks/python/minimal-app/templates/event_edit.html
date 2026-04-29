@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Event Edit - Mobiscroll Connect SDK Tester</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --text:#e5e7eb; --muted:#94a3b8; --border:#334155; --accent2:#06b6d4; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif; color:var(--text);
+      background: radial-gradient(1200px 500px at 10% -10%,#1e293b 0%,transparent 60%),
+                  radial-gradient(800px 400px at 95% 0%,#0c4a6e 0%,transparent 60%), var(--bg);
+      min-height:100vh; padding:24px; }
+    .wrap { width:min(1080px,100%); margin:0 auto; }
+    .nav { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+    .nav a { color:var(--accent2); text-decoration:none; border:1px solid var(--border); border-radius:999px; padding:6px 10px; font-size:13px; }
+    .panel { background:linear-gradient(180deg,#0b1220,var(--panel)); border:1px solid var(--border); border-radius:12px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,.3); margin-bottom:12px; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .field { margin-bottom:8px; }
+    .field label { display:block; margin-bottom:4px; color:var(--muted); font-size:12px; }
+    .field input { width:100%; border:1px solid var(--border); border-radius:8px; background:#0b1220; color:var(--text); padding:8px 10px; }
+    .checkbox { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; margin:8px 0; }
+    .btn { border:1px solid var(--border); border-radius:10px; padding:10px 12px; color:var(--text); background:#111827; cursor:pointer; margin-right:8px; margin-bottom:8px; }
+    pre { margin:0; background:#020617; border:1px solid #1e293b; border-radius:10px; padding:12px; overflow:auto; min-height:260px; font-size:12px; line-height:1.4; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .status { color:var(--muted); font-size:13px; margin:8px 0 12px; }
+    .hint { color:var(--muted); font-size:12px; margin-top:6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/?action=ui">Home</a>
+      <a href="/?action=calendars-page">Calendars</a>
+      <a href="/?action=events-page">Events</a>
+      <a href="/?action=event-edit-page">Event Edit</a>
+    </div>
+    <section class="panel">
+      <h1>Create / Edit / Delete Event</h1>
+      <div class="row2">
+        <div class="field">
+          <label for="editProvider">Provider</label>
+          <input id="editProvider" type="text" value="google" />
+        </div>
+        <div class="field">
+          <label for="editCalendarId">Calendar ID</label>
+          <input id="editCalendarId" type="text" placeholder="calendar-id" />
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="editEventId">Event ID (for update/delete)</label>
+          <input id="editEventId" type="text" placeholder="event-id" />
+        </div>
+        <div class="field">
+          <label for="editRecurringEventId">Recurring Event ID (optional)</label>
+          <input id="editRecurringEventId" type="text" placeholder="recurring-event-id" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="editTitle">Title</label>
+        <input id="editTitle" type="text" placeholder="Weekly Team Meeting" />
+      </div>
+      <div class="field">
+        <label for="editDescription">Description</label>
+        <input id="editDescription" type="text" placeholder="Discuss project updates" />
+      </div>
+      <div class="field">
+        <label for="editLocation">Location</label>
+        <input id="editLocation" type="text" placeholder="Conference Room A" />
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="editStart">Start (ISO)</label>
+          <input id="editStart" type="text" />
+        </div>
+        <div class="field">
+          <label for="editEnd">End (ISO)</label>
+          <input id="editEnd" type="text" />
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="editUpdateMode">Update Mode</label>
+          <input id="editUpdateMode" type="text" placeholder="this | following | all" />
+        </div>
+        <div class="field">
+          <label for="editDeleteMode">Delete Mode</label>
+          <input id="editDeleteMode" type="text" placeholder="this | following | all" />
+        </div>
+      </div>
+      <div class="checkbox">
+        <input id="editAllDay" type="checkbox" />
+        <label for="editAllDay">All day event</label>
+      </div>
+      <button class="btn" id="btnAuthUrl">Generate Auth URL</button>
+      <button class="btn" id="btnSession">Check Session</button>
+      <button class="btn" id="btnCreateEvent">Create Event</button>
+      <button class="btn" id="btnUpdateEvent">Update Event</button>
+      <button class="btn" id="btnDeleteEvent">Delete Event</button>
+      <div class="hint">For update and delete, provide Event ID. For recurring instances, also provide Recurring Event ID and mode.</div>
+      <div class="status" id="status">Ready</div>
+    </section>
+    <section class="panel">
+      <pre id="output">{\n  "hint": "Use create/update/delete buttons"\n}</pre>
+    </section>
+  </div>
+  <script>
+    const statusEl = document.getElementById('status');
+    const output = document.getElementById('output');
+    function setStatus(t) { statusEl.textContent = t; }
+
+    function setDefaultDates() {
+      const now = new Date();
+      const later = new Date(now.getTime() + 60 * 60 * 1000);
+      document.getElementById('editStart').value = now.toISOString();
+      document.getElementById('editEnd').value = later.toISOString();
+    }
+
+    function getPayload(type) {
+      const payload = {};
+      const provider = document.getElementById('editProvider').value.trim();
+      const calendarId = document.getElementById('editCalendarId').value.trim();
+      const eventId = document.getElementById('editEventId').value.trim();
+      const recurringEventId = document.getElementById('editRecurringEventId').value.trim();
+      const title = document.getElementById('editTitle').value.trim();
+      const description = document.getElementById('editDescription').value.trim();
+      const location = document.getElementById('editLocation').value.trim();
+      const start = document.getElementById('editStart').value.trim();
+      const end = document.getElementById('editEnd').value.trim();
+      const allDay = document.getElementById('editAllDay').checked;
+      const updateMode = document.getElementById('editUpdateMode').value.trim();
+      const deleteMode = document.getElementById('editDeleteMode').value.trim();
+      if (provider) payload.provider = provider;
+      if (calendarId) payload.calendarId = calendarId;
+      if (eventId) payload.eventId = eventId;
+      if (recurringEventId) payload.recurringEventId = recurringEventId;
+      if (type !== 'delete-event') {
+        if (title) payload.title = title;
+        if (description) payload.description = description;
+        if (location) payload.location = location;
+        if (start) payload.start = start;
+        if (end) payload.end = end;
+        payload.allDay = allDay;
+      }
+      if (type === 'update-event' && updateMode) payload.updateMode = updateMode;
+      if (type === 'delete-event' && deleteMode) payload.deleteMode = deleteMode;
+      return payload;
+    }
+
+    async function runSimpleAction(action) {
+      setStatus('Running ' + action + '...');
+      try {
+        const res = await fetch('/?action=' + encodeURIComponent(action), { credentials: 'same-origin' });
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+        setStatus(res.ok ? 'Done: ' + action : 'Action failed: ' + action);
+      } catch (err) {
+        output.textContent = JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }, null, 2);
+        setStatus('Request failed');
+      }
+    }
+
+    async function runJsonAction(action, payload) {
+      setStatus('Running ' + action + '...');
+      try {
+        const res = await fetch('/?action=' + encodeURIComponent(action), {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload || {})
+        });
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+        setStatus(res.ok ? 'Done: ' + action : 'Action failed: ' + action);
+      } catch (err) {
+        output.textContent = JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }, null, 2);
+        setStatus('Request failed');
+      }
+    }
+
+    document.getElementById('btnAuthUrl').addEventListener('click', () => runSimpleAction('auth-url'));
+    document.getElementById('btnSession').addEventListener('click', () => runSimpleAction('session'));
+    document.getElementById('btnCreateEvent').addEventListener('click', () => runJsonAction('create-event', getPayload('create-event')));
+    document.getElementById('btnUpdateEvent').addEventListener('click', () => runJsonAction('update-event', getPayload('update-event')));
+    document.getElementById('btnDeleteEvent').addEventListener('click', () => runJsonAction('delete-event', getPayload('delete-event')));
+
+    setDefaultDates();
+  </script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Events - Mobiscroll Connect SDK Tester</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --text:#e5e7eb; --muted:#94a3b8; --border:#334155; --accent2:#06b6d4; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif; color:var(--text);
+      background: radial-gradient(1200px 500px at 10% -10%,#1e293b 0%,transparent 60%),
+                  radial-gradient(800px 400px at 95% 0%,#0c4a6e 0%,transparent 60%), var(--bg);
+      min-height:100vh; padding:24px; }
+    .wrap { width:min(1080px,100%); margin:0 auto; }
+    .nav { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+    .nav a { color:var(--accent2); text-decoration:none; border:1px solid var(--border); border-radius:999px; padding:6px 10px; font-size:13px; }
+    .panel { background:linear-gradient(180deg,#0b1220,var(--panel)); border:1px solid var(--border); border-radius:12px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,.3); margin-bottom:12px; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .field { margin-bottom:8px; }
+    .field label { display:block; margin-bottom:4px; color:var(--muted); font-size:12px; }
+    .field input { width:100%; border:1px solid var(--border); border-radius:8px; background:#0b1220; color:var(--text); padding:8px 10px; }
+    .checkbox { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; margin:8px 0; }
+    .btn { border:1px solid var(--border); border-radius:10px; padding:10px 12px; color:var(--text); background:#111827; cursor:pointer; margin-right:8px; margin-bottom:8px; }
+    .title { font-size:12px; color:var(--muted); margin:0 0 6px; text-transform:uppercase; }
+    pre { margin:0; background:#020617; border:1px solid #1e293b; border-radius:10px; padding:12px; overflow:auto; min-height:240px; font-size:12px; line-height:1.4; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .status { color:var(--muted); font-size:13px; margin:8px 0 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/?action=ui">Home</a>
+      <a href="/?action=calendars-page">Calendars</a>
+      <a href="/?action=events-page">Events</a>
+      <a href="/?action=event-edit-page">Event Edit</a>
+    </div>
+    <section class="panel">
+      <h1>Events</h1>
+      <div class="row2">
+        <div class="field">
+          <label for="filterProvider">Provider</label>
+          <input id="filterProvider" type="text" value="google" />
+        </div>
+        <div class="field">
+          <label for="filterCalendars">Calendars (comma-separated IDs)</label>
+          <input id="filterCalendars" type="text" placeholder="calendar-id-1,calendar-id-2" />
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="filterStart">Start (ISO)</label>
+          <input id="filterStart" type="text" placeholder="2026-04-01T00:00:00Z" />
+        </div>
+        <div class="field">
+          <label for="filterEnd">End (ISO)</label>
+          <input id="filterEnd" type="text" placeholder="2026-04-30T23:59:59Z" />
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="filterPageSize">Page Size</label>
+          <input id="filterPageSize" type="number" min="1" max="1000" value="100" />
+        </div>
+        <div class="field">
+          <label for="filterNextPageToken">Next Page Token</label>
+          <input id="filterNextPageToken" type="text" placeholder="paste token from previous response" />
+        </div>
+      </div>
+      <div class="checkbox">
+        <input id="filterSingleEvents" type="checkbox" checked />
+        <label for="filterSingleEvents">Single Events</label>
+      </div>
+      <button class="btn" id="btnAuthUrl">Generate Auth URL</button>
+      <button class="btn" id="btnSession">Check Session</button>
+      <button class="btn" id="btnEvents">Load Events</button>
+      <button class="btn" id="btnApplyFilters">Apply Filters</button>
+      <div class="status" id="status">Ready</div>
+    </section>
+    <section class="panel">
+      <div class="title">Latest API Response</div>
+      <pre id="outputLatest">{\n  "hint": "Click Load Events"\n}</pre>
+    </section>
+    <section class="panel">
+      <div class="title">All events loaded (concatenated)</div>
+      <pre id="outputConcat">{\n  "events": []\n}</pre>
+    </section>
+  </div>
+  <script>
+    const statusEl = document.getElementById('status');
+    const outputLatest = document.getElementById('outputLatest');
+    const outputConcat = document.getElementById('outputConcat');
+    let concatenatedEvents = [];
+
+    function setStatus(t) { statusEl.textContent = t; }
+
+    function getEventsRequestUrl() {
+      const params = new URLSearchParams({ action: 'events' });
+      const provider = document.getElementById('filterProvider').value.trim();
+      const start = document.getElementById('filterStart').value.trim();
+      const end = document.getElementById('filterEnd').value.trim();
+      const calendars = document.getElementById('filterCalendars').value.trim();
+      const pageSize = document.getElementById('filterPageSize').value.trim();
+      const nextPageToken = document.getElementById('filterNextPageToken').value.trim();
+      const singleEvents = document.getElementById('filterSingleEvents').checked;
+      if (provider) params.set('provider', provider);
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      if (calendars) params.set('calendars', calendars);
+      if (pageSize) params.set('pageSize', pageSize);
+      if (nextPageToken) params.set('nextPageToken', nextPageToken);
+      params.set('singleEvents', singleEvents ? 'true' : 'false');
+      return '/?' + params.toString();
+    }
+
+    function printEvents(data, append) {
+      const latestEvents = Array.isArray(data.events) ? data.events : [];
+      concatenatedEvents = append ? concatenatedEvents.concat(latestEvents) : latestEvents;
+      outputLatest.textContent = JSON.stringify(data, null, 2);
+      outputConcat.textContent = JSON.stringify({ ...data, events: concatenatedEvents }, null, 2);
+    }
+
+    async function runSimpleAction(action) {
+      setStatus('Running ' + action + '...');
+      try {
+        const res = await fetch('/?action=' + encodeURIComponent(action), { credentials: 'same-origin' });
+        const data = await res.json();
+        outputLatest.textContent = JSON.stringify(data, null, 2);
+        setStatus(res.ok ? 'Done: ' + action : 'Action failed: ' + action);
+      } catch (err) {
+        outputLatest.textContent = JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }, null, 2);
+        setStatus('Request failed');
+      }
+    }
+
+    async function loadEvents() {
+      setStatus('Running events...');
+      try {
+        const res = await fetch(getEventsRequestUrl(), { credentials: 'same-origin' });
+        const data = await res.json();
+        const append = document.getElementById('filterNextPageToken').value.trim() !== '';
+        printEvents(data, append);
+        setStatus(res.ok ? 'Done: events' : 'Action failed: events');
+      } catch (err) {
+        outputLatest.textContent = JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }, null, 2);
+        setStatus('Request failed');
+      }
+    }
+
+    document.getElementById('btnAuthUrl').addEventListener('click', () => runSimpleAction('auth-url'));
+    document.getElementById('btnSession').addEventListener('click', () => runSimpleAction('session'));
+    document.getElementById('btnEvents').addEventListener('click', loadEvents);
+    document.getElementById('btnApplyFilters').addEventListener('click', loadEvents);
+  </script>
+</body>
+</html>
