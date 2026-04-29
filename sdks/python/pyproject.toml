@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mobiscroll-connect"
-version = "0.1.0"
+version = "1.0.0"
 description = "Python client for the Mobiscroll Connect API — calendar and event management across Google, Microsoft, Apple, and CalDAV."
 readme = "README.md"
 requires-python = ">=3.9"
