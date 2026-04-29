@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mobiscroll-connect"
+version = "0.1.0"
+description = "Python client for the Mobiscroll Connect API — calendar and event management across Google, Microsoft, Apple, and CalDAV."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Mobiscroll" }]
+keywords = ["mobiscroll", "calendar", "google-calendar", "outlook", "caldav", "oauth2"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Scheduling",
+    "Typing :: Typed",
+]
+dependencies = [
+    "httpx>=0.24,<1.0",
+    "typing-extensions>=4.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "respx>=0.20",
+    "mypy>=1.0",
+    "ruff>=0.1",
+    "python-dotenv>=1.0",
+]
+
+[project.urls]
+Homepage = "https://mobiscroll.com/connect"
+Documentation = "https://mobiscroll.com/docs/connect/python-sdk"
+Source = "https://github.com/mobiscroll/mobiscroll-connect-python"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mobiscroll_connect"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
