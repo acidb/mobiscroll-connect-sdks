@@ -1,0 +1,48 @@
+name: CI (PHP)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdks/php/**'
+      - '.github/workflows/ci-php.yml'
+  pull_request:
+    paths:
+      - 'sdks/php/**'
+      - '.github/workflows/ci-php.yml'
+
+defaults:
+  run:
+    working-directory: sdks/php
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.1', '8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: sdks/php/vendor
+          key: ${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('sdks/php/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-${{ matrix.php-version }}-
+
+      - run: composer install --no-progress --prefer-dist
+      - run: composer run lint
+      - run: composer run stan
+      - run: composer run test

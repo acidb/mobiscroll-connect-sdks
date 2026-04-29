@@ -1,0 +1,38 @@
+name: CI (Python)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdks/python/**'
+      - '.github/workflows/ci-python.yml'
+  pull_request:
+    paths:
+      - 'sdks/python/**'
+      - '.github/workflows/ci-python.yml'
+
+defaults:
+  run:
+    working-directory: sdks/python
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: sdks/python/pyproject.toml
+
+      - run: pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: mypy mobiscroll_connect
+      - run: pytest
