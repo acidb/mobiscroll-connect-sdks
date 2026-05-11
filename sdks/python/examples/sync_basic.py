@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from mobiscroll_connect import (
+from mobiscroll_connect import (  # noqa: E402
     AuthenticationError,
     MobiscrollConnectClient,
     TokenResponse,

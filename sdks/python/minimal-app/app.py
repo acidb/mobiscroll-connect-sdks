@@ -29,11 +29,11 @@ from flask import Flask, jsonify, redirect, render_template, request, session
 
 load_dotenv(Path(__file__).parent / ".env")
 
-from mobiscroll_connect import (
+from mobiscroll_connect import (  # noqa: E402
     MobiscrollConnectClient,
     TokenResponse,
 )
-from mobiscroll_connect.exceptions import MobiscrollConnectError
+from mobiscroll_connect.exceptions import MobiscrollConnectError  # noqa: E402
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-in-prod")
@@ -227,10 +227,9 @@ def index():
         "calendars", "events", "connection-status",
         "create-event", "update-event", "delete-event", "disconnect",
     }
-    if action in AUTHENTICATED_ACTIONS:
-        if not _restore_credentials(client):
-            return _err("No stored token. Complete OAuth flow first.",
-                        401, next="Visit /?action=auth-url to start OAuth")
+    if action in AUTHENTICATED_ACTIONS and not _restore_credentials(client):
+        return _err("No stored token. Complete OAuth flow first.",
+                    401, next="Visit /?action=auth-url to start OAuth")
 
     try:
         # ---- calendars ---------------------------------------------------

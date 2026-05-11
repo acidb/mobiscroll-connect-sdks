@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, Iterator, Mapping, Optional
+from collections.abc import Iterable, Iterator, Mapping
+from typing import Any
 
 from .._internal.payloads import (
     DateLike,
@@ -22,12 +23,12 @@ class Events:
     def list(
         self,
         *,
-        start: Optional[DateLike] = None,
-        end: Optional[DateLike] = None,
-        calendar_ids: Optional[Mapping[str, Iterable[str]]] = None,
-        page_size: Optional[int] = None,
-        next_page_token: Optional[str] = None,
-        single_events: Optional[bool] = None,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        calendar_ids: Mapping[str, Iterable[str]] | None = None,
+        page_size: int | None = None,
+        next_page_token: str | None = None,
+        single_events: bool | None = None,
     ) -> EventsListResponse:
         """List events.
 
@@ -51,15 +52,15 @@ class Events:
     def iter_all(
         self,
         *,
-        start: Optional[DateLike] = None,
-        end: Optional[DateLike] = None,
-        calendar_ids: Optional[Mapping[str, Iterable[str]]] = None,
-        page_size: Optional[int] = None,
-        single_events: Optional[bool] = None,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        calendar_ids: Mapping[str, Iterable[str]] | None = None,
+        page_size: int | None = None,
+        single_events: bool | None = None,
     ) -> Iterator[CalendarEvent]:
         """Yield every event across all pages, transparently following
         ``next_page_token``. Callers don't need to manage pagination state."""
-        token: Optional[str] = None
+        token: str | None = None
         while True:
             page = self.list(
                 start=start,
@@ -101,9 +102,5 @@ class Events:
     def _extract_event(response: Any, operation: str) -> CalendarEvent:
         if isinstance(response, Mapping) and isinstance(response.get("event"), Mapping):
             return CalendarEvent.from_dict(response["event"])
-        message = (
-            response.get("message")
-            if isinstance(response, Mapping) and isinstance(response.get("message"), str)
-            else f"Failed to {operation} event"
-        )
-        raise ServerError(message, 400)
+        msg = response.get("message") if isinstance(response, Mapping) else None
+        raise ServerError(msg if isinstance(msg, str) else f"Failed to {operation} event", 400)

@@ -162,6 +162,7 @@ class MinimalAppSmokeTest extends TestCase
         $body = @file_get_contents($url, false, $context);
         $body = is_string($body) ? $body : '';
 
+        /** @phpstan-ignore nullCoalesce.variable */
         $headers = $http_response_header ?? [];
         $status = 0;
         if (isset($headers[0]) && preg_match('/\s(\d{3})\s/', $headers[0], $matches) === 1) {

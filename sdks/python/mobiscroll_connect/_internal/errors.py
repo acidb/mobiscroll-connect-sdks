@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 
@@ -40,7 +41,7 @@ def map_response_error(response: httpx.Response) -> MobiscrollConnectError:
         return ValidationError(message, details if isinstance(details, Mapping) else None)
     if status == 429:
         retry_after_raw = response.headers.get("retry-after")
-        retry_after: Optional[int] = None
+        retry_after: int | None = None
         if retry_after_raw is not None:
             try:
                 retry_after = int(retry_after_raw)

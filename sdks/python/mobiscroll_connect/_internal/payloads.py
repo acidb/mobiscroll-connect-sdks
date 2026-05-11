@@ -7,8 +7,9 @@ reused by both the sync and async resources.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, Mapping, Optional, Union
+from typing import Any, Union
 
 DateLike = Union[datetime, str]
 
@@ -27,15 +28,15 @@ def format_datetime(value: DateLike) -> str:
 
 def build_list_events_query(
     *,
-    start: Optional[DateLike] = None,
-    end: Optional[DateLike] = None,
-    calendar_ids: Optional[Mapping[str, Iterable[str]]] = None,
-    page_size: Optional[int] = None,
-    next_page_token: Optional[str] = None,
-    single_events: Optional[bool] = None,
-) -> Dict[str, str]:
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    calendar_ids: Mapping[str, Iterable[str]] | None = None,
+    page_size: int | None = None,
+    next_page_token: str | None = None,
+    single_events: bool | None = None,
+) -> dict[str, str]:
     """Build the query string for ``GET /events``. All values are stringified."""
-    query: Dict[str, str] = {}
+    query: dict[str, str] = {}
 
     if start is not None:
         query["start"] = format_datetime(start)
@@ -56,7 +57,7 @@ def build_list_events_query(
     return query
 
 
-def build_event_payload(event: Mapping[str, Any]) -> Dict[str, Any]:
+def build_event_payload(event: Mapping[str, Any]) -> dict[str, Any]:
     """Normalize a snake_case-friendly event dict into the API's camelCase shape.
 
     Accepts both wire-format keys (``calendarId``, ``allDay``) and Pythonic ones
@@ -71,7 +72,7 @@ def build_event_payload(event: Mapping[str, Any]) -> Dict[str, Any]:
         "all_day": "allDay",
     }
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
     for key, value in event.items():
         out_key = snake_to_camel.get(key, key)
         if out_key in ("start", "end") and value is not None:
@@ -82,10 +83,10 @@ def build_event_payload(event: Mapping[str, Any]) -> Dict[str, Any]:
     return payload
 
 
-def build_delete_query(params: Mapping[str, Any]) -> Dict[str, str]:
+def build_delete_query(params: Mapping[str, Any]) -> dict[str, str]:
     """Build the query string for ``DELETE /event``. Validates required keys."""
     payload = build_event_payload(params)
-    query: Dict[str, str] = {}
+    query: dict[str, str] = {}
     for key in _LIST_QUERY_KEYS_PASSTHROUGH:
         value = payload.get(key)
         if value is not None and value != "":

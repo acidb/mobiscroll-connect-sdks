@@ -15,7 +15,8 @@ from __future__ import annotations
 
 import base64
 import threading
-from typing import Any, Callable, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, Callable
 from urllib.parse import urlencode
 
 import httpx
@@ -36,11 +37,11 @@ class ApiClient:
         self,
         config: Config,
         *,
-        http_client: Optional[httpx.Client] = None,
-        on_tokens_refreshed: Optional[TokensRefreshedCallback] = None,
+        http_client: httpx.Client | None = None,
+        on_tokens_refreshed: TokensRefreshedCallback | None = None,
     ) -> None:
         self._config = config
-        self._credentials: Optional[TokenResponse] = None
+        self._credentials: TokenResponse | None = None
         self._on_tokens_refreshed = on_tokens_refreshed
         self._refresh_lock = threading.Lock()
         self._owns_client = http_client is None
@@ -62,7 +63,7 @@ class ApiClient:
     def set_credentials(self, tokens: TokenResponse) -> None:
         self._credentials = tokens
 
-    def get_credentials(self) -> Optional[TokenResponse]:
+    def get_credentials(self) -> TokenResponse | None:
         return self._credentials
 
     def on_tokens_refreshed(self, callback: TokensRefreshedCallback) -> None:
@@ -73,7 +74,7 @@ class ApiClient:
         if self._owns_client:
             self._http.close()
 
-    def __enter__(self) -> "ApiClient":
+    def __enter__(self) -> ApiClient:
         return self
 
     def __exit__(self, *exc_info: Any) -> None:
@@ -81,16 +82,16 @@ class ApiClient:
 
     # ---- HTTP verbs -----------------------------------------------------
 
-    def get(self, path: str, params: Optional[Mapping[str, Any]] = None) -> Any:
+    def get(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
         return self._request_with_refresh("GET", path, params=params)
 
-    def post(self, path: str, json: Any = None, params: Optional[Mapping[str, Any]] = None) -> Any:
+    def post(self, path: str, json: Any = None, params: Mapping[str, Any] | None = None) -> Any:
         return self._request_with_refresh("POST", path, json=json, params=params)
 
     def put(self, path: str, json: Any = None) -> Any:
         return self._request_with_refresh("PUT", path, json=json)
 
-    def delete(self, path: str, params: Optional[Mapping[str, Any]] = None) -> Any:
+    def delete(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
         return self._request_with_refresh("DELETE", path, params=params)
 
     def post_form(self, path: str, form: Mapping[str, Any], headers: Mapping[str, str]) -> Any:
@@ -116,7 +117,7 @@ class ApiClient:
         path: str,
         *,
         json: Any = None,
-        params: Optional[Mapping[str, Any]] = None,
+        params: Mapping[str, Any] | None = None,
     ) -> Any:
         url = self._normalize_path(path)
 
@@ -195,19 +196,18 @@ class ApiClient:
             self._credentials = merged
 
             if self._on_tokens_refreshed is not None:
-                try:
+                try:  # noqa: SIM105
                     self._on_tokens_refreshed(merged)
                 except Exception:
-                    # Persistence callbacks must not break the refresh path.
                     pass
 
-    def _auth_headers(self) -> dict:
+    def _auth_headers(self) -> dict[str, str]:
         if self._credentials and self._credentials.access_token:
             return {"Authorization": f"Bearer {self._credentials.access_token}"}
         return {}
 
     @staticmethod
-    def _json_headers(content_type: str = "application/json") -> dict:
+    def _json_headers(content_type: str = "application/json") -> dict[str, str]:
         return {"Content-Type": content_type}
 
     @staticmethod

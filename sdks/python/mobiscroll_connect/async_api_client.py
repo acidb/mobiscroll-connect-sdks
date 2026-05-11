@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from typing import Any, Awaitable, Callable, Mapping, Optional, Union
+from collections.abc import Awaitable, Mapping
+from typing import Any, Callable, Union
 from urllib.parse import urlencode
 
 import httpx
@@ -29,11 +30,11 @@ class AsyncApiClient:
         self,
         config: Config,
         *,
-        http_client: Optional[httpx.AsyncClient] = None,
-        on_tokens_refreshed: Optional[AsyncTokensRefreshedCallback] = None,
+        http_client: httpx.AsyncClient | None = None,
+        on_tokens_refreshed: AsyncTokensRefreshedCallback | None = None,
     ) -> None:
         self._config = config
-        self._credentials: Optional[TokenResponse] = None
+        self._credentials: TokenResponse | None = None
         self._on_tokens_refreshed = on_tokens_refreshed
         self._refresh_lock = asyncio.Lock()
         self._owns_client = http_client is None
@@ -55,7 +56,7 @@ class AsyncApiClient:
     def set_credentials(self, tokens: TokenResponse) -> None:
         self._credentials = tokens
 
-    def get_credentials(self) -> Optional[TokenResponse]:
+    def get_credentials(self) -> TokenResponse | None:
         return self._credentials
 
     def on_tokens_refreshed(self, callback: AsyncTokensRefreshedCallback) -> None:
@@ -65,7 +66,7 @@ class AsyncApiClient:
         if self._owns_client:
             await self._http.aclose()
 
-    async def __aenter__(self) -> "AsyncApiClient":
+    async def __aenter__(self) -> AsyncApiClient:
         return self
 
     async def __aexit__(self, *exc_info: Any) -> None:
@@ -73,18 +74,18 @@ class AsyncApiClient:
 
     # ---- HTTP verbs -----------------------------------------------------
 
-    async def get(self, path: str, params: Optional[Mapping[str, Any]] = None) -> Any:
+    async def get(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
         return await self._request_with_refresh("GET", path, params=params)
 
     async def post(
-        self, path: str, json: Any = None, params: Optional[Mapping[str, Any]] = None
+        self, path: str, json: Any = None, params: Mapping[str, Any] | None = None
     ) -> Any:
         return await self._request_with_refresh("POST", path, json=json, params=params)
 
     async def put(self, path: str, json: Any = None) -> Any:
         return await self._request_with_refresh("PUT", path, json=json)
 
-    async def delete(self, path: str, params: Optional[Mapping[str, Any]] = None) -> Any:
+    async def delete(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
         return await self._request_with_refresh("DELETE", path, params=params)
 
     async def post_form(
@@ -110,7 +111,7 @@ class AsyncApiClient:
         path: str,
         *,
         json: Any = None,
-        params: Optional[Mapping[str, Any]] = None,
+        params: Mapping[str, Any] | None = None,
     ) -> Any:
         url = self._normalize_path(path)
 
@@ -192,7 +193,7 @@ class AsyncApiClient:
                 except Exception:
                     pass
 
-    def _auth_headers(self) -> dict:
+    def _auth_headers(self) -> dict[str, str]:
         if self._credentials and self._credentials.access_token:
             return {"Authorization": f"Bearer {self._credentials.access_token}"}
         return {}

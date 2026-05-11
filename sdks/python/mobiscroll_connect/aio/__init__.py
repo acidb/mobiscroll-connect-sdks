@@ -4,8 +4,8 @@ from .client import AsyncMobiscrollConnectClient
 from .resources import AsyncAuth, AsyncCalendars, AsyncEvents
 
 __all__ = [
-    "AsyncMobiscrollConnectClient",
     "AsyncAuth",
     "AsyncCalendars",
     "AsyncEvents",
+    "AsyncMobiscrollConnectClient",
 ]

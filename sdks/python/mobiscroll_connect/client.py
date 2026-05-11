@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -34,12 +34,12 @@ class MobiscrollConnectClient:
         client_secret: str,
         redirect_uri: str,
         *,
-        base_url: Optional[str] = None,
-        timeout: Optional[float] = None,
-        http_client: Optional[httpx.Client] = None,
-        on_tokens_refreshed: Optional[TokensRefreshedCallback] = None,
+        base_url: str | None = None,
+        timeout: float | None = None,
+        http_client: httpx.Client | None = None,
+        on_tokens_refreshed: TokensRefreshedCallback | None = None,
     ) -> None:
-        config_kwargs = {"client_id": client_id, "client_secret": client_secret, "redirect_uri": redirect_uri}
+        config_kwargs: dict[str, Any] = {"client_id": client_id, "client_secret": client_secret, "redirect_uri": redirect_uri}
         if base_url is not None:
             config_kwargs["base_url"] = base_url
         if timeout is not None:
@@ -71,7 +71,7 @@ class MobiscrollConnectClient:
     def close(self) -> None:
         self._api.close()
 
-    def __enter__(self) -> "MobiscrollConnectClient":
+    def __enter__(self) -> MobiscrollConnectClient:
         return self
 
     def __exit__(self, *exc_info: Any) -> None:

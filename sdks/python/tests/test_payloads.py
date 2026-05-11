@@ -20,7 +20,8 @@ class TestFormatDatetime:
         assert format_datetime(d) == "2024-06-15T10:00:00Z"
 
     def test_aware_datetime_converted_to_utc(self):
-        from datetime import timedelta, timezone as tz
+        from datetime import timedelta
+        from datetime import timezone as tz
 
         d = datetime(2024, 6, 15, 12, 0, 0, tzinfo=tz(timedelta(hours=2)))
         assert format_datetime(d) == "2024-06-15T10:00:00Z"

@@ -7,7 +7,8 @@ specific subclasses (e.g. :class:`AuthenticationError`).
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 
 class MobiscrollConnectError(Exception):
@@ -15,7 +16,7 @@ class MobiscrollConnectError(Exception):
 
     code: str = "MOBISCROLL_ERROR"
 
-    def __init__(self, message: str = "", code: Optional[str] = None) -> None:
+    def __init__(self, message: str = "", code: str | None = None) -> None:
         super().__init__(message)
         self.message = message
         if code is not None:
@@ -51,7 +52,7 @@ class ValidationError(MobiscrollConnectError):
     def __init__(
         self,
         message: str = "Validation failed",
-        details: Optional[Mapping[str, Any]] = None,
+        details: Mapping[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.details: Mapping[str, Any] = details or {}
@@ -65,7 +66,7 @@ class RateLimitError(MobiscrollConnectError):
     def __init__(
         self,
         message: str = "Rate limit exceeded",
-        retry_after: Optional[int] = None,
+        retry_after: int | None = None,
     ) -> None:
         super().__init__(message)
         self.retry_after = retry_after

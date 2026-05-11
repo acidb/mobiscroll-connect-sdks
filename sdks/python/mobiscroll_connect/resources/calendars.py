@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Mapping
+import builtins
+from collections.abc import Mapping
 
 from ..api_client import ApiClient
 from ..models import Calendar
@@ -12,7 +13,7 @@ class Calendars:
     def __init__(self, api_client: ApiClient) -> None:
         self._api = api_client
 
-    def list(self) -> List[Calendar]:
+    def list(self) -> builtins.list[Calendar]:
         data = self._api.get("calendars")
         if not isinstance(data, list):
             return []

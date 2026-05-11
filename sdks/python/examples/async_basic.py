@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from mobiscroll_connect import TokenResponse
-from mobiscroll_connect.aio import AsyncMobiscrollConnectClient
+from mobiscroll_connect import TokenResponse  # noqa: E402
+from mobiscroll_connect.aio import AsyncMobiscrollConnectClient  # noqa: E402
 
 
 async def main() -> None:

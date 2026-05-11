@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import base64
-from typing import Optional, Union
+from typing import Union
 from urllib.parse import urlencode
 
 from ..api_client import ApiClient
@@ -27,8 +27,8 @@ class Auth:
         user_id: str,
         *,
         scope: str = "calendar",
-        state: Optional[str] = None,
-        providers: Optional[str] = None,
+        state: str | None = None,
+        providers: str | None = None,
     ) -> str:
         """Build the OAuth2 authorization URL to redirect the user to.
 
@@ -94,7 +94,7 @@ class Auth:
         self,
         provider: ProviderLike,
         *,
-        account: Optional[str] = None,
+        account: str | None = None,
     ) -> DisconnectResponse:
         """Revoke a provider connection. Pass ``account`` to disconnect a
         single account; omit it to disconnect every account for that provider."""

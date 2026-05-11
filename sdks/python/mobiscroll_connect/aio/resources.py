@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import base64
-from typing import Any, AsyncIterator, Iterable, Mapping, Optional, Union
+from collections.abc import AsyncIterator, Iterable, Mapping
+from typing import Any, Union
 from urllib.parse import urlencode
 
 from .._internal.payloads import (
@@ -34,8 +35,8 @@ class AsyncAuth:
         user_id: str,
         *,
         scope: str = "calendar",
-        state: Optional[str] = None,
-        providers: Optional[str] = None,
+        state: str | None = None,
+        providers: str | None = None,
     ) -> str:
         cfg = self._api.config
         params = {
@@ -87,7 +88,7 @@ class AsyncAuth:
         self,
         provider: ProviderLike,
         *,
-        account: Optional[str] = None,
+        account: str | None = None,
     ) -> DisconnectResponse:
         params = {"provider": str(provider.value if isinstance(provider, Provider) else provider)}
         if account:
@@ -103,7 +104,7 @@ class AsyncCalendars:
     def __init__(self, api_client: AsyncApiClient) -> None:
         self._api = api_client
 
-    async def list(self) -> list:
+    async def list(self) -> list[Calendar]:
         data = await self._api.get("calendars")
         if not isinstance(data, list):
             return []
@@ -117,12 +118,12 @@ class AsyncEvents:
     async def list(
         self,
         *,
-        start: Optional[DateLike] = None,
-        end: Optional[DateLike] = None,
-        calendar_ids: Optional[Mapping[str, Iterable[str]]] = None,
-        page_size: Optional[int] = None,
-        next_page_token: Optional[str] = None,
-        single_events: Optional[bool] = None,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        calendar_ids: Mapping[str, Iterable[str]] | None = None,
+        page_size: int | None = None,
+        next_page_token: str | None = None,
+        single_events: bool | None = None,
     ) -> EventsListResponse:
         query = build_list_events_query(
             start=start,
@@ -138,13 +139,13 @@ class AsyncEvents:
     async def iter_all(
         self,
         *,
-        start: Optional[DateLike] = None,
-        end: Optional[DateLike] = None,
-        calendar_ids: Optional[Mapping[str, Iterable[str]]] = None,
-        page_size: Optional[int] = None,
-        single_events: Optional[bool] = None,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        calendar_ids: Mapping[str, Iterable[str]] | None = None,
+        page_size: int | None = None,
+        single_events: bool | None = None,
     ) -> AsyncIterator[CalendarEvent]:
-        token: Optional[str] = None
+        token: str | None = None
         while True:
             page = await self.list(
                 start=start,
@@ -180,9 +181,5 @@ class AsyncEvents:
     def _extract_event(response: Any, operation: str) -> CalendarEvent:
         if isinstance(response, Mapping) and isinstance(response.get("event"), Mapping):
             return CalendarEvent.from_dict(response["event"])
-        message = (
-            response.get("message")
-            if isinstance(response, Mapping) and isinstance(response.get("message"), str)
-            else f"Failed to {operation} event"
-        )
-        raise ServerError(message, 400)
+        msg = response.get("message") if isinstance(response, Mapping) else None
+        raise ServerError(msg if isinstance(msg, str) else f"Failed to {operation} event", 400)

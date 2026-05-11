@@ -7,10 +7,11 @@ and tolerate missing optional fields.
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any
 
 
 class Provider(str, Enum):
@@ -50,10 +51,10 @@ class TokenResponse:
 
     access_token: str
     token_type: str = "Bearer"
-    expires_in: Optional[int] = None
-    refresh_token: Optional[str] = None
+    expires_in: int | None = None
+    refresh_token: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "access_token": self.access_token,
             "token_type": self.token_type,
@@ -62,7 +63,7 @@ class TokenResponse:
         }
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "TokenResponse":
+    def from_dict(cls, data: Mapping[str, Any]) -> TokenResponse:
         return cls(
             access_token=_require(data, "access_token"),
             token_type=data.get("token_type") or "Bearer",
@@ -84,7 +85,7 @@ class Calendar:
     original: Mapping[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "Calendar":
+    def from_dict(cls, data: Mapping[str, Any]) -> Calendar:
         return cls(
             provider=_require(data, "provider"),
             id=_require(data, "id"),
@@ -99,11 +100,11 @@ class Calendar:
 @dataclass(frozen=True)
 class EventAttendee:
     email: str
-    status: Optional[str] = None
-    organizer: Optional[bool] = None
+    status: str | None = None
+    organizer: bool | None = None
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "EventAttendee":
+    def from_dict(cls, data: Mapping[str, Any]) -> EventAttendee:
         return cls(
             email=_require(data, "email"),
             status=data.get("status"),
@@ -122,23 +123,23 @@ class CalendarEvent:
     start: datetime
     end: datetime
     all_day: bool = False
-    recurring_event_id: Optional[str] = None
-    color: Optional[str] = None
-    location: Optional[str] = None
-    description: Optional[str] = None
-    attendees: Optional[List[EventAttendee]] = None
-    custom: Optional[Mapping[str, Any]] = None
-    conference: Optional[str] = None
-    availability: Optional[str] = None
-    privacy: Optional[str] = None
-    status: Optional[str] = None
-    link: Optional[str] = None
+    recurring_event_id: str | None = None
+    color: str | None = None
+    location: str | None = None
+    description: str | None = None
+    attendees: list[EventAttendee] | None = None
+    custom: Mapping[str, Any] | None = None
+    conference: str | None = None
+    availability: str | None = None
+    privacy: str | None = None
+    status: str | None = None
+    link: str | None = None
     original: Mapping[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "CalendarEvent":
+    def from_dict(cls, data: Mapping[str, Any]) -> CalendarEvent:
         attendees_raw = data.get("attendees")
-        attendees: Optional[List[EventAttendee]] = None
+        attendees: list[EventAttendee] | None = None
         if isinstance(attendees_raw, list):
             attendees = [
                 EventAttendee.from_dict(a) if isinstance(a, Mapping) else EventAttendee(email=str(a))
@@ -176,11 +177,11 @@ class EventsListResponse:
     to fetch the next page if ``next_page_token`` is set.
     """
 
-    events: List[CalendarEvent]
-    page_size: Optional[int] = None
-    next_page_token: Optional[str] = None
+    events: list[CalendarEvent]
+    page_size: int | None = None
+    next_page_token: str | None = None
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[CalendarEvent]:
         return iter(self.events)
 
     def __len__(self) -> int:
@@ -191,7 +192,7 @@ class EventsListResponse:
         return bool(self.next_page_token)
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "EventsListResponse":
+    def from_dict(cls, data: Mapping[str, Any]) -> EventsListResponse:
         events_raw = data.get("events", []) or []
         return cls(
             events=[CalendarEvent.from_dict(e) for e in events_raw],
@@ -203,23 +204,23 @@ class EventsListResponse:
 @dataclass(frozen=True)
 class ConnectedAccount:
     id: str
-    display: Optional[str] = None
+    display: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "ConnectedAccount":
+    def from_dict(cls, data: Mapping[str, Any]) -> ConnectedAccount:
         return cls(id=_require(data, "id"), display=data.get("display"))
 
 
 @dataclass(frozen=True)
 class ConnectionStatusResponse:
-    connections: Dict[str, List[ConnectedAccount]]
+    connections: dict[str, list[ConnectedAccount]]
     limit_reached: bool = False
-    limit: Optional[int] = None
+    limit: int | None = None
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "ConnectionStatusResponse":
+    def from_dict(cls, data: Mapping[str, Any]) -> ConnectionStatusResponse:
         raw: Mapping[str, Any] = data.get("connections", {}) or {}
-        connections: Dict[str, List[ConnectedAccount]] = {}
+        connections: dict[str, list[ConnectedAccount]] = {}
         for provider, accounts in raw.items():
             connections[provider] = [
                 ConnectedAccount.from_dict(a) if isinstance(a, Mapping) else ConnectedAccount(id=str(a))
@@ -235,10 +236,10 @@ class ConnectionStatusResponse:
 @dataclass(frozen=True)
 class DisconnectResponse:
     success: bool
-    message: Optional[str] = None
+    message: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "DisconnectResponse":
+    def from_dict(cls, data: Mapping[str, Any]) -> DisconnectResponse:
         return cls(
             success=bool(data.get("success", False)),
             message=data.get("message"),
