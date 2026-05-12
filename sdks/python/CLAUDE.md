@@ -24,7 +24,7 @@ Formatting:
 
 Python 3.9+ client library for the Mobiscroll Connect API. Enables calendar and event management across Google Calendar, Microsoft Outlook, Apple Calendar, and CalDAV through a single SDK.
 
-- **PyPI**: `mobiscroll-connect`
+- **PyPI**: `mobiscroll-connect-sdk`
 - **Package**: `mobiscroll_connect`
 - **HTTP client**: httpx (sync + async, same API surface)
 - **Test framework**: pytest + pytest-asyncio + respx

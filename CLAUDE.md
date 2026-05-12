@@ -9,7 +9,7 @@ When you work on a specific SDK, also read its per-SDK [sdks/node/CLAUDE.md](sdk
 ```
 sdks/
 ├── node/      TypeScript / Node 20+      → npm: @mobiscroll/connect-sdk
-├── python/    Python 3.9+ (httpx)         → PyPI: mobiscroll-connect
+├── python/    Python 3.9+ (httpx)         → PyPI: mobiscroll-connect-sdk
 ├── php/       PHP 8.1+ (Guzzle 7)         → Packagist: mobiscroll/connect-php
 └── dotnet/    .NET 8 (HttpClient)         → NuGet: Mobiscroll.Connect
 

@@ -18,7 +18,7 @@ Python client for the Mobiscroll Connect API — calendar and event management a
 ## Installation
 
 ```bash
-pip install mobiscroll-connect
+pip install mobiscroll-connect-sdk
 ```
 
 Requires Python 3.9+.

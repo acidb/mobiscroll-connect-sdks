@@ -1,0 +1,51 @@
+name: Release (.NET)
+
+on:
+  push:
+    tags:
+      - 'dotnet-v*'
+
+defaults:
+  run:
+    working-directory: sdks/dotnet
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Verify tag matches csproj version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#dotnet-v}"
+          PKG_VERSION="$(grep -oE '<Version>[^<]+</Version>' src/Mobiscroll.Connect/Mobiscroll.Connect.csproj | head -1 | sed -E 's|<Version>([^<]+)</Version>|\1|')"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag version ($TAG_VERSION) does not match csproj <Version> ($PKG_VERSION)"
+            exit 1
+          fi
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release --verbosity normal
+
+      - name: Pack
+        run: dotnet pack src/Mobiscroll.Connect --no-build --configuration Release --output ./artifacts
+
+      - name: Publish to NuGet
+        run: |
+          dotnet nuget push "./artifacts/*.nupkg" \
+            --api-key "${{ secrets.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate

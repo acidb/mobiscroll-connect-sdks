@@ -3,7 +3,7 @@ requires = ["hatchling>=1.18"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mobiscroll-connect"
+name = "mobiscroll-connect-sdk"
 version = "1.0.0"
 description = "Python client for the Mobiscroll Connect API — calendar and event management across Google, Microsoft, Apple, and CalDAV."
 readme = "README.md"
@@ -43,7 +43,7 @@ dev = [
 [project.urls]
 Homepage = "https://mobiscroll.com/connect"
 Documentation = "https://mobiscroll.com/docs/connect/python-sdk"
-Source = "https://github.com/mobiscroll/mobiscroll-connect-python"
+Source = "https://github.com/acidb/mobiscroll-connect-sdks"
 
 [tool.hatch.build.targets.wheel]
 packages = ["mobiscroll_connect"]

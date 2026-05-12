@@ -13,7 +13,7 @@
     <PackageTags>mobiscroll;calendar;oauth;google-calendar;outlook;caldav</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <RepositoryUrl>https://github.com/mobiscroll/mobiscroll-connect-dotnet</RepositoryUrl>
+    <RepositoryUrl>https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/dotnet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
