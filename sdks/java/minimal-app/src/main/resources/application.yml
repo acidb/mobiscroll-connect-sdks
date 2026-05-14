@@ -1,0 +1,9 @@
+server:
+  port: 8080
+
+mobiscroll:
+  connect:
+    client-id: ${MOBISCROLL_CLIENT_ID:76996F59-B812-4E98-B29B-3DDEAADAAAFB}
+    client-secret: ${MOBISCROLL_CLIENT_SECRET:A306A780-52CE-470B-A504-B980B7AAFF43}
+    redirect-uri: ${MOBISCROLL_REDIRECT_URI:http://localhost:8080/oauth/callback}
+    base-url: ${MOBISCROLL_BASE_URL:}
