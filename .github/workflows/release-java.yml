@@ -1,0 +1,49 @@
+name: Release (Java)
+
+on:
+  push:
+    tags:
+      - 'java-v*'
+
+defaults:
+  run:
+    working-directory: sdks/java
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: maven
+          server-id: central
+          server-username: MAVEN_CENTRAL_USERNAME
+          server-password: MAVEN_CENTRAL_TOKEN
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      - name: Verify tag matches pom revision
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#java-v}"
+          POM_VERSION="$(grep -oE '\-Drevision=[^[:space:]]+' .mvn/maven.config | sed -E 's/^-Drevision=//')"
+          if [ "$TAG_VERSION" != "$POM_VERSION" ]; then
+            echo "Tag version ($TAG_VERSION) does not match .mvn/maven.config revision ($POM_VERSION)"
+            exit 1
+          fi
+
+      - name: Build & verify
+        run: mvn -B -ntp -pl connect-sdk -am verify
+
+      - name: Deploy to Maven Central
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: mvn -B -ntp -Prelease -pl connect-sdk -am deploy -DskipTests
