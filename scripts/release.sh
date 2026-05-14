@@ -8,7 +8,7 @@
 #   4. Push the commit and tag (when a remote named 'origin' exists).
 #
 # Usage: scripts/release.sh <sdk> <version>
-#   <sdk>     node | python | php | dotnet
+#   <sdk>     node | python | php | dotnet | java
 #   <version> a version string without 'v', e.g. 1.0.2
 #
 # For PHP, no file changes are needed — only the tag.

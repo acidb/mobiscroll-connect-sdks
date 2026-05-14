@@ -17,3 +17,5 @@ Thumbs.db
 .env.local
 .env.*.local
 !**/.env.example
+
+.claude
