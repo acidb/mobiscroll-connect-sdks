@@ -98,8 +98,8 @@ public class AuthTests
         var status = await client.Auth.GetConnectionStatusAsync();
 
         Assert.False(status.LimitReached);
-        Assert.Single(status.Connections.Google);
-        Assert.Equal("u@g.com", status.Connections.Google[0].Id);
+        Assert.Single(status.Connections["google"]);
+        Assert.Equal("u@g.com", status.Connections["google"][0].Id);
 
         Assert.EndsWith("/oauth/connection-status", handler.Requests[0].Uri.AbsolutePath);
         Assert.EndsWith("/connection-status", handler.Requests[1].Uri.AbsolutePath);

@@ -225,11 +225,12 @@ await client.Events.DeleteAsync(new EventDeleteParams
 // Check which providers are connected
 ConnectionStatusResponse status = await client.Auth.GetConnectionStatusAsync();
 
-foreach (ConnectedAccount acct in status.Connections.Google)
-    Console.WriteLine($"Google: {acct.Display} ({acct.Id})");
+if (status.Connections.TryGetValue("google", out var googleAccounts))
+    foreach (ConnectedAccount acct in googleAccounts)
+        Console.WriteLine($"Google: {acct.Display} ({acct.Id})");
 
 if (status.LimitReached)
-    Console.WriteLine($"Connection limit of {status.Limit} reached");
+    Console.WriteLine("Connection limit reached");
 
 // Disconnect a provider
 DisconnectResponse result = await client.Auth.DisconnectAsync(new DisconnectParams
