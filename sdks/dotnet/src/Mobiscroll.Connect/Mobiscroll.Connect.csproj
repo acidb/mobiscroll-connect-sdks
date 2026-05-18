@@ -6,7 +6,7 @@
     <AssemblyName>Mobiscroll.Connect</AssemblyName>
 
     <PackageId>Mobiscroll.Connect</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Mobiscroll</Authors>
     <Company>Mobiscroll</Company>
     <Description>.NET SDK for the Mobiscroll Connect API. Manage calendars and events across Google, Microsoft, Apple, and CalDAV through a single async client.</Description>
