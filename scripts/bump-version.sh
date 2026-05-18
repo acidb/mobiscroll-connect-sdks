@@ -2,7 +2,7 @@
 # Bump the version of a single SDK in place. Does NOT commit, tag, or push.
 #
 # Usage: scripts/bump-version.sh <sdk> <version>
-#   <sdk>     one of: node, python, php, dotnet, java
+#   <sdk>     one of: node, python, php, dotnet, java, go
 #   <version> a version string without the 'v' prefix, e.g. 1.0.2
 #
 # Examples:
@@ -13,7 +13,7 @@ set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
   echo "usage: $0 <sdk> <version>" >&2
-  echo "  sdk: node | python | php | dotnet | java" >&2
+  echo "  sdk: node | python | php | dotnet | java | go" >&2
   exit 2
 fi
 
@@ -69,8 +69,15 @@ case "$SDK" in
     echo "Updated $FILE → -Drevision=$VERSION"
     ;;
 
+  go)
+    FILE="$ROOT/sdks/go/version.go"
+    sed -i.bak -E "s/Version = \"[^\"]+\"/Version = \"$VERSION\"/" "$FILE"
+    rm -f "$FILE.bak"
+    echo "Updated $FILE → Version = \"$VERSION\""
+    ;;
+
   *)
-    echo "unknown sdk: $SDK (expected: node | python | php | dotnet | java)" >&2
+    echo "unknown sdk: $SDK (expected: node | python | php | dotnet | java | go)" >&2
     exit 2
     ;;
 esac

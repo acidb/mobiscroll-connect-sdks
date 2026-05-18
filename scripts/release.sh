@@ -8,10 +8,13 @@
 #   4. Push the commit and tag (when a remote named 'origin' exists).
 #
 # Usage: scripts/release.sh <sdk> <version>
-#   <sdk>     node | python | php | dotnet | java
+#   <sdk>     node | python | php | dotnet | java | go
 #   <version> a version string without 'v', e.g. 1.0.2
 #
 # For PHP, no file changes are needed — only the tag.
+#
+# Tag format: <sdk>-v<version>, except for Go which must use sdks/go/v<version>
+# because the Go module proxy requires the module path as the tag prefix.
 
 set -euo pipefail
 
@@ -22,7 +25,10 @@ fi
 
 SDK="$1"
 VERSION="$2"
-TAG="${SDK}-v${VERSION}"
+case "$SDK" in
+  go) TAG="sdks/go/v${VERSION}" ;;
+  *)  TAG="${SDK}-v${VERSION}" ;;
+esac
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 cd "$ROOT"
