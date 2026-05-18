@@ -101,12 +101,10 @@ class TestConnectionStatusResponse:
                 "microsoft": [],
             },
             "limitReached": True,
-            "limit": 5,
         })
         assert r.connections["google"][0].id == "user@gmail.com"
         assert r.connections["microsoft"] == []
         assert r.limit_reached is True
-        assert r.limit == 5
 
 
 class TestDisconnectResponse:

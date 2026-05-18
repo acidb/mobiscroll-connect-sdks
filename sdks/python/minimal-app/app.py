@@ -99,7 +99,6 @@ def _event_to_dict(event) -> dict:
         "recurringEventId": event.recurring_event_id,
         "color": event.color,
         "location": event.location,
-        "description": event.description,
         "attendees": [
             {"email": a.email, "status": a.status, "organizer": a.organizer}
             for a in (event.attendees or [])

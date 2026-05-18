@@ -126,7 +126,6 @@ class CalendarEvent:
     recurring_event_id: str | None = None
     color: str | None = None
     location: str | None = None
-    description: str | None = None
     attendees: list[EventAttendee] | None = None
     custom: Mapping[str, Any] | None = None
     conference: str | None = None
@@ -157,7 +156,6 @@ class CalendarEvent:
             recurring_event_id=data.get("recurringEventId"),
             color=data.get("color"),
             location=data.get("location"),
-            description=data.get("description"),
             attendees=attendees,
             custom=data.get("custom"),
             conference=data.get("conference"),
@@ -215,7 +213,6 @@ class ConnectedAccount:
 class ConnectionStatusResponse:
     connections: dict[str, list[ConnectedAccount]]
     limit_reached: bool = False
-    limit: int | None = None
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> ConnectionStatusResponse:
@@ -229,7 +226,6 @@ class ConnectionStatusResponse:
         return cls(
             connections=connections,
             limit_reached=bool(data.get("limitReached", False)),
-            limit=data.get("limit"),
         )
 
 
