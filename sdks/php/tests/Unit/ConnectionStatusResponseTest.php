@@ -18,13 +18,11 @@ class ConnectionStatusResponseTest extends BaseTestCase
                 'microsoft' => [],
             ],
             'limitReached' => false,
-            'limit' => 5,
         ];
 
         $response = ConnectionStatusResponse::fromArray($data);
 
         $this->assertFalse($response->limitReached);
-        $this->assertSame(5, $response->limit);
         $this->assertArrayHasKey('google', $response->connections);
         $this->assertCount(1, $response->connections['google']);
         $this->assertSame('user@gmail.com', $response->connections['google'][0]['id']);
@@ -36,7 +34,6 @@ class ConnectionStatusResponseTest extends BaseTestCase
 
         $this->assertSame([], $response->connections);
         $this->assertFalse($response->limitReached);
-        $this->assertNull($response->limit);
     }
 
     public function testFromArrayLimitReached(): void
@@ -44,11 +41,9 @@ class ConnectionStatusResponseTest extends BaseTestCase
         $response = ConnectionStatusResponse::fromArray([
             'connections' => ['google' => [['id' => 'a@gmail.com']]],
             'limitReached' => true,
-            'limit' => 1,
         ]);
 
         $this->assertTrue($response->limitReached);
-        $this->assertSame(1, $response->limit);
     }
 
     public function testDisconnectResponseSuccess(): void

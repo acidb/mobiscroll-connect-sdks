@@ -12,7 +12,6 @@ class ConnectionStatusResponse
     public function __construct(
         public readonly array $connections,
         public readonly bool $limitReached,
-        public readonly ?int $limit = null,
     ) {
     }
 
@@ -24,7 +23,6 @@ class ConnectionStatusResponse
         return new self(
             $data['connections'] ?? [],
             $data['limitReached'] ?? false,
-            $data['limit'] ?? null,
         );
     }
 }
