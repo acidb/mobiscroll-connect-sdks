@@ -1,0 +1,20 @@
+# Compiled binaries
+bin/
+*.exe
+*.test
+*.out
+minimal-app/mobiscroll-connect-go-demo
+
+# Build artifacts
+*.so
+*.dylib
+*.dll
+
+# Go workspace files
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.iml

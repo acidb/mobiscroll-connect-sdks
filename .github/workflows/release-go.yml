@@ -1,0 +1,43 @@
+name: Release (Go)
+
+on:
+  push:
+    tags:
+      - 'sdks/go/v*'
+
+defaults:
+  run:
+    working-directory: sdks/go
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+          cache-dependency-path: sdks/go/go.sum
+
+      - name: Verify tag matches version.go
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#sdks/go/v}"
+          CODE_VERSION="$(grep -oE 'Version = "[^"]+"' version.go | sed -E 's/Version = "(.+)"/\1/')"
+          if [ "$TAG_VERSION" != "$CODE_VERSION" ]; then
+            echo "Tag ($TAG_VERSION) does not match version.go ($CODE_VERSION)"
+            exit 1
+          fi
+
+      - name: Run tests
+        run: go test -race -count=1 ./...
+
+      - name: Warm the Go module proxy
+        run: |
+          VERSION="${GITHUB_REF_NAME#sdks/go/}"
+          curl -fsSL "https://proxy.golang.org/github.com/acidb/mobiscroll-connect-sdks/sdks/go/@v/${VERSION}.info" \
+            || echo "Proxy fetch returned non-2xx; the module will be discovered on the next consumer go get."
