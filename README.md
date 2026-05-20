@@ -1,6 +1,6 @@
 # Mobiscroll Connect SDKs
 
-Official client SDKs for the [Mobiscroll Connect](https://mobiscroll.com/connect) API. This monorepo contains six language SDKs that share a common architecture (Auth, Calendars, Events) and are released independently to their respective package registries.
+Official client SDKs for the [Mobiscroll Connect](https://mobiscroll.com/connect) API. This monorepo contains seven language SDKs that share a common architecture (Auth, Calendars, Events) and are released independently to their respective package registries.
 
 ## SDKs
 
@@ -12,6 +12,7 @@ Official client SDKs for the [Mobiscroll Connect](https://mobiscroll.com/connect
 | [sdks/dotnet](sdks/dotnet/) | .NET 8 | `Mobiscroll.Connect` | [NuGet](https://www.nuget.org/packages/Mobiscroll.Connect) |
 | [sdks/java](sdks/java/) | Java 11+ | `com.mobiscroll:connect-sdk` | [Maven Central](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk) |
 | [sdks/go](sdks/go/) | Go 1.22+ | `github.com/acidb/mobiscroll-connect-sdks/sdks/go` | [pkg.go.dev](https://pkg.go.dev/github.com/acidb/mobiscroll-connect-sdks/sdks/go) |
+| [sdks/ruby](sdks/ruby/) | Ruby 3.1+ | `mobiscroll-connect` | [RubyGems](https://rubygems.org/gems/mobiscroll-connect) |
 
 Each SDK directory contains its own README, CLAUDE.md, and a `minimal-app/` (or `samples/MinimalApp/`) reference app you can run end-to-end.
 
@@ -24,7 +25,8 @@ sdks/
 ├── php/       PHP SDK + minimal-app
 ├── dotnet/    .NET SDK + samples/MinimalApp
 ├── java/      Java SDK + Spring Boot minimal-app
-└── go/        Go SDK + net/http minimal-app
+├── go/        Go SDK + net/http minimal-app
+└── ruby/      Ruby SDK + minimal Sinatra app
 ```
 
 Each SDK is self-contained — `cd sdks/<lang>` and use that language's normal toolchain (`npm`, `pip`, `composer`, `dotnet`, `mvn`, `go`).
@@ -41,6 +43,7 @@ Each SDK releases independently using path-scoped git tags:
 | .NET | `dotnet-v*` | `dotnet-v1.0.2` |
 | Java | `java-v*` | `java-v1.0.0` |
 | Go | `sdks/go/v*` | `sdks/go/v1.0.0` |
+| Ruby | `ruby-v*` | `ruby-v1.0.0` |
 
 GitHub Actions workflows (`.github/workflows/release-*.yml`) publish to the corresponding registry when a matching tag is pushed.
 

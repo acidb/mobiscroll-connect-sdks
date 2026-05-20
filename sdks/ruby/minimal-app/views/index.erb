@@ -1,0 +1,17 @@
+<% @title = 'Home' %>
+<% if @logged_in %>
+  <div class="alert alert-success">
+    <strong>Connected!</strong> You have an active session.
+  </div>
+  <p>
+    <a href="/calendars" class="btn btn-primary" style="margin-right:.5rem">View Calendars</a>
+    <a href="/events" class="btn btn-primary" style="margin-right:.5rem">View Events</a>
+    <a href="/event-edit" class="btn btn-primary" style="margin-right:.5rem">Create / Edit Event</a>
+    <a href="<%= h(@auth_url) %>" class="btn btn-primary">Connect another calendar</a>
+  </p>
+<% else %>
+  <div class="alert alert-info">
+    <strong>Not connected.</strong> Connect a calendar account to get started.
+  </div>
+  <a href="<%= h(@auth_url) %>" class="btn btn-primary">Connect calendar account</a>
+<% end %>

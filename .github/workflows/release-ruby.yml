@@ -1,0 +1,50 @@
+name: Release (Ruby)
+
+on:
+  push:
+    tags:
+      - 'ruby-v*'
+
+defaults:
+  run:
+    working-directory: sdks/ruby
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: sdks/ruby
+
+      - name: Verify tag matches version.rb
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#ruby-v}"
+          CODE_VERSION="$(grep -oE "VERSION = '[^']+'" lib/mobiscroll/connect/version.rb | sed -E "s/VERSION = '(.+)'/\1/")"
+          if [ "$TAG_VERSION" != "$CODE_VERSION" ]; then
+            echo "Tag ($TAG_VERSION) does not match version.rb ($CODE_VERSION)"
+            exit 1
+          fi
+
+      - name: Run tests
+        run: bundle exec rspec
+
+      - name: Build gem
+        run: gem build mobiscroll-connect.gemspec
+
+      - name: Push to RubyGems
+        run: |
+          mkdir -p ~/.gem
+          cat > ~/.gem/credentials << EOF
+          ---
+          :rubygems_api_key: ${{ secrets.RUBYGEMS_API_KEY }}
+          EOF
+          chmod 0600 ~/.gem/credentials
+          gem push mobiscroll-connect-*.gem

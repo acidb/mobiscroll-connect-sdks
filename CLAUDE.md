@@ -1,8 +1,8 @@
 # CLAUDE.md — Mobiscroll Connect SDKs (Monorepo)
 
-This is a polyglot monorepo containing six official client SDKs for the Mobiscroll Connect API: Node.js, Python, PHP, .NET, Java, and Go. Each SDK is self-contained under `sdks/<lang>/` with its own toolchain, tests, and CLAUDE.md. This file covers cross-SDK invariants and monorepo workflow.
+This is a polyglot monorepo containing seven official client SDKs for the Mobiscroll Connect API: Node.js, Python, PHP, .NET, Java, Go, and Ruby. Each SDK is self-contained under `sdks/<lang>/` with its own toolchain, tests, and CLAUDE.md. This file covers cross-SDK invariants and monorepo workflow.
 
-When you work on a specific SDK, also read its per-SDK [sdks/node/CLAUDE.md](sdks/node/CLAUDE.md) / [sdks/python/CLAUDE.md](sdks/python/CLAUDE.md) / [sdks/php/CLAUDE.md](sdks/php/CLAUDE.md) / [sdks/dotnet/CLAUDE.md](sdks/dotnet/CLAUDE.md) / [sdks/java/CLAUDE.md](sdks/java/CLAUDE.md) / [sdks/go/CLAUDE.md](sdks/go/CLAUDE.md) — those define the language-specific style and architecture that supersedes anything here.
+When you work on a specific SDK, also read its per-SDK [sdks/node/CLAUDE.md](sdks/node/CLAUDE.md) / [sdks/python/CLAUDE.md](sdks/python/CLAUDE.md) / [sdks/php/CLAUDE.md](sdks/php/CLAUDE.md) / [sdks/dotnet/CLAUDE.md](sdks/dotnet/CLAUDE.md) / [sdks/java/CLAUDE.md](sdks/java/CLAUDE.md) / [sdks/go/CLAUDE.md](sdks/go/CLAUDE.md) / [sdks/ruby/CLAUDE.md](sdks/ruby/CLAUDE.md) — those define the language-specific style and architecture that supersedes anything here.
 
 ## Repository layout
 
@@ -13,7 +13,8 @@ sdks/
 ├── php/       PHP 8.1+ (Guzzle 7)         → Packagist: mobiscroll/connect-php
 ├── dotnet/    .NET 8 (HttpClient)         → NuGet: Mobiscroll.Connect
 ├── java/      Java 11+ (OkHttp 4)         → Maven Central: com.mobiscroll:connect-sdk
-└── go/        Go 1.22+ (net/http)         → pkg.go.dev: github.com/acidb/mobiscroll-connect-sdks/sdks/go
+├── go/        Go 1.22+ (net/http)         → pkg.go.dev: github.com/acidb/mobiscroll-connect-sdks/sdks/go
+└── ruby/      Ruby 3.1+ (Faraday)         → RubyGems: mobiscroll-connect
 
 .github/workflows/   path-filtered CI per SDK + (later) tag-driven release
 scripts/             release.sh, bump-version.sh
@@ -66,6 +67,7 @@ All six SDKs implement the **same public surface** against the same backend. Whe
 | .NET | `dotnet-v*` | `dotnet-v1.0.2` |
 | Java | `java-v*` | `java-v1.0.0` |
 | Go | `sdks/go/v*` | `sdks/go/v1.0.0` |
+| Ruby | `ruby-v*` | `ruby-v1.0.0` |
 
 > **Note on the Go tag format:** Go uses `sdks/go/v*` (not `go-v*`) because the Go module proxy requires the module path as the tag prefix. `go get github.com/acidb/mobiscroll-connect-sdks/sdks/go@v1.0.0` only resolves when the tag is `sdks/go/v1.0.0`. This is the single documented exception to the `<sdk>-v*` convention.
 
@@ -83,19 +85,20 @@ The matching `.github/workflows/release-<sdk>.yml` workflow (added once the GitH
 - .NET: `sdks/dotnet/src/Mobiscroll.Connect/Mobiscroll.Connect.csproj` → `<Version>`
 - Java: `sdks/java/.mvn/maven.config` → `-Drevision=X` (single source; parent + child POMs all reference `${revision}` via `flatten-maven-plugin`)
 - Go: `sdks/go/version.go` → `const Version = "X"`
+- Ruby: `sdks/ruby/lib/mobiscroll/connect/version.rb` → `VERSION = "X"`
 
 **PHP-specific gotcha:** Packagist reads the `composer.json` at the **root** of the registered repo. Since the monorepo's PHP `composer.json` lives at `sdks/php/composer.json`, the release workflow uses `git subtree split` to push `sdks/php/` to a thin mirror repo (the existing [acidb/mobiscroll-connect-php](https://github.com/acidb/mobiscroll-connect-php) repo, repurposed as a publish-only mirror). Developers only ever edit in this monorepo; never edit the mirror directly.
 
 ## Per-SDK quick reference
 
-| Task | Node | Python | PHP | .NET | Java | Go |
-|------|------|--------|-----|------|------|----|
-| Install deps | `npm ci` | `pip install -e ".[dev]"` | `composer install` | `dotnet restore` | `mvn -B verify -DskipTests` (downloads on first run) | `go mod download` |
-| Run tests | `npm test` | `pytest` | `composer run test` | `dotnet test` | `mvn -pl connect-sdk test` | `go test -race ./...` |
-| Lint | `npm run lint` | `ruff check .` | `composer run lint` | (warnings-as-errors via build) | (compiler `-Xlint:all`) | `golangci-lint run` |
-| Type check | `tsc --noEmit` | `mypy mobiscroll_connect` | `composer run stan` | (compiler) | (compiler) | (compiler) |
-| Build | `npm run build` | `python -m build` | (n/a) | `dotnet build` | `mvn -pl connect-sdk package` | `go build ./...` |
-| Smoke test | (README examples) | `cd minimal-app && python app.py` | `cd minimal-app && php -S ...` | `cd samples/MinimalApp && dotnet run` | `cd minimal-app && mvn spring-boot:run` | `cd minimal-app && go run .` |
+| Task | Node | Python | PHP | .NET | Java | Go | Ruby |
+|------|------|--------|-----|------|------|----|------|
+| Install deps | `npm ci` | `pip install -e ".[dev]"` | `composer install` | `dotnet restore` | `mvn -B verify -DskipTests` | `go mod download` | `bundle install` |
+| Run tests | `npm test` | `pytest` | `composer run test` | `dotnet test` | `mvn -pl connect-sdk test` | `go test -race ./...` | `bundle exec rspec` |
+| Lint | `npm run lint` | `ruff check .` | `composer run lint` | (warnings-as-errors via build) | (compiler `-Xlint:all`) | `golangci-lint run` | `bundle exec rubocop` |
+| Type check | `tsc --noEmit` | `mypy mobiscroll_connect` | `composer run stan` | (compiler) | (compiler) | (compiler) | (duck-typed) |
+| Build | `npm run build` | `python -m build` | (n/a) | `dotnet build` | `mvn -pl connect-sdk package` | `go build ./...` | `gem build mobiscroll-connect.gemspec` |
+| Smoke test | (README examples) | `cd minimal-app && python app.py` | `cd minimal-app && php -S ...` | `cd samples/MinimalApp && dotnet run` | `cd minimal-app && mvn spring-boot:run` | `cd minimal-app && go run .` | `cd minimal-app && bundle exec rackup` |
 
 All commands assume `cwd = sdks/<lang>/`.
 

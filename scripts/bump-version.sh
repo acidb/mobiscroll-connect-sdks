@@ -2,18 +2,19 @@
 # Bump the version of a single SDK in place. Does NOT commit, tag, or push.
 #
 # Usage: scripts/bump-version.sh <sdk> <version>
-#   <sdk>     one of: node, python, php, dotnet, java, go
+#   <sdk>     one of: node, python, php, dotnet, java, go, ruby
 #   <version> a version string without the 'v' prefix, e.g. 1.0.2
 #
 # Examples:
 #   scripts/bump-version.sh node 1.0.2
 #   scripts/bump-version.sh python 0.2.0
+#   scripts/bump-version.sh ruby 1.0.0
 
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
   echo "usage: $0 <sdk> <version>" >&2
-  echo "  sdk: node | python | php | dotnet | java | go" >&2
+  echo "  sdk: node | python | php | dotnet | java | go | ruby" >&2
   exit 2
 fi
 
@@ -76,8 +77,15 @@ case "$SDK" in
     echo "Updated $FILE → Version = \"$VERSION\""
     ;;
 
+  ruby)
+    FILE="$ROOT/sdks/ruby/lib/mobiscroll/connect/version.rb"
+    sed -i.bak -E "s/VERSION = '[^']+'/VERSION = '$VERSION'/" "$FILE"
+    rm -f "$FILE.bak"
+    echo "Updated $FILE → VERSION = '$VERSION'"
+    ;;
+
   *)
-    echo "unknown sdk: $SDK (expected: node | python | php | dotnet | java | go)" >&2
+    echo "unknown sdk: $SDK (expected: node | python | php | dotnet | java | go | ruby)" >&2
     exit 2
     ;;
 esac

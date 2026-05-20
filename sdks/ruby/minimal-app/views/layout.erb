@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title><%= @title || 'Mobiscroll Connect Ruby' %> — Mobiscroll Connect Ruby SDK demo</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="nav-header">
+    <h2>Mobiscroll Connect — Ruby SDK demo</h2>
+    <nav class="nav-menu">
+      <a href="/" <%= request.path == '/' ? 'class="active"' : '' %>>Home</a>
+      <a href="/calendars" <%= request.path == '/calendars' ? 'class="active"' : '' %>>Calendars</a>
+      <a href="/events" <%= request.path == '/events' ? 'class="active"' : '' %>>Events</a>
+      <a href="/event-edit" <%= request.path == '/event-edit' ? 'class="active"' : '' %>>Event Edit</a>
+      <% if logged_in? %>
+        <a href="/logout" style="background:#dc3545">Logout</a>
+      <% end %>
+    </nav>
+  </header>
+  <main class="page">
+    <%= yield %>
+  </main>
+</body>
+</html>

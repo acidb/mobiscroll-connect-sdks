@@ -1,0 +1,133 @@
+<% @title = 'Event Edit' %>
+<h1>Create / Edit Event</h1>
+
+<div id="result-box" class="alert" style="display:none"></div>
+
+<form class="event-form" id="event-form">
+  <div class="form-section">
+    <h3 class="section-title">Event Settings</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="provider">Provider *</label>
+        <select id="provider" name="provider" required>
+          <option value="">Select provider…</option>
+          <option value="google" <%= @provider == 'google' ? 'selected' : '' %>>Google</option>
+          <option value="microsoft" <%= @provider == 'microsoft' ? 'selected' : '' %>>Microsoft</option>
+          <option value="apple" <%= @provider == 'apple' ? 'selected' : '' %>>Apple</option>
+          <option value="caldav" <%= @provider == 'caldav' ? 'selected' : '' %>>CalDAV</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="mode">Update / Delete Mode</label>
+        <select id="mode" name="mode">
+          <option value="this">This event only</option>
+          <option value="following">This and following</option>
+          <option value="all">All events in series</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="eventId">Event ID</label>
+      <input type="text" id="eventId" name="eventId" value="<%= h(@event_id) %>" placeholder="Leave blank to create a new event">
+      <div class="help-text">Leave blank to create · fill in to update/delete</div>
+    </div>
+    <div class="form-group">
+      <label for="recurringEventId">Recurring Event ID</label>
+      <input type="text" id="recurringEventId" name="recurringEventId" placeholder="Only for recurring event instances">
+      <div class="help-text">Only needed when editing a specific instance of a recurring event</div>
+    </div>
+    <div class="form-group">
+      <label for="calendarId">Calendar *</label>
+      <select id="calendarId" name="calendarId" required>
+        <option value="">Select a calendar…</option>
+        <% @calendars.each do |cal| %>
+          <option value="<%= h(cal.id) %>" data-provider="<%= h(cal.provider.to_s) %>" <%= cal.id == @calendar_id ? 'selected' : '' %>><%= h(cal.title) %> (<%= h(cal.provider) %>)</option>
+        <% end %>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3 class="section-title">Event Details</h3>
+    <div class="form-group">
+      <label for="title">Title *</label>
+      <input type="text" id="title" name="title" value="Weekly Team Meeting" required>
+    </div>
+    <div class="form-group">
+      <label for="description">Description</label>
+      <textarea id="description" name="description">Discuss project updates and blockers.</textarea>
+    </div>
+    <div class="form-group">
+      <label for="location">Location</label>
+      <input type="text" id="location" name="location" placeholder="Conference Room A">
+    </div>
+    <div class="form-group">
+      <label for="attendees">Attendees</label>
+      <textarea id="attendees" name="attendees" placeholder="email1@example.com&#10;email2@example.com"></textarea>
+      <div class="help-text">One email address per line</div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3 class="section-title">Date &amp; Time</h3>
+    <div class="checkbox-group" style="margin-bottom:.9rem">
+      <input type="checkbox" id="allDay" name="allDay">
+      <label for="allDay">All-day event</label>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="startDate">Start *</label>
+        <input type="datetime-local" id="startDate" name="startDate" value="<%= Time.now.strftime('%Y-%m-%dT%H:%M') %>" required>
+      </div>
+      <div class="form-group">
+        <label for="endDate">End *</label>
+        <input type="datetime-local" id="endDate" name="endDate" value="<%= (Time.now + 3600).strftime('%Y-%m-%dT%H:%M') %>" required>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="recurrence-toggle" onclick="toggleRecurrence()">
+      <input type="checkbox" id="recurrenceEnabled" name="recurrenceEnabled" onclick="event.stopPropagation();toggleRecurrence()">
+      <label for="recurrenceEnabled">Add Recurrence</label>
+    </div>
+    <div id="recurrenceContent" class="recurrence-content">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="frequency">Frequency</label>
+          <select id="frequency" name="frequency">
+            <option value="DAILY">Daily</option>
+            <option value="WEEKLY">Weekly</option>
+            <option value="MONTHLY">Monthly</option>
+            <option value="YEARLY">Yearly</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="interval">Interval</label>
+          <input type="number" id="interval" name="interval" value="1" min="1">
+          <div class="help-text">Repeat every N days/weeks/months</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="count">Count</label>
+        <input type="number" id="count" name="count" value="3" min="1">
+        <div class="help-text">Number of occurrences</div>
+      </div>
+      <div class="form-group">
+        <label for="byDay">By Day</label>
+        <input type="text" id="byDay" name="byDay" value="MO,TU,WE,TH,FR,SA,SU" placeholder="MO,TU,WE,TH,FR">
+        <div class="help-text">Comma-separated: SU,MO,TU,WE,TH,FR,SA</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <button type="submit" class="btn btn-primary" id="submitBtn">Create / Update Event</button>
+    <button type="button" class="btn btn-danger" id="deleteBtn" onclick="handleDelete()">Delete Event</button>
+  </div>
+</form>
+
+<script>
+  window.CAL_DATA = <%= @calendars.map { |c| { id: c.id, title: c.title, provider: c.provider.to_s } }.to_json %>;
+</script>
+<script src="/event-edit.js"></script>

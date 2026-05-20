@@ -1,0 +1,57 @@
+name: CI (Ruby)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdks/ruby/**'
+      - '.github/workflows/ci-ruby.yml'
+  pull_request:
+    paths:
+      - 'sdks/ruby/**'
+      - '.github/workflows/ci-ruby.yml'
+
+defaults:
+  run:
+    working-directory: sdks/ruby
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby: ['3.1', '3.2', '3.3']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Ruby ${{ matrix.ruby }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+          working-directory: sdks/ruby
+
+      - name: Run tests
+        run: bundle exec rspec
+
+      - name: Build gem
+        run: gem build mobiscroll-connect.gemspec
+
+      - name: Build minimal-app deps
+        working-directory: sdks/ruby/minimal-app
+        run: bundle install
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: sdks/ruby
+
+      - name: RuboCop
+        run: bundle exec rubocop

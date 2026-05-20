@@ -1,0 +1,65 @@
+<% @title = 'Events' %>
+<h1>Events</h1>
+
+<div class="filter-form">
+  <form method="get" action="/events">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label for="start">Start date</label>
+        <input type="datetime-local" id="start" name="start" value="<%= h(@start_dt) %>">
+      </div>
+      <div class="filter-group">
+        <label for="end">End date</label>
+        <input type="datetime-local" id="end" name="end" value="<%= h(@end_dt) %>">
+      </div>
+      <div class="filter-group">
+        <label for="page_size">Page size</label>
+        <input type="number" id="page_size" name="page_size" min="1" max="1000" value="<%= @page_size %>">
+      </div>
+      <button type="submit" class="btn btn-primary">Load</button>
+    </div>
+    <div class="checkbox-group">
+      <input type="checkbox" id="single_events" name="single_events" value="true" <%= @single_events ? 'checked' : '' %>>
+      <label for="single_events">Single Events (expand recurring)</label>
+    </div>
+  </form>
+</div>
+
+<% if @error %>
+  <div class="alert alert-error"><%= h(@error) %></div>
+<% end %>
+
+<div class="events-table-wrap">
+  <table>
+    <thead>
+      <tr><th>Provider</th><th>Title / Calendar</th><th>Start → End</th><th></th><th></th></tr>
+    </thead>
+    <tbody>
+      <% if @result.nil? || @result.events.empty? %>
+        <tr><td colspan="5" style="text-align:center;color:#6b7280;padding:2rem">No events found for this range.</td></tr>
+      <% else %>
+        <% @result.events.each do |evt| %>
+          <tr>
+            <td><span class="provider-badge provider-<%= h(evt.provider) %>"><%= h(evt.provider) %></span></td>
+            <td>
+              <div class="event-title"><%= h(evt.title) %></div>
+              <div class="event-meta"><%= h(evt.calendar_id) %></div>
+            </td>
+            <td>
+              <%= h(evt.start) %>
+              <br><span class="event-meta">→ <%= h(evt.end_time) %></span>
+            </td>
+            <td><% if evt.all_day %><span style="color:#6b7280;font-size:.8rem">all day</span><% end %></td>
+            <td><a href="/event-edit?eventId=<%= Rack::Utils.escape(evt.id.to_s) %>&calendarId=<%= Rack::Utils.escape(evt.calendar_id.to_s) %>&provider=<%= Rack::Utils.escape(evt.provider.to_s) %>">edit</a></td>
+          </tr>
+        <% end %>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<% if @result && @result.next_page_token %>
+  <div class="pagination-bar">
+    <a href="/events?start=<%= Rack::Utils.escape(@start_dt) %>&end=<%= Rack::Utils.escape(@end_dt) %>&page_size=<%= @page_size %>&single_events=<%= @single_events %>&next_page_token=<%= Rack::Utils.escape(@result.next_page_token) %>" class="btn btn-primary">Load next page →</a>
+  </div>
+<% end %>
