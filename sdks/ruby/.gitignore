@@ -1,0 +1,8 @@
+*.gem
+.bundle/
+.rspec_status
+coverage/
+pkg/
+tmp/
+vendor/bundle/
+.env
