@@ -22,10 +22,10 @@ RSpec.describe Mobiscroll::Connect::Resources::Events do
   describe '#list' do
     it 'returns an EventsListResponse' do
       MockServer.stub_json(:get, '/events', {
-        'events' => [event_fixture],
-        'pageSize' => 50,
-        'nextPageToken' => nil
-      })
+                             'events' => [event_fixture],
+                             'pageSize' => 50,
+                             'nextPageToken' => nil
+                           })
 
       result = client.events.list
       expect(result).to be_a(Mobiscroll::Connect::EventsListResponse)
@@ -92,7 +92,7 @@ RSpec.describe Mobiscroll::Connect::Resources::Events do
       rule = Mobiscroll::Connect::RecurrenceRule.new(
         frequency: 'WEEKLY',
         interval: 1,
-        by_day: ['MO', 'WE']
+        by_day: %w[MO WE]
       )
 
       client.events.create(

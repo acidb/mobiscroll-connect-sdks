@@ -86,7 +86,7 @@ module Mobiscroll
 
         if response.status == 401 && @credentials&.refresh_token && !retried
           new_tokens = refresh_access_token!
-          raise AuthenticationError.new('Failed to refresh token') if new_tokens.nil?
+          raise AuthenticationError, 'Failed to refresh token' if new_tokens.nil?
 
           return execute(method, path, query: query, body: body, headers: headers, retried: true)
         end
@@ -122,7 +122,7 @@ module Mobiscroll
         err = Connect.map_response_error(response.status, parsed, response.headers)
         raise(err) if err
 
-        raise Error.new("HTTP #{response.status}")
+        raise Error, "HTTP #{response.status}"
       end
 
       # Refreshes the access token. Concurrent callers share one in-flight
@@ -168,7 +168,7 @@ module Mobiscroll
 
       def perform_refresh
         rt = @credentials&.refresh_token
-        raise AuthenticationError.new('No refresh token available') if rt.nil? || rt.empty?
+        raise AuthenticationError, 'No refresh token available' if rt.nil? || rt.empty?
 
         form = {
           'grant_type' => 'refresh_token',

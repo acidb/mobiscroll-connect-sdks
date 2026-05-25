@@ -17,15 +17,44 @@ Metrics/MethodLength:
   Max: 30
 
 Metrics/AbcSize:
-  Max: 30
+  # Wider than default — model `from_h` and event body builders are flat
+  # assignment-heavy transforms; splitting them would only add indirection.
+  Max: 80
 
 Metrics/ClassLength:
   Max: 200
+
+Metrics/ModuleLength:
+  # models.rb groups all DTOs in one module by design.
+  Max: 250
+
+Metrics/CyclomaticComplexity:
+  # Many `from_h` methods fan-out into many `||`/key-lookup branches.
+  Max: 30
+
+Metrics/PerceivedComplexity:
+  Max: 30
+
+Metrics/ParameterLists:
+  # Public surface mirrors the other SDKs — keyword arg counts are fixed by
+  # cross-SDK parity.
+  Max: 8
+  CountKeywordArgs: true
 
 Metrics/BlockLength:
   Exclude:
     - 'spec/**/*'
     - '*.gemspec'
+
+Naming/FileName:
+  # `lib/mobiscroll-connect.rb` is the RubyGems-required shim for the
+  # hyphenated gem name.
+  Exclude:
+    - 'lib/mobiscroll-connect.rb'
+
+Gemspec/DevelopmentDependencies:
+  # Dev deps stay in the gemspec so `gem build` + `bundle install` agree.
+  Enabled: false
 
 Naming/AccessorMethodName:
   Enabled: false

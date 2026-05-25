@@ -24,14 +24,14 @@ Each `sdks/<lang>/` is independently buildable: `cd sdks/python && pip install -
 
 ## Cross-SDK invariants
 
-All six SDKs implement the **same public surface** against the same backend. When changing one, consider whether the other five need the parallel change.
+All seven SDKs implement the **same public surface** against the same backend. When changing one, consider whether the other six need the parallel change.
 
 **Resources** (each SDK exposes these as a top-level client property):
 - `Auth` — OAuth authorization, token exchange, refresh
 - `Calendars` — list, get, sync calendars across providers
 - `Events` — CRUD + list events on a calendar
 
-**Provider coverage** (identical across all six): Google Calendar, Microsoft Outlook (Graph), Apple Calendar, CalDAV.
+**Provider coverage** (identical across all seven): Google Calendar, Microsoft Outlook (Graph), Apple Calendar, CalDAV.
 
 **Error taxonomy** (mapped to language-idiomatic exception types in each SDK, but the categories are the same):
 - Authentication errors (401, expired/invalid token)
@@ -44,14 +44,14 @@ All six SDKs implement the **same public surface** against the same backend. Whe
 
 **Token-refresh semantics:** all SDKs auto-refresh expired access tokens once per request, retry the original call once, then surface the auth error if the refresh also fails. Do not change this behavior in only one SDK.
 
-**Naming parity:** the same operation has the same name across SDKs, adjusted for language case conventions. `listCalendars` in Node, `list_calendars` in Python, `listCalendars` in PHP, `ListCalendarsAsync` in .NET, `listCalendars` in Java, `ListCalendars` in Go (Go exported = PascalCase). When adding an operation, name it the same in all six.
+**Naming parity:** the same operation has the same name across SDKs, adjusted for language case conventions. `listCalendars` in Node, `list_calendars` in Python and Ruby, `listCalendars` in PHP, `ListCalendarsAsync` in .NET, `listCalendars` in Java, `ListCalendars` in Go (Go exported = PascalCase). When adding an operation, name it the same in all seven.
 
 ## Cross-SDK changes — workflow
 
 1. Make the change in one SDK first (whichever you're most comfortable with), get the tests passing.
-2. Replicate the change in the other five. Per-SDK CLAUDE.md files dictate idiomatic style — don't fight them.
+2. Replicate the change in the other six. Per-SDK CLAUDE.md files dictate idiomatic style — don't fight them.
 3. Update each SDK's README/CHANGELOG separately if user-visible.
-4. Single PR is preferred for a synchronized cross-SDK change. The path-filtered CI runs all six jobs in parallel.
+4. Single PR is preferred for a synchronized cross-SDK change. The path-filtered CI runs all seven jobs in parallel.
 
 ## Releases
 

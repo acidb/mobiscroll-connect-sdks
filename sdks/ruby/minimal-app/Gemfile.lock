@@ -2,6 +2,7 @@ PATH
   remote: ..
   specs:
     mobiscroll-connect (1.0.0)
+      base64 (~> 0.2)
       faraday (~> 2.9)
 
 GEM

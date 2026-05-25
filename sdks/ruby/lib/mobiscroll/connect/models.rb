@@ -18,7 +18,7 @@ module Mobiscroll
       # Overlay `incoming` on top of self, preserving the existing
       # refresh_token if `incoming` omits one.
       def merged_with(incoming)
-        return incoming if self.nil?
+        return incoming if nil?
 
         rt = incoming.refresh_token
         rt = refresh_token if rt.nil? || rt.empty?

@@ -21,23 +21,23 @@ RSpec.describe Mobiscroll::Connect::Client do
   end
 
   it 'raises on missing client_id' do
-    expect {
+    expect do
       Mobiscroll::Connect::Client.new(
         client_id: '',
         client_secret: 'secret',
         redirect_uri: 'http://localhost/callback'
       )
-    }.to raise_error(Mobiscroll::Connect::Error, /client_id/)
+    end.to raise_error(Mobiscroll::Connect::Error, /client_id/)
   end
 
   it 'raises on missing client_secret' do
-    expect {
+    expect do
       Mobiscroll::Connect::Client.new(
         client_id: 'id',
         client_secret: nil,
         redirect_uri: 'http://localhost/callback'
       )
-    }.to raise_error(Mobiscroll::Connect::Error, /client_secret/)
+    end.to raise_error(Mobiscroll::Connect::Error, /client_secret/)
   end
 
   it 'stores and retrieves credentials' do

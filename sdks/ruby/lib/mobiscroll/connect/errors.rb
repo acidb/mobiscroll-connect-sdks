@@ -75,7 +75,7 @@ module Mobiscroll
         ValidationError.new(message, details: details)
       when 429
         retry_after = headers && (headers['retry-after'] || headers['Retry-After'])
-        retry_after_int = retry_after ? retry_after.to_i : nil
+        retry_after_int = retry_after&.to_i
         RateLimitError.new(message, retry_after: retry_after_int)
       when 500..599
         ServerError.new(message, status_code: status)

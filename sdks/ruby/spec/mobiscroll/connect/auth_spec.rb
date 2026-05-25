@@ -37,7 +37,7 @@ RSpec.describe Mobiscroll::Connect::Resources::Auth do
         providers: [Mobiscroll::Connect::Provider::GOOGLE, Mobiscroll::Connect::Provider::MICROSOFT]
       )
       provider_values = URI.decode_www_form(URI.parse(url).query)
-                           .select { |k, _| k == 'providers' }
+                           .select { |k, _| k == 'providers' } # rubocop:disable Style/HashSlice
                            .map(&:last)
       expect(provider_values).to contain_exactly('google', 'microsoft')
     end
@@ -65,11 +65,11 @@ RSpec.describe Mobiscroll::Connect::Resources::Auth do
   describe '#get_connection_status' do
     it 'returns connection status from /oauth/connection-status' do
       MockServer.stub_json(:get, '/oauth/connection-status', {
-        'connections' => {
-          'google' => [{ 'id' => 'acc1', 'display' => 'user@gmail.com' }]
-        },
-        'limitReached' => false
-      })
+                             'connections' => {
+                               'google' => [{ 'id' => 'acc1', 'display' => 'user@gmail.com' }]
+                             },
+                             'limitReached' => false
+                           })
 
       status = MockServer.client_with_tokens.auth.get_connection_status
 
@@ -83,9 +83,9 @@ RSpec.describe Mobiscroll::Connect::Resources::Auth do
              .to_return(status: 404, body: '{"message":"not found"}',
                         headers: { 'Content-Type' => 'application/json' })
       MockServer.stub_json(:get, '/connection-status', {
-        'connections' => { 'microsoft' => [] },
-        'limitReached' => false
-      })
+                             'connections' => { 'microsoft' => [] },
+                             'limitReached' => false
+                           })
 
       status = MockServer.client_with_tokens.auth.get_connection_status
       expect(status.connections.key?('microsoft')).to be true

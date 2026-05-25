@@ -9,21 +9,21 @@ RSpec.describe Mobiscroll::Connect::Resources::Calendars do
   describe '#list' do
     it 'returns an array of Calendar objects' do
       MockServer.stub_json(:get, '/calendars', [
-        {
-          'provider' => 'google',
-          'id' => 'primary',
-          'title' => 'My Calendar',
-          'timeZone' => 'America/New_York',
-          'color' => '#4285F4'
-        },
-        {
-          'provider' => 'microsoft',
-          'id' => 'cal-2',
-          'title' => 'Work Calendar',
-          'timeZone' => 'UTC',
-          'color' => nil
-        }
-      ])
+                             {
+                               'provider' => 'google',
+                               'id' => 'primary',
+                               'title' => 'My Calendar',
+                               'timeZone' => 'America/New_York',
+                               'color' => '#4285F4'
+                             },
+                             {
+                               'provider' => 'microsoft',
+                               'id' => 'cal-2',
+                               'title' => 'Work Calendar',
+                               'timeZone' => 'UTC',
+                               'color' => nil
+                             }
+                           ])
 
       calendars = client.calendars.list
 

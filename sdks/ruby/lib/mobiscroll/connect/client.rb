@@ -30,8 +30,8 @@ module Mobiscroll
         @api_client.credentials
       end
 
-      def on_tokens_refreshed(&block)
-        @api_client.on_tokens_refreshed(&block)
+      def on_tokens_refreshed(&)
+        @api_client.on_tokens_refreshed(&)
       end
     end
   end

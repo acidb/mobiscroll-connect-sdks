@@ -32,22 +32,22 @@ module Mobiscroll
         def create(provider:, calendar_id:, title:, start:, end:, **opts)
           end_time = binding.local_variable_get(:end)
           body = build_event_body(opts.merge(
-            provider: provider,
-            calendar_id: calendar_id,
-            title: title,
-            start: start,
-            end: end_time
-          ))
+                                    provider: provider,
+                                    calendar_id: calendar_id,
+                                    title: title,
+                                    start: start,
+                                    end: end_time
+                                  ))
           parsed = @api_client.post('/event', body: JSON.generate(body))
           CalendarEvent.from_h(parsed)
         end
 
         def update(provider:, calendar_id:, event_id:, **opts)
           body = build_event_body(opts.merge(
-            provider: provider,
-            calendar_id: calendar_id,
-            event_id: event_id
-          ))
+                                    provider: provider,
+                                    calendar_id: calendar_id,
+                                    event_id: event_id
+                                  ))
           parsed = @api_client.put('/event', body: JSON.generate(body))
           CalendarEvent.from_h(parsed)
         end
@@ -85,7 +85,8 @@ module Mobiscroll
           body['privacy'] = params[:privacy] if params.key?(:privacy)
 
           if params.key?(:recurrence)
-            body['recurrence'] = params[:recurrence].is_a?(RecurrenceRule) ? params[:recurrence].to_wire : params[:recurrence]
+            body['recurrence'] =
+              params[:recurrence].is_a?(RecurrenceRule) ? params[:recurrence].to_wire : params[:recurrence]
           end
 
           if params.key?(:attendees)
