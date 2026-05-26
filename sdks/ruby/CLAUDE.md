@@ -3,7 +3,7 @@
 ## AI Assistant Guidelines
 
 - Be terse. Code first, brief explanation after.
-- Ruby 3.1 baseline. Idiomatic stdlib-first style.
+- Ruby 3.2 baseline. Idiomatic stdlib-first style.
 - No magic — explicit `require`, no autoloading outside the gem entry point.
 - Errors are values; surface them via typed subclasses of `Mobiscroll::Connect::Error`.
 
@@ -13,7 +13,7 @@
 - **Module:** `Mobiscroll::Connect`
 - **Entry point:** `Mobiscroll::Connect::Client.new(client_id:, client_secret:, redirect_uri:, **opts)`
 - **HTTP:** Faraday ~> 2.9 (two separate connections; see token-refresh below)
-- **Min Ruby:** 3.1 (CI matrix: 3.1, 3.2, 3.3)
+- **Min Ruby:** 3.2 (CI matrix: 3.2, 3.3)
 - **Tests:** RSpec + WebMock
 - **Lint:** RuboCop
 

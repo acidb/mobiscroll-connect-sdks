@@ -28,17 +28,17 @@ module MockServer
            )
   end
 
-  def self.default_client(**opts)
+  def self.default_client(**)
     Mobiscroll::Connect::Client.new(
       client_id: 'test-client-id',
       client_secret: 'test-client-secret',
       redirect_uri: 'http://localhost:3000/callback',
-      **opts
+      **
     )
   end
 
-  def self.client_with_tokens(**opts)
-    client = default_client(**opts)
+  def self.client_with_tokens(**)
+    client = default_client(**)
     tokens = Mobiscroll::Connect::TokenResponse.new(
       access_token: 'test-access-token',
       token_type: 'Bearer',
@@ -49,8 +49,8 @@ module MockServer
   end
 
   # Client with only an access_token — no refresh_token, so 401 is not retried.
-  def self.client_with_access_token_only(**opts)
-    client = default_client(**opts)
+  def self.client_with_access_token_only(**)
+    client = default_client(**)
     tokens = Mobiscroll::Connect::TokenResponse.new(
       access_token: 'test-access-token',
       token_type: 'Bearer'

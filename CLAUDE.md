@@ -14,7 +14,7 @@ sdks/
 ├── dotnet/    .NET 8 (HttpClient)         → NuGet: Mobiscroll.Connect
 ├── java/      Java 11+ (OkHttp 4)         → Maven Central: com.mobiscroll:connect-sdk
 ├── go/        Go 1.22+ (net/http)         → pkg.go.dev: github.com/acidb/mobiscroll-connect-sdks/sdks/go
-└── ruby/      Ruby 3.1+ (Faraday)         → RubyGems: mobiscroll-connect
+└── ruby/      Ruby 3.2+ (Faraday)         → RubyGems: mobiscroll-connect
 
 .github/workflows/   path-filtered CI per SDK + (later) tag-driven release
 scripts/             release.sh, bump-version.sh
