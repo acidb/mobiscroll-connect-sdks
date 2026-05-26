@@ -108,3 +108,9 @@ All commands assume `cwd = sdks/<lang>/`.
 - **Language-specific style, architecture, idioms** → `sdks/<lang>/CLAUDE.md`
 - **Release process specific to one SDK** → `sdks/<lang>/RELEASE_CHECKLIST.md` if it exists, else `sdks/<lang>/CLAUDE.md`
 - **Workflow/scripts that touch multiple SDKs** → `scripts/`
+
+## Commit messages
+
+- Keep messages minimal: a single-line conventional-commit subject is usually enough (e.g. `fix(ruby): pin public_suffix < 7`).
+- Only add a body when the *why* isn't obvious from the subject + diff. One short paragraph max.
+- **Never** add `Co-Authored-By:` trailers (including AI co-authors).
