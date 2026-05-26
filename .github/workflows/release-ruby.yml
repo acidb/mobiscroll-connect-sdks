@@ -41,20 +41,6 @@ jobs:
       - name: Build gem
         run: gem build mobiscroll-connect.gemspec
 
-      - name: Debug OIDC claims
-        shell: bash
-        run: |
-          TOKEN=$(curl -sSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=rubygems.org" | jq -r .value)
-          # Decode JWT payload (second segment)
-          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+')
-          # Pad with '=' to make base64 valid
-          PAD=$(( (4 - ${#PAYLOAD} % 4) % 4 ))
-          PAYLOAD=$(printf '%s%*s' "$PAYLOAD" "$PAD" "" | tr ' ' '=')
-          echo "::group::OIDC claims"
-          echo "$PAYLOAD" | base64 -d | jq '{sub, repository, repository_owner, workflow, workflow_ref, job_workflow_ref, environment, ref, ref_type, event_name}'
-          echo "::endgroup::"
-
       - name: RubyGems login (OIDC trusted publishing)
         uses: rubygems/configure-rubygems-credentials@main
 
