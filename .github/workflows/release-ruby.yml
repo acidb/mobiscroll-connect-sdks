@@ -12,8 +12,10 @@ defaults:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: rubygems-release
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -39,12 +41,8 @@ jobs:
       - name: Build gem
         run: gem build mobiscroll-connect.gemspec
 
+      - name: RubyGems login (OIDC trusted publishing)
+        uses: rubygems/configure-rubygems-credentials@main
+
       - name: Push to RubyGems
-        run: |
-          mkdir -p ~/.gem
-          cat > ~/.gem/credentials << EOF
-          ---
-          :rubygems_api_key: ${{ secrets.RUBYGEMS_API_KEY }}
-          EOF
-          chmod 0600 ~/.gem/credentials
-          gem push mobiscroll-connect-*.gem
+        run: gem push mobiscroll-connect-*.gem
