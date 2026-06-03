@@ -11,7 +11,7 @@ module Mobiscroll
           @api_client = api_client
         end
 
-        def generate_auth_url(user_id:, scope: nil, state: nil, providers: nil)
+        def generate_auth_url(user_id:, scope: nil, state: nil, providers: nil, lng: nil)
           params = {
             'response_type' => 'code',
             'client_id' => @config.client_id,
@@ -20,6 +20,7 @@ module Mobiscroll
           }
           params['scope'] = scope if scope
           params['state'] = state if state
+          params['lng'] = lng if lng
 
           query = URI.encode_www_form(params)
 

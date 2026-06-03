@@ -11,4 +11,10 @@ public sealed class AuthorizeParams
 
     /// <summary>Comma-separated provider list, e.g. "google,microsoft".</summary>
     public string? Providers { get; set; }
+
+    /// <summary>
+    /// Language code for the Connect authorization pages ("en" | "es" | "fr" | "ar").
+    /// When null, the Connect UI falls back to the browser Accept-Language header, then English.
+    /// </summary>
+    public string? Lng { get; set; }
 }

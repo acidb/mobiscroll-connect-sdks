@@ -26,13 +26,15 @@ class AuthTest extends BaseTestCase
             userId: 'user-123',
             scope: 'read-write',
             state: 'test-state',
-            providers: 'google,microsoft'
+            providers: 'google,microsoft',
+            lng: 'es'
         );
 
         $this->assertStringContainsString('user_id=user-123', $url);
         $this->assertStringContainsString('scope=read-write', $url);
         $this->assertStringContainsString('state=test-state', $url);
         $this->assertStringContainsString('providers=google%2Cmicrosoft', $url);
+        $this->assertStringContainsString('lng=es', $url);
     }
 
     public function testGenerateAuthUrlDefaultScopeIsCalendar(): void

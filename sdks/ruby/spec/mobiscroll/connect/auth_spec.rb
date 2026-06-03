@@ -31,6 +31,18 @@ RSpec.describe Mobiscroll::Connect::Resources::Auth do
       expect(params['state']).to eq('random-state')
     end
 
+    it 'includes the lng param when provided' do
+      url = client.auth.generate_auth_url(user_id: 'user-123', lng: 'es')
+      params = URI.decode_www_form(URI.parse(url).query).to_h
+      expect(params['lng']).to eq('es')
+    end
+
+    it 'omits the lng param when not provided' do
+      url = client.auth.generate_auth_url(user_id: 'user-123')
+      params = URI.decode_www_form(URI.parse(url).query).to_h
+      expect(params).not_to have_key('lng')
+    end
+
     it 'includes multiple providers as repeated params' do
       url = client.auth.generate_auth_url(
         user_id: 'user-123',

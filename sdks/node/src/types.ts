@@ -284,6 +284,13 @@ export interface AuthorizeParams {
    * Optional providers parameter (comma-separated list: 'google,apple,microsoft,caldav')
    */
   providers?: string;
+
+  /**
+   * Optional language code for the Connect authorization pages ('en' | 'es' | 'fr' | 'ar').
+   * Passed to the authorize URL as `lng`. When omitted, the Connect UI falls back to the
+   * browser's Accept-Language header, then English.
+   */
+  lng?: string;
 }
 
 /**

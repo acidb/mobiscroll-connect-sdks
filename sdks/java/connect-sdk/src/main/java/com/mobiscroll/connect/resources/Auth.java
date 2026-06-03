@@ -31,7 +31,8 @@ public final class Auth {
                 .add("redirect_uri", api.getConfig().getRedirectUri())
                 .add("user_id", params.getUserId())
                 .add("state", params.getState())
-                .add("scope", params.getScope());
+                .add("scope", params.getScope())
+                .add("lng", params.getLng());
         if (params.getProviders() != null) {
             for (Provider p : params.getProviders()) {
                 qs.add("providers", p.wireValue());

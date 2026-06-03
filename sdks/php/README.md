@@ -72,6 +72,7 @@ $authUrl = $client->auth()->generateAuthUrl(
     // scope: 'read-write',
     // state: 'csrf-protection-value',
     // providers: 'google,microsoft',
+    // lng: 'es', // Connect page language ('en', 'es', 'fr', 'ar')
 );
 
 header('Location: ' . $authUrl);

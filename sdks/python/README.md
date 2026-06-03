@@ -53,6 +53,7 @@ auth_url = client.auth.generate_auth_url(
     scope="calendar",       # optional
     state="csrf-value",     # optional
     providers="google,microsoft",  # optional
+    lng="es",               # optional: Connect page language ("en" | "es" | "fr" | "ar")
 )
 
 # Step 2 — exchange the code (in your callback handler)

@@ -33,7 +33,7 @@ export class Auth {
   generateAuthUrl(params: AuthorizeParams): string {
     const config = this.client.getConfig();
     const { clientId, redirectUri } = config;
-    const { userId, state, scope, providers } = params;
+    const { userId, state, scope, providers, lng } = params;
 
     const queryParams = new URLSearchParams({
       response_type: 'code',
@@ -45,6 +45,7 @@ export class Auth {
     if (state) queryParams.set('state', state);
     if (scope) queryParams.set('scope', scope);
     if (providers) queryParams.set('providers', providers);
+    if (lng) queryParams.set('lng', lng);
 
     const baseURL = this.client.baseURL;
     return `${baseURL}/oauth/authorize?${queryParams.toString()}`;

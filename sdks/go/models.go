@@ -35,6 +35,7 @@ type AuthURLParams struct {
 	Scope     string     // optional: "read-write" | "free-busy" | "read"
 	State     string     // optional CSRF state
 	Providers []Provider // optional: restrict to specific providers
+	Lng       string     // optional: Connect page language ("en", "es", "fr", "ar"); falls back to Accept-Language then English
 }
 
 // ConnectedAccount is one connected account under a provider.

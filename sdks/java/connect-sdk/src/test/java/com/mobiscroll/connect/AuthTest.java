@@ -36,6 +36,7 @@ class AuthTest {
                 .state("xyz")
                 .scope("calendars events")
                 .providers(Arrays.asList(Provider.GOOGLE, Provider.MICROSOFT))
+                .lng("es")
                 .build());
 
         assertThat(url).startsWith(server.url("/api/oauth/authorize").toString() + "?");
@@ -47,6 +48,7 @@ class AuthTest {
         assertThat(url).contains("scope=calendars+events");
         assertThat(url).contains("providers=google");
         assertThat(url).contains("providers=microsoft");
+        assertThat(url).contains("lng=es");
     }
 
     @Test void getTokenExchangesCodeAndCachesCredentials() throws Exception {

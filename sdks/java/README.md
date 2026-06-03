@@ -46,6 +46,7 @@ MobiscrollConnectClient client = new MobiscrollConnectClient(
 String authUrl = client.auth().generateAuthUrl(AuthUrlParams.builder()
     .userId("user-123")
     .providers(List.of(Provider.GOOGLE))
+    .lng("es") // optional: Connect page language ("en", "es", "fr", "ar")
     .build());
 
 // 2. On the callback, exchange the code.

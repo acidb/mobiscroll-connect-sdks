@@ -37,6 +37,7 @@ class AsyncAuth:
         scope: str = "calendar",
         state: str | None = None,
         providers: str | None = None,
+        lng: str | None = None,
     ) -> str:
         cfg = self._api.config
         params = {
@@ -50,6 +51,8 @@ class AsyncAuth:
             params["state"] = state
         if providers is not None:
             params["providers"] = providers
+        if lng is not None:
+            params["lng"] = lng
         return f"{self._api.base_url}/oauth/authorize?{urlencode(params)}"
 
     async def get_token(self, code: str) -> TokenResponse:

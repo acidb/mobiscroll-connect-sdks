@@ -35,6 +35,7 @@ client = Mobiscroll::Connect::Client.new(
 ```ruby
 url = client.auth.generate_auth_url(
   user_id:   'user-123',
+  lng:       'es', # optional: Connect page language ('en', 'es', 'fr', 'ar')
   providers: [
     Mobiscroll::Connect::Provider::GOOGLE,
     Mobiscroll::Connect::Provider::MICROSOFT

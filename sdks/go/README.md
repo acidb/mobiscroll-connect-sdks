@@ -27,6 +27,7 @@ client := mobiscroll.NewClient("client-id", "client-secret", "https://app.exampl
 authURL := client.Auth().GenerateAuthURL(&mobiscroll.AuthURLParams{
     UserID:    "user-1",
     Providers: []mobiscroll.Provider{mobiscroll.ProviderGoogle},
+    Lng:       "es", // optional: Connect page language ("en", "es", "fr", "ar")
 })
 // http.Redirect(w, r, authURL, http.StatusFound)
 

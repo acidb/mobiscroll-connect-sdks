@@ -86,6 +86,7 @@ string authUrl = client.Auth.GenerateAuthUrl(new AuthorizeParams
     // Scope     = "read-write",
     // State     = "csrf-protection-value",
     // Providers = "google,microsoft",
+    // Lng       = "es", // Connect page language ("en", "es", "fr", "ar")
 });
 
 // Redirect the user to authUrl

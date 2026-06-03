@@ -20,13 +20,15 @@ class Auth
      * @param string $scope Optional: Requested OAuth scopes (default: 'calendar')
      * @param string|null $state Optional: CSRF protection state value
      * @param string|null $providers Optional: Comma-separated list of providers to authorize
+     * @param string|null $lng Optional: Language code for the Connect pages ('en', 'es', 'fr', 'ar')
      * @return string The complete OAuth2 authorization URL
      */
     public function generateAuthUrl(
         string $userId,
         string $scope = 'calendar',
         ?string $state = null,
-        ?string $providers = null
+        ?string $providers = null,
+        ?string $lng = null
     ): string {
         $config = $this->apiClient->getConfig();
 
@@ -44,6 +46,10 @@ class Auth
 
         if ($providers !== null) {
             $params['providers'] = $providers;
+        }
+
+        if ($lng !== null) {
+            $params['lng'] = $lng;
         }
 
         return 'https://connect.mobiscroll.com/api/oauth/authorize?' . http_build_query($params);

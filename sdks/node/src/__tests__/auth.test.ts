@@ -32,6 +32,7 @@ describe('Auth Resource', () => {
         userId: 'user-123',
         state: 'random-state',
         scope: 'read-write',
+        lng: 'es',
       });
 
       expect(url).toContain('https://connect.mobiscroll.com/api/oauth/authorize');
@@ -41,6 +42,7 @@ describe('Auth Resource', () => {
       expect(url).toContain('redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback');
       expect(url).toContain('state=random-state');
       expect(url).toContain('scope=read-write');
+      expect(url).toContain('lng=es');
     });
 
     it('should generate URL with only required parameters', () => {
@@ -53,6 +55,7 @@ describe('Auth Resource', () => {
       expect(url).toContain('client_id=test-client');
       expect(url).toContain('user_id=user-123');
       expect(url).not.toContain('state=');
+      expect(url).not.toContain('lng=');
     });
   });
 

@@ -29,6 +29,7 @@ class Auth:
         scope: str = "calendar",
         state: str | None = None,
         providers: str | None = None,
+        lng: str | None = None,
     ) -> str:
         """Build the OAuth2 authorization URL to redirect the user to.
 
@@ -37,6 +38,9 @@ class Auth:
         :param state: Opaque CSRF protection value.
         :param providers: Comma-separated list (e.g. ``"google,microsoft"``)
             to restrict the provider picker.
+        :param lng: Language code for the Connect authorization pages
+            (``"en"``, ``"es"``, ``"fr"``, ``"ar"``). When omitted, the Connect
+            UI falls back to the browser ``Accept-Language`` header, then English.
         """
         cfg = self._api.config
         params = {
@@ -50,6 +54,8 @@ class Auth:
             params["state"] = state
         if providers is not None:
             params["providers"] = providers
+        if lng is not None:
+            params["lng"] = lng
 
         return f"{self._api.base_url}/oauth/authorize?{urlencode(params)}"
 

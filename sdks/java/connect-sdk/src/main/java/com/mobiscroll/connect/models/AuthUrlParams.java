@@ -12,18 +12,23 @@ public final class AuthUrlParams {
     private final String state;
     private final String scope;
     private final List<Provider> providers;
+    private final String lng;
 
     private AuthUrlParams(Builder b) {
         this.userId = Objects.requireNonNull(b.userId, "userId");
         this.state = b.state;
         this.scope = b.scope;
         this.providers = b.providers;
+        this.lng = b.lng;
     }
 
     public String getUserId() { return userId; }
     public String getState() { return state; }
     public String getScope() { return scope; }
     public List<Provider> getProviders() { return providers; }
+
+    /** Language code for the Connect authorization pages ("en", "es", "fr", "ar"); null falls back to Accept-Language then English. */
+    public String getLng() { return lng; }
 
     public static Builder builder() { return new Builder(); }
 
@@ -32,11 +37,13 @@ public final class AuthUrlParams {
         private String state;
         private String scope;
         private List<Provider> providers;
+        private String lng;
 
         public Builder userId(String v) { this.userId = v; return this; }
         public Builder state(String v) { this.state = v; return this; }
         public Builder scope(String v) { this.scope = v; return this; }
         public Builder providers(List<Provider> v) { this.providers = v; return this; }
+        public Builder lng(String v) { this.lng = v; return this; }
 
         public AuthUrlParams build() { return new AuthUrlParams(this); }
     }

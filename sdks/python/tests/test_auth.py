@@ -36,12 +36,19 @@ def test_generate_auth_url_minimal(client):
 
 def test_generate_auth_url_optional(client):
     url = client.auth.generate_auth_url(
-        user_id="u", state="csrf", providers="google,microsoft", scope="read-write"
+        user_id="u", state="csrf", providers="google,microsoft", scope="read-write", lng="es"
     )
     params = parse_qs(urlparse(url).query)
     assert params["state"] == ["csrf"]
     assert params["providers"] == ["google,microsoft"]
     assert params["scope"] == ["read-write"]
+    assert params["lng"] == ["es"]
+
+
+def test_generate_auth_url_omits_lng_when_absent(client):
+    url = client.auth.generate_auth_url(user_id="user-1")
+    params = parse_qs(urlparse(url).query)
+    assert "lng" not in params
 
 
 @respx.mock

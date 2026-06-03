@@ -22,7 +22,8 @@ func (a *authService) GenerateAuthURL(p *AuthURLParams) string {
 	if p != nil {
 		qs.Add("user_id", p.UserID).
 			Add("state", p.State).
-			Add("scope", p.Scope)
+			Add("scope", p.Scope).
+			Add("lng", p.Lng)
 		for _, prov := range p.Providers {
 			qs.Add("providers", string(prov))
 		}

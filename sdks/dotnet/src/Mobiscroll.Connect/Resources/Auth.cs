@@ -42,7 +42,8 @@ public sealed class Auth
             .Add("redirect_uri", cfg.RedirectUri)
             .Add("state", authParams.State)
             .Add("scope", authParams.Scope)
-            .Add("providers", authParams.Providers);
+            .Add("providers", authParams.Providers)
+            .Add("lng", authParams.Lng);
 
         // BaseUrl ends with a slash — keep the resulting URL clean.
         return $"{_client.BaseUrl}oauth/authorize?{qs}";

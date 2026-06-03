@@ -49,6 +49,7 @@ const url = client.auth.generateAuthUrl({
 	state: 'optional-state',
 	scope: 'read-write',
 	providers: 'google,microsoft,apple,caldav',
+	lng: 'es', // optional: Connect page language ('en' | 'es' | 'fr' | 'ar')
 });
 
 // Redirect the user to `url`
