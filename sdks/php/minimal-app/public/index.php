@@ -207,10 +207,12 @@ try {
 
     switch ($action) {
         case 'auth-url':
+            $lng = isset($_GET['lng']) && $_GET['lng'] !== '' ? (string)$_GET['lng'] : null;
             $authUrl = $client->auth()->generateAuthUrl(
                 userId: $userId,
                 scope: $scope,
                 providers: $provider,
+                lng: $lng,
             );
             $callbackPreview = $redirectUri . (str_contains($redirectUri, '?') ? '&' : '?') . 'code=...';
 

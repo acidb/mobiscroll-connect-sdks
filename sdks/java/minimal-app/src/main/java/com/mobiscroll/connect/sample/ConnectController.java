@@ -128,6 +128,7 @@ public class ConnectController {
         TokenResponse tokens = readTokens(req);
         String authUrl = client.auth().generateAuthUrl(AuthUrlParams.builder()
                 .userId("demo-user")
+                .lng(req.getParameter("lng")) // optional: try /?lng=es | fr | ar
                 .providers(Arrays.asList(
                         com.mobiscroll.connect.Provider.GOOGLE,
                         com.mobiscroll.connect.Provider.MICROSOFT,

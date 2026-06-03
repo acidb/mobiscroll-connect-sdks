@@ -92,6 +92,7 @@ app.MapGet("/", (MobiscrollConnectClient client, HttpContext ctx) =>
     var authUrl = client.Auth.GenerateAuthUrl(new AuthorizeParams
     {
         UserId = "demo-user",
+        Lng = ctx.Request.Query["lng"], // optional: try /?lng=es | fr | ar
         Providers = "google,microsoft,apple,caldav",
     });
 

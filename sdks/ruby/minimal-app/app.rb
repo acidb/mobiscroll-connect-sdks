@@ -60,6 +60,7 @@ helpers do
     )
     client.auth.generate_auth_url(
       user_id: 'demo-user',
+      lng: params['lng'], # optional: try /?lng=es | fr | ar
       providers: [
         Mobiscroll::Connect::Provider::GOOGLE,
         Mobiscroll::Connect::Provider::MICROSOFT,
