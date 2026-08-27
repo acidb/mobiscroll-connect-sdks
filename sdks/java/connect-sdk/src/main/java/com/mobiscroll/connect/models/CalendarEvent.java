@@ -36,6 +36,11 @@ public final class CalendarEvent {
     private final String status;
     private final String link;
     private final JsonNode original;
+    private final String description;
+    /** Provider-specific conference metadata; keys vary per provider. */
+    private final Map<String, Object> conferenceData;
+    /** ISO 8601 timestamp of the last modification. */
+    private final String lastModified;
     private final Map<String, Object> additional = new HashMap<>();
 
     @JsonCreator
@@ -57,7 +62,10 @@ public final class CalendarEvent {
             @JsonProperty("privacy") String privacy,
             @JsonProperty("status") String status,
             @JsonProperty("link") String link,
-            @JsonProperty("original") JsonNode original) {
+            @JsonProperty("original") JsonNode original,
+            @JsonProperty("description") String description,
+            @JsonProperty("conferenceData") Map<String, Object> conferenceData,
+            @JsonProperty("lastModified") String lastModified) {
         this.id = id;
         this.provider = provider;
         this.calendarId = calendarId;
@@ -76,6 +84,9 @@ public final class CalendarEvent {
         this.status = status;
         this.link = link;
         this.original = original;
+        this.description = description;
+        this.conferenceData = conferenceData;
+        this.lastModified = lastModified;
     }
 
     public String getId() { return id; }
@@ -97,6 +108,12 @@ public final class CalendarEvent {
     public String getStatus() { return status; }
     public String getLink() { return link; }
     public JsonNode getOriginal() { return original; }
+    /** Event description or notes. */
+    public String getDescription() { return description; }
+    /** Provider-specific conference metadata; use it for details beyond {@link #getConference()}. */
+    public Map<String, Object> getConferenceData() { return conferenceData; }
+    /** ISO 8601 timestamp of the last modification, e.g. {@code 2026-03-10T13:36:08.000Z}. */
+    public String getLastModified() { return lastModified; }
 
     @JsonAnyGetter
     public Map<String, Object> getAdditional() { return additional; }

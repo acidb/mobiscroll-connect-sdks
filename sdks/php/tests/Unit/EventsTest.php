@@ -69,6 +69,39 @@ class EventsTest extends BaseTestCase
         $this->assertEquals('https://calendar.google.com/event?eid=123', $event->link);
     }
 
+    public function testEventFromArrayWithDescriptionConferenceDataAndLastModified(): void
+    {
+        $event = CalendarEvent::fromArray([
+            'provider' => 'google',
+            'id' => 'event-789',
+            'calendarId' => 'primary',
+            'title' => 'Standup',
+            'start' => '2024-06-01T09:00:00Z',
+            'end' => '2024-06-01T09:15:00Z',
+            'description' => 'Weekly team sync',
+            'conference' => 'https://meet.google.com/abc-defg-hij',
+            'conferenceData' => ['provider' => 'google-meet', 'conferenceId' => 'abc-defg-hij'],
+            'lastModified' => '2026-03-10T13:36:08.000Z',
+        ]);
+
+        $this->assertEquals('Weekly team sync', $event->description);
+        $this->assertEquals('google-meet', $event->conferenceData['provider'] ?? null);
+        $this->assertEquals('2026-03-10T13:36:08.000Z', $event->lastModified);
+    }
+
+    public function testEventOptionalExtrasDefaultToNull(): void
+    {
+        $event = CalendarEvent::fromArray([
+            'provider' => 'google',
+            'id' => 'event-000',
+            'calendarId' => 'primary',
+        ]);
+
+        $this->assertNull($event->description);
+        $this->assertNull($event->conferenceData);
+        $this->assertNull($event->lastModified);
+    }
+
     public function testEventMissingRequiredFields(): void
     {
         $this->expectException(\InvalidArgumentException::class);

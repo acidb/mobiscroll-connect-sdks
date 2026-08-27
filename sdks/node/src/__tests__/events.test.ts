@@ -74,6 +74,43 @@ describe('Events Resource', () => {
       expect(mockApiClient.get).toHaveBeenCalledWith('/events');
       expect(result).toEqual({ events: mockEvents });
     });
+
+    it('should surface description, conferenceData and lastModified', async () => {
+      const mockEvents: CalendarEvent[] = [
+        {
+          id: '1',
+          title: 'Standup',
+          description: 'Weekly team sync',
+          start: new Date('2023-01-01T10:00:00Z'),
+          end: new Date('2023-01-01T11:00:00Z'),
+          allDay: false,
+          provider: ProviderEnum.Google,
+          calendarId: 'cal1',
+          conference: 'https://meet.google.com/abc-defg-hij',
+          conferenceData: {
+            provider: 'google-meet',
+            conferenceId: 'abc-defg-hij',
+            entryPoints: [
+              { entryPointType: 'video', uri: 'https://meet.google.com/abc-defg-hij' },
+            ],
+          },
+          lastModified: '2026-03-10T13:36:08.000Z',
+          original: {},
+        },
+      ];
+
+      mockApiClient.get.mockResolvedValue({
+        data: { events: mockEvents },
+        status: 200,
+        headers: {},
+      });
+
+      const [event] = (await events.list()).events;
+
+      expect(event.description).toBe('Weekly team sync');
+      expect(event.conferenceData?.provider).toBe('google-meet');
+      expect(event.lastModified).toBe('2026-03-10T13:36:08.000Z');
+    });
   });
 
   describe('create', () => {

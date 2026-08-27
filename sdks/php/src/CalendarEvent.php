@@ -14,6 +14,8 @@ class CalendarEvent
      * @param array<string, mixed> $original
      * @param array<string, mixed>|null $attendees
      * @param array<string, mixed>|null $custom
+     * @param array<string, mixed>|null $conferenceData provider-specific conference metadata; keys vary per provider
+     * @param string|null $lastModified ISO 8601 timestamp of the last modification
      */
     public function __construct(
         public readonly string $provider,
@@ -34,6 +36,9 @@ class CalendarEvent
         public readonly ?string $status = null,
         public readonly ?string $link = null,
         public readonly array $original = [],
+        public readonly ?string $description = null,
+        public readonly ?array $conferenceData = null,
+        public readonly ?string $lastModified = null,
     ) {
     }
 
@@ -61,6 +66,9 @@ class CalendarEvent
             $data['status'] ?? null,
             $data['link'] ?? null,
             $data['original'] ?? [],
+            $data['description'] ?? null,
+            $data['conferenceData'] ?? null,
+            $data['lastModified'] ?? null,
         );
     }
 }

@@ -62,4 +62,29 @@ public class SerializationTests
         Assert.DoesNotContain("\"description\":", json);
         Assert.DoesNotContain("\"location\":", json);
     }
+
+    [Fact]
+    public void CalendarEvent_DeserializesDescriptionConferenceDataAndLastModified()
+    {
+        var json = """
+        {
+          "provider": "google",
+          "id": "evt-1",
+          "calendarId": "primary",
+          "title": "Standup",
+          "description": "Weekly team sync",
+          "conference": "https://meet.google.com/abc-defg-hij",
+          "conferenceData": { "provider": "google-meet", "conferenceId": "abc-defg-hij" },
+          "lastModified": "2026-03-10T13:36:08.000Z"
+        }
+        """;
+
+        var e = JsonSerializer.Deserialize<CalendarEvent>(json, ApiClient.JsonOptions);
+
+        Assert.NotNull(e);
+        Assert.Equal("Weekly team sync", e!.Description);
+        Assert.NotNull(e.ConferenceData);
+        Assert.Equal("google-meet", e.ConferenceData!["provider"].GetString());
+        Assert.Equal("2026-03-10T13:36:08.000Z", e.LastModified);
+    }
 }

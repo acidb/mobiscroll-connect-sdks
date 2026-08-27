@@ -10,6 +10,10 @@ public sealed class CalendarEvent
     public string Id { get; set; } = string.Empty;
     public string CalendarId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
+
+    /// <summary>Event description or notes.</summary>
+    public string? Description { get; set; }
+
     public DateTime Start { get; set; }
     public DateTime End { get; set; }
     public bool AllDay { get; set; }
@@ -20,6 +24,12 @@ public sealed class CalendarEvent
     public Dictionary<string, JsonElement>? Custom { get; set; }
     public string? Conference { get; set; }
 
+    /// <summary>
+    /// Provider-specific conference metadata; use it for details beyond <see cref="Conference"/>.
+    /// Keys vary per provider, so the payload is left as raw <see cref="JsonElement"/> values.
+    /// </summary>
+    public Dictionary<string, JsonElement>? ConferenceData { get; set; }
+
     /// <summary>"busy" | "free"</summary>
     public string? Availability { get; set; }
 
@@ -28,6 +38,9 @@ public sealed class CalendarEvent
 
     /// <summary>"confirmed" | "tentative" | "cancelled"</summary>
     public string? Status { get; set; }
+
+    /// <summary>ISO 8601 timestamp of the last modification, e.g. "2026-03-10T13:36:08.000Z".</summary>
+    public string? LastModified { get; set; }
 
     public string? Link { get; set; }
 
