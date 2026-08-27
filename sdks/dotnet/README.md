@@ -86,7 +86,7 @@ string authUrl = client.Auth.GenerateAuthUrl(new AuthorizeParams
     // Scope     = "read-write",
     // State     = "csrf-protection-value",
     // Providers = "google,microsoft",
-    // Lng       = "es", // Connect page language ("en", "es", "fr", "ar")
+    // Lng       = "es", // Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
 });
 
 // Redirect the user to authUrl

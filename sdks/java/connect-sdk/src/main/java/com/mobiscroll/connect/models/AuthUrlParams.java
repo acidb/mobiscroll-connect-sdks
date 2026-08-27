@@ -27,7 +27,12 @@ public final class AuthUrlParams {
     public String getScope() { return scope; }
     public List<Provider> getProviders() { return providers; }
 
-    /** Language code for the Connect authorization pages ("en", "es", "fr", "ar"); null falls back to Accept-Language then English. */
+    /**
+     * Language code for the Connect authorization pages, e.g. {@code "es"}; null falls back to
+     * Accept-Language then English.
+     *
+     * @see <a href="https://mobiscroll.com/docs/connect/localization#supported-languages">Supported languages</a>
+     */
     public String getLng() { return lng; }
 
     public static Builder builder() { return new Builder(); }

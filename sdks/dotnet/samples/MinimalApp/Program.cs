@@ -92,7 +92,7 @@ app.MapGet("/", (MobiscrollConnectClient client, HttpContext ctx) =>
     var authUrl = client.Auth.GenerateAuthUrl(new AuthorizeParams
     {
         UserId = "demo-user",
-        Lng = ctx.Request.Query["lng"], // optional: try /?lng=es | fr | ar
+        Lng = ctx.Request.Query["lng"], // optional: try /?lng=es — languages: https://mobiscroll.com/docs/connect/localization#supported-languages
         Providers = "google,microsoft,apple,caldav",
     });
 

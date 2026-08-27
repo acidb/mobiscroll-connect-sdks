@@ -105,7 +105,7 @@ func (s *server) home(w http.ResponseWriter, r *http.Request) {
 	c := mobiscroll.NewClient(s.cfg.clientID, s.cfg.clientSecret, s.cfg.redirectURI)
 	authURL := c.Auth().GenerateAuthURL(&mobiscroll.AuthURLParams{
 		UserID: "demo-user",
-		Lng:    r.URL.Query().Get("lng"), // optional: try /?lng=es | fr | ar
+		Lng:    r.URL.Query().Get("lng"), // optional: try /?lng=es — languages: https://mobiscroll.com/docs/connect/localization#supported-languages
 		Providers: []mobiscroll.Provider{
 			mobiscroll.ProviderGoogle, mobiscroll.ProviderMicrosoft,
 			mobiscroll.ProviderApple, mobiscroll.ProviderCalDav,

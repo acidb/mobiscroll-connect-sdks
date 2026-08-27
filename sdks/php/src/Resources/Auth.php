@@ -20,7 +20,8 @@ class Auth
      * @param string $scope Optional: Requested OAuth scopes (default: 'calendar')
      * @param string|null $state Optional: CSRF protection state value
      * @param string|null $providers Optional: Comma-separated list of providers to authorize
-     * @param string|null $lng Optional: Language code for the Connect pages ('en', 'es', 'fr', 'ar')
+     * @param string|null $lng Optional: Language code for the Connect pages, e.g. 'es'.
+     *                         Supported languages: https://mobiscroll.com/docs/connect/localization#supported-languages
      * @return string The complete OAuth2 authorization URL
      */
     public function generateAuthUrl(

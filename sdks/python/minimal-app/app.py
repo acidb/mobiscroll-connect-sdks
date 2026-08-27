@@ -193,7 +193,7 @@ def index():
         scope = session.get("cfg_scope") or _env("MOBISCROLL_SCOPE", "read-write")
         providers = session.get("cfg_providers") or _env("MOBISCROLL_PROVIDER", "google")
         redirect_uri = _env("MOBISCROLL_REDIRECT_URI", "http://localhost:8000/?action=callback")
-        lng = request.args.get("lng")  # optional: ?action=auth-url&lng=es | fr | ar
+        lng = request.args.get("lng")  # optional: ?action=auth-url&lng=es — languages: https://mobiscroll.com/docs/connect/localization#supported-languages
 
         auth_url = client.auth.generate_auth_url(
             user_id=user_id, scope=scope, providers=providers, lng=lng

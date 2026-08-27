@@ -60,7 +60,7 @@ helpers do
     )
     client.auth.generate_auth_url(
       user_id: 'demo-user',
-      lng: params['lng'], # optional: try /?lng=es | fr | ar
+      lng: params['lng'], # optional: try /?lng=es — languages: https://mobiscroll.com/docs/connect/localization#supported-languages
       providers: [
         Mobiscroll::Connect::Provider::GOOGLE,
         Mobiscroll::Connect::Provider::MICROSOFT,

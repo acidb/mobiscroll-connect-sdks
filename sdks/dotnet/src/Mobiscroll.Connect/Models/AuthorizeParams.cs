@@ -13,8 +13,9 @@ public sealed class AuthorizeParams
     public string? Providers { get; set; }
 
     /// <summary>
-    /// Language code for the Connect authorization pages ("en" | "es" | "fr" | "ar").
+    /// Language code for the Connect authorization pages, e.g. "es".
     /// When null, the Connect UI falls back to the browser Accept-Language header, then English.
+    /// Supported languages: <see href="https://mobiscroll.com/docs/connect/localization#supported-languages"/>
     /// </summary>
     public string? Lng { get; set; }
 }
