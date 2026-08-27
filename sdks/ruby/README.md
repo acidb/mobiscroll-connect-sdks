@@ -35,7 +35,7 @@ client = Mobiscroll::Connect::Client.new(
 ```ruby
 url = client.auth.generate_auth_url(
   user_id:   'user-123',
-  lng:       'es', # optional: Connect page language ('en', 'es', 'fr', 'ar')
+  lng:       'es', # optional: Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
   providers: [
     Mobiscroll::Connect::Provider::GOOGLE,
     Mobiscroll::Connect::Provider::MICROSOFT
@@ -69,7 +69,12 @@ client.set_credentials(
 ```ruby
 status = client.auth.get_connection_status
 status.connections.each do |provider, accounts|
-  accounts.each { |a| puts "#{provider}: #{a.display}" }
+  accounts.each do |a|
+    puts "#{provider}: #{a.display}"
+    # Google's consent screen lets the user untick the calendar permission and still
+    # finish signing in. Such an account is connected but lists no calendars.
+    puts "  #{a.id} must reconnect and allow calendar access" if a.calendar_permission_granted == false
+  end
 end
 ```
 

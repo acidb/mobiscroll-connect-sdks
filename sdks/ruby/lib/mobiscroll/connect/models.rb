@@ -35,12 +35,40 @@ module Mobiscroll
       end
     end
 
-    # One connected account under a provider.
-    ConnectedAccount = Struct.new(:id, :display, keyword_init: true) do
+    # A connected account that withheld calendar access on its provider's consent screen.
+    BlockedAccount = Struct.new(:provider, :account, keyword_init: true) do
       def self.from_h(hash)
         return nil if hash.nil?
 
-        new(id: hash['id'] || hash[:id], display: hash['display'] || hash[:display])
+        new(
+          provider: hash['provider'] || hash[:provider],
+          account: hash['account'] || hash[:account]
+        )
+      end
+    end
+
+    # One connected calendar account.
+    #
+    # `granted_scopes` are the scopes the provider actually granted, which are not
+    # necessarily the ones Connect asked for: Google's consent screen lets the user untick
+    # the calendar permission and still complete sign-in.
+    #
+    # `calendar_permission_granted` is false for exactly those accounts — connected, but
+    # no calendars can be read from them until the user reconnects and allows access. It
+    # is nil when the question does not apply (Apple and CalDav authenticate with a
+    # username and app password) or no scopes were recorded for the account.
+    ConnectedAccount = Struct.new(:id, :display, :granted_scopes, :calendar_permission_granted, keyword_init: true) do
+      def self.from_h(hash)
+        return nil if hash.nil?
+
+        key = 'calendarPermissionGranted'
+        granted = hash.key?(key) ? hash[key] : hash[key.to_sym]
+        new(
+          id: hash['id'] || hash[:id],
+          display: hash['display'] || hash[:display],
+          granted_scopes: Array(hash['grantedScopes'] || hash[:grantedScopes]),
+          calendar_permission_granted: granted
+        )
       end
     end
 

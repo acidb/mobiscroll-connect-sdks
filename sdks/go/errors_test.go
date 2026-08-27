@@ -40,6 +40,38 @@ func TestErrorMapping(t *testing.T) {
 			},
 		},
 		{
+			name:   "403 with calendar_permission_required -> CalendarPermissionError",
+			status: 403,
+			body: `{"error":"Forbidden","code":"calendar_permission_required",` +
+				`"message":"No connected account has calendar access",` +
+				`"accounts":[{"provider":"google","account":"withheld@gmail.com"}]}`,
+			check: func(t *testing.T, err error) {
+				var cpe *mobiscroll.CalendarPermissionError
+				if !errors.As(err, &cpe) {
+					t.Fatalf("expected *CalendarPermissionError, got %T: %v", err, err)
+				}
+				if len(cpe.Accounts) != 1 || cpe.Accounts[0].Account != "withheld@gmail.com" {
+					t.Fatalf("unexpected accounts: %+v", cpe.Accounts)
+				}
+				// Unwraps to an AuthenticationError, so existing checks keep matching.
+				var ae *mobiscroll.AuthenticationError
+				if !errors.As(err, &ae) {
+					t.Fatalf("expected it to unwrap to *AuthenticationError, got %T", err)
+				}
+			},
+		},
+		{
+			name:   "plain 403 stays a generic AuthenticationError",
+			status: 403,
+			body:   `{"message":"no scope"}`,
+			check: func(t *testing.T, err error) {
+				var cpe *mobiscroll.CalendarPermissionError
+				if errors.As(err, &cpe) {
+					t.Fatalf("did not expect *CalendarPermissionError, got %v", cpe)
+				}
+			},
+		},
+		{
 			name:   "404 -> NotFoundError",
 			status: 404,
 			body:   `{"message":"missing"}`,

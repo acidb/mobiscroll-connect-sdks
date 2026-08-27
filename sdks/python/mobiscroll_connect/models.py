@@ -134,6 +134,9 @@ class CalendarEvent:
     status: str | None = None
     link: str | None = None
     original: Mapping[str, Any] = field(default_factory=dict)
+    description: str | None = None
+    conference_data: Mapping[str, Any] | None = None
+    last_modified: str | None = None
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> CalendarEvent:
@@ -164,6 +167,9 @@ class CalendarEvent:
             status=data.get("status"),
             link=data.get("link"),
             original=data.get("original", {}) or {},
+            description=data.get("description"),
+            conference_data=data.get("conferenceData"),
+            last_modified=data.get("lastModified"),
         )
 
 
@@ -201,12 +207,31 @@ class EventsListResponse:
 
 @dataclass(frozen=True)
 class ConnectedAccount:
+    """One connected calendar account.
+
+    ``granted_scopes`` are the scopes the provider actually granted, which are not
+    necessarily the ones Connect asked for: Google's consent screen lets the user untick
+    the calendar permission and still complete sign-in.
+
+    ``calendar_permission_granted`` is ``False`` for exactly those accounts — connected,
+    but no calendars can be read from them until the user reconnects and allows access.
+    It is ``None`` when the question does not apply (Apple and CalDav authenticate with a
+    username and app password) or no scopes were recorded for the account.
+    """
+
     id: str
     display: str | None = None
+    granted_scopes: list[str] = field(default_factory=list)
+    calendar_permission_granted: bool | None = None
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> ConnectedAccount:
-        return cls(id=_require(data, "id"), display=data.get("display"))
+        return cls(
+            id=_require(data, "id"),
+            display=data.get("display"),
+            granted_scopes=[str(s) for s in (data.get("grantedScopes") or [])],
+            calendar_permission_granted=data.get("calendarPermissionGranted"),
+        )
 
 
 @dataclass(frozen=True)

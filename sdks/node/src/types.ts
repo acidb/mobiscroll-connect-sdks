@@ -56,6 +56,8 @@ export interface ApiErrorResponse {
   message: string;
   code?: string;
   details?: unknown;
+  /** Present on a `calendar_permission_required` 403. See {@link CalendarPermissionError}. */
+  accounts?: BlockedAccount[];
 }
 
 export class MobiscrollConnectError extends Error {
@@ -72,6 +74,35 @@ export class AuthenticationError extends MobiscrollConnectError {
   constructor(message: string) {
     super(message, 'AUTHENTICATION_ERROR');
     this.name = 'AuthenticationError';
+  }
+}
+
+/**
+ * A connected account that withheld calendar access on its provider's consent screen.
+ */
+export interface BlockedAccount {
+  provider: 'google' | 'microsoft' | 'apple' | 'caldav';
+  account: string;
+}
+
+/**
+ * Raised when no connected account has the calendar access the request needs.
+ *
+ * The user completed sign-in but did not grant the calendar permission — Google's consent
+ * screen presents it as a separate checkbox. This cannot be repaired server-side, because
+ * providers only issue permissions at consent time: the accounts in {@link accounts} have
+ * to run the connect flow again and allow calendar access.
+ *
+ * Extends {@link AuthenticationError}, so existing handlers keep working unchanged.
+ */
+export class CalendarPermissionError extends AuthenticationError {
+  constructor(
+    message: string,
+    public accounts: BlockedAccount[] = []
+  ) {
+    super(message);
+    this.name = 'CalendarPermissionError';
+    this.code = 'CALENDAR_PERMISSION_REQUIRED';
   }
 }
 
@@ -162,11 +193,27 @@ export type CalendarEventAvailability = 'busy' | 'free';
 export type CalendarEventPrivacy = 'public' | 'private' | 'confidential';
 export type CalendarEventStatus = 'confirmed' | 'tentative' | 'cancelled';
 
+/**
+ * Provider-specific conference metadata, passed through from the upstream
+ * provider as-is. Only `provider` is stable across providers — the remaining
+ * keys differ per provider (Google returns `conferenceId`/`entryPoints`,
+ * Microsoft returns `joinUrl`/`conferenceId`), so narrow them at the call site.
+ *
+ * For the plain join URL prefer {@link CalendarEvent.conference}.
+ */
+export interface ConferenceData {
+  /** Conference system identifier, e.g. `google-meet`, `microsoft-teams`, `zoom`. */
+  provider?: string;
+  [key: string]: unknown;
+}
+
 export interface CalendarEvent {
   provider: ProviderName;
   id: string;
   calendarId: string;
   title: string;
+  /** Event description or notes. */
+  description?: string;
   start: Date;
   end: Date;
   allDay: boolean;
@@ -176,9 +223,13 @@ export interface CalendarEvent {
   attendees?: EventAttendee[];
   custom?: Record<string, unknown>;
   conference?: string;
+  /** Provider-specific conference metadata; use it for details beyond `conference`. */
+  conferenceData?: ConferenceData;
   availability?: CalendarEventAvailability;
   privacy?: CalendarEventPrivacy;
   status?: CalendarEventStatus;
+  /** ISO 8601 timestamp of the last modification, e.g. `2026-03-10T13:36:08.000Z`. */
+  lastModified?: string;
   link?: string;
   original: calendar_v3.Schema$Event | MicrosoftGraphEvent | VEvent;
 }
@@ -286,7 +337,9 @@ export interface AuthorizeParams {
   providers?: string;
 
   /**
-   * Optional language code for the Connect authorization pages ('en' | 'es' | 'fr' | 'ar').
+   * Optional language code for the Connect authorization pages, e.g. `'es'`.
+   * For the languages Connect supports, see https://mobiscroll.com/docs/connect/localization#supported-languages
+   *
    * Passed to the authorize URL as `lng`. When omitted, the Connect UI falls back to the
    * browser's Accept-Language header, then English.
    */
@@ -325,6 +378,24 @@ export interface ConnectedAccount {
   id: string;
 
   display?: string;
+
+  /**
+   * Scopes the provider actually granted for this account.
+   *
+   * Not necessarily the scopes Connect asked for: Google's consent screen lets the user
+   * untick the calendar permission and still complete sign-in. Empty for Apple and
+   * CalDav, which authenticate with a username and app password.
+   */
+  grantedScopes: string[];
+
+  /**
+   * Whether this account granted calendar access sufficient for your project's scope.
+   *
+   * `false` means the account is connected but no calendars can be read from it — the
+   * user has to reconnect and allow calendar access. `null` means the question does not
+   * apply (Apple, CalDav) or no scopes were recorded for the account.
+   */
+  calendarPermissionGranted: boolean | null;
 }
 
 /**

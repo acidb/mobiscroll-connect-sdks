@@ -141,3 +141,58 @@ func TestGetConnectionStatus_FallsBackToLegacyPathOn404(t *testing.T) {
 		t.Fatalf("unexpected connections: %+v", status.Connections)
 	}
 }
+
+func TestGetConnectionStatus_ReportsCalendarPermission(t *testing.T) {
+	srv := testsupport.NewMockServer(t)
+	srv.EnqueueJSON(`{"connections":{"google":[` +
+		`{"id":"granted@g.com","grantedScopes":["openid","https://www.googleapis.com/auth/calendar"],"calendarPermissionGranted":true},` +
+		`{"id":"withheld@g.com","grantedScopes":["openid"],"calendarPermissionGranted":false}],` +
+		`"apple":[{"id":"u@icloud.com","grantedScopes":[],"calendarPermissionGranted":null}]},"limitReached":false}`)
+
+	c := mobiscroll.NewClient("id", "secret", "https://app/cb",
+		mobiscroll.WithBaseURL(srv.URL+"/api"),
+	)
+	c.SetCredentials(&mobiscroll.TokenResponse{AccessToken: "at"})
+
+	status, err := c.Auth().GetConnectionStatus(context.Background())
+	if err != nil {
+		t.Fatalf("GetConnectionStatus: %v", err)
+	}
+
+	google := status.Connections[mobiscroll.ProviderGoogle]
+	if len(google) != 2 {
+		t.Fatalf("expected 2 google accounts, got %d", len(google))
+	}
+	if google[0].CalendarPermissionGranted == nil || !*google[0].CalendarPermissionGranted {
+		t.Errorf("expected granted@g.com to have calendar permission")
+	}
+	if google[1].CalendarPermissionGranted == nil || *google[1].CalendarPermissionGranted {
+		t.Errorf("expected withheld@g.com to lack calendar permission")
+	}
+	if len(google[1].GrantedScopes) != 1 || google[1].GrantedScopes[0] != "openid" {
+		t.Errorf("unexpected granted scopes: %v", google[1].GrantedScopes)
+	}
+	// Apple has no scopes to withhold, so the flag is nil rather than false.
+	if apple := status.Connections[mobiscroll.ProviderApple]; len(apple) != 1 || apple[0].CalendarPermissionGranted != nil {
+		t.Errorf("expected apple account with nil permission flag: %+v", apple)
+	}
+}
+
+func TestGetConnectionStatus_DefaultsWhenScopeFieldsAbsent(t *testing.T) {
+	srv := testsupport.NewMockServer(t)
+	srv.EnqueueJSON(`{"connections":{"google":[{"id":"u@g.com"}]},"limitReached":false}`)
+
+	c := mobiscroll.NewClient("id", "secret", "https://app/cb",
+		mobiscroll.WithBaseURL(srv.URL+"/api"),
+	)
+	c.SetCredentials(&mobiscroll.TokenResponse{AccessToken: "at"})
+
+	status, err := c.Auth().GetConnectionStatus(context.Background())
+	if err != nil {
+		t.Fatalf("GetConnectionStatus: %v", err)
+	}
+	acct := status.Connections[mobiscroll.ProviderGoogle][0]
+	if len(acct.GrantedScopes) != 0 || acct.CalendarPermissionGranted != nil {
+		t.Errorf("expected zero values, got %+v", acct)
+	}
+}

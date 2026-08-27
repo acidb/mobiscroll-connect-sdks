@@ -228,7 +228,14 @@ ConnectionStatusResponse status = await client.Auth.GetConnectionStatusAsync();
 
 if (status.Connections.TryGetValue("google", out var googleAccounts))
     foreach (ConnectedAccount acct in googleAccounts)
+    {
         Console.WriteLine($"Google: {acct.Display} ({acct.Id})");
+
+        // Google's consent screen lets the user untick the calendar permission and still
+        // finish signing in. Such an account is connected but lists no calendars.
+        if (acct.CalendarPermissionGranted == false)
+            Console.WriteLine($"  {acct.Id} must reconnect and allow calendar access");
+    }
 
 if (status.LimitReached)
     Console.WriteLine("Connection limit reached");

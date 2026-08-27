@@ -114,6 +114,12 @@ export class Auth {
    * console.log(status.connections.google); // Array of connected Google accounts
    * console.log(status.connections.microsoft); // Array of connected Microsoft accounts
    * console.log(status.limitReached); // Whether account limit is reached
+   *
+   * // Accounts that connected but withheld calendar access on the provider's consent
+   * // screen. They can list no calendars until the user reconnects and allows it.
+   * const needsCalendarAccess = status.connections.google.filter(
+   *   (account) => account.calendarPermissionGranted === false,
+   * );
    * ```
    */
   async getConnectionStatus(): Promise<ConnectionStatusResponse> {

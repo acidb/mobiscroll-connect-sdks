@@ -11,6 +11,7 @@ import {
   ApiErrorResponse,
   MobiscrollConnectError,
   AuthenticationError,
+  CalendarPermissionError,
   NotFoundError,
   ValidationError,
   RateLimitError,
@@ -165,6 +166,11 @@ export class ApiClient extends EventEmitter {
     switch (status) {
       case 401:
       case 403:
+        // A 403 the user can act on: the account connected but never granted calendar
+        // access, so it is reported as its own type carrying the accounts to reconnect.
+        if (status === 403 && data?.code === 'calendar_permission_required') {
+          return new CalendarPermissionError(message, data.accounts ?? []);
+        }
         return new AuthenticationError(message);
       case 404:
         return new NotFoundError(message);

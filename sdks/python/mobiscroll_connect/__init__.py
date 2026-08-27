@@ -22,6 +22,8 @@ from .client import MobiscrollConnectClient
 from .config import Config
 from .exceptions import (
     AuthenticationError,
+    BlockedAccount,
+    CalendarPermissionError,
     MobiscrollConnectError,
     NetworkError,
     NotFoundError,
@@ -41,12 +43,14 @@ from .models import (
     TokenResponse,
 )
 
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 
 __all__ = [
     "AuthenticationError",
+    "BlockedAccount",
     "Calendar",
     "CalendarEvent",
+    "CalendarPermissionError",
     "Config",
     "ConnectedAccount",
     "ConnectionStatusResponse",

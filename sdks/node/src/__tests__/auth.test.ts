@@ -99,8 +99,22 @@ describe('Auth Resource', () => {
     it('should get connection status', async () => {
       const mockResponse: ConnectionStatusResponse = {
         connections: {
-          google: [{ id: 'user@gmail.com', display: 'user@gmail.com' }],
-          microsoft: [{ id: 'user@outlook.com', display: 'user@outlook.com' }],
+          google: [
+            {
+              id: 'user@gmail.com',
+              display: 'user@gmail.com',
+              grantedScopes: ['openid', 'https://www.googleapis.com/auth/calendar'],
+              calendarPermissionGranted: true,
+            },
+          ],
+          microsoft: [
+            {
+              id: 'user@outlook.com',
+              display: 'user@outlook.com',
+              grantedScopes: ['openid', 'profile', 'https://graph.microsoft.com/Calendars.ReadWrite'],
+              calendarPermissionGranted: true,
+            },
+          ],
           apple: [],
           caldav: [],
         },
@@ -118,6 +132,38 @@ describe('Auth Resource', () => {
       expect(mockApiClient.get).toHaveBeenCalledWith('/oauth/connection-status');
       expect(result).toEqual(mockResponse);
       expect(result.connections.google).toHaveLength(1);
+    });
+
+    it('should surface accounts that withheld calendar permission', async () => {
+      const mockResponse: ConnectionStatusResponse = {
+        connections: {
+          google: [
+            {
+              id: 'user@gmail.com',
+              display: 'user@gmail.com',
+              grantedScopes: ['openid', 'https://www.googleapis.com/auth/userinfo.email'],
+              calendarPermissionGranted: false,
+            },
+          ],
+          microsoft: [],
+          apple: [{ id: 'user@icloud.com', grantedScopes: [], calendarPermissionGranted: null }],
+          caldav: [],
+        },
+        limitReached: false,
+      };
+
+      mockApiClient.get.mockResolvedValue({
+        data: mockResponse,
+        status: 200,
+        headers: {},
+      });
+
+      const result = await auth.getConnectionStatus();
+
+      expect(result.connections.google[0].calendarPermissionGranted).toBe(false);
+      expect(result.connections.google[0].grantedScopes).not.toContain('https://www.googleapis.com/auth/calendar');
+      // Apple has no scopes to withhold, so the flag is null rather than false.
+      expect(result.connections.apple[0].calendarPermissionGranted).toBeNull();
     });
   });
 

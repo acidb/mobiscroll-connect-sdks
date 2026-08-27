@@ -49,7 +49,7 @@ const url = client.auth.generateAuthUrl({
 	state: 'optional-state',
 	scope: 'read-write',
 	providers: 'google,microsoft,apple,caldav',
-	lng: 'es', // optional: Connect page language ('en' | 'es' | 'fr' | 'ar')
+	lng: 'es', // optional: Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
 });
 
 // Redirect the user to `url`
@@ -129,6 +129,11 @@ await client.events.delete({
 ```ts
 const status = await client.auth.getConnectionStatus();
 console.log(status.connections);
+
+// An account can connect without granting calendar access — Google's consent screen
+// lets the user untick that permission. Such accounts list no calendars until the
+// user reconnects and allows it.
+const needsCalendarAccess = status.connections.google.filter((account) => account.calendarPermissionGranted === false);
 
 await client.auth.disconnect({ provider: 'google', account: 'user@gmail.com' });
 ```

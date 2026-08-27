@@ -72,7 +72,7 @@ $authUrl = $client->auth()->generateAuthUrl(
     // scope: 'read-write',
     // state: 'csrf-protection-value',
     // providers: 'google,microsoft',
-    // lng: 'es', // Connect page language ('en', 'es', 'fr', 'ar')
+    // lng: 'es', // Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
 );
 
 header('Location: ' . $authUrl);
@@ -211,6 +211,14 @@ $status = $client->auth()->getConnectionStatus();
 
 foreach ($status->connections as $provider => $accounts) {
     echo "{$provider}: " . count($accounts) . " account(s)\n";
+
+    foreach ($accounts as $account) {
+        // Google's consent screen lets the user untick the calendar permission and still
+        // finish signing in. Such an account is connected but lists no calendars.
+        if ($account['calendarPermissionGranted'] === false) {
+            echo "  {$account['id']} must reconnect and allow calendar access\n";
+        }
+    }
 }
 
 if ($status->limitReached) {

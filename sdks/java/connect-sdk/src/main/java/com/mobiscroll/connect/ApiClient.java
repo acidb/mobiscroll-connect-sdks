@@ -2,6 +2,8 @@ package com.mobiscroll.connect;
 
 import java.io.IOException;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -12,6 +14,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mobiscroll.connect.exceptions.AuthenticationException;
+import com.mobiscroll.connect.exceptions.CalendarPermissionException;
 import com.mobiscroll.connect.exceptions.MobiscrollConnectException;
 import com.mobiscroll.connect.exceptions.NetworkException;
 import com.mobiscroll.connect.exceptions.NotFoundException;
@@ -19,6 +22,7 @@ import com.mobiscroll.connect.exceptions.RateLimitException;
 import com.mobiscroll.connect.exceptions.ServerException;
 import com.mobiscroll.connect.exceptions.ValidationException;
 import com.mobiscroll.connect.internal.JsonMapperHolder;
+import com.mobiscroll.connect.models.BlockedAccount;
 import com.mobiscroll.connect.models.TokenResponse;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
@@ -299,6 +303,18 @@ public final class ApiClient {
         return m;
     }
 
+    private List<BlockedAccount> readBlockedAccounts(JsonNode bodyJson) {
+        JsonNode accounts = bodyJson != null ? bodyJson.get("accounts") : null;
+        if (accounts == null || !accounts.isArray()) {
+            return Collections.emptyList();
+        }
+        try {
+            return json.convertValue(accounts, new TypeReference<List<BlockedAccount>>() {});
+        } catch (IllegalArgumentException ignored) {
+            return Collections.emptyList();
+        }
+    }
+
     private MobiscrollConnectException mapError(Response response) {
         int code = response.code();
         String bodyText = "";
@@ -321,8 +337,16 @@ public final class ApiClient {
 
         switch (code) {
             case 401:
-            case 403:
                 return new AuthenticationException(message);
+            case 403: {
+                // A 403 the caller can act on: the account connected but never granted
+                // calendar access, so it is thrown as its own type naming the accounts.
+                JsonNode codeNode = bodyJson != null ? bodyJson.get("code") : null;
+                if (codeNode != null && "calendar_permission_required".equals(codeNode.asText())) {
+                    return new CalendarPermissionException(message, readBlockedAccounts(bodyJson));
+                }
+                return new AuthenticationException(message);
+            }
             case 404:
                 return new NotFoundException(message);
             case 400:

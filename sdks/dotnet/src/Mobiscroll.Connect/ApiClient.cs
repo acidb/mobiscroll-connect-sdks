@@ -384,6 +384,7 @@ public sealed class ApiClient : IDisposable
         string? message = null;
         string? codeField = null;
         JsonElement? details = null;
+        List<BlockedAccount>? blockedAccounts = null;
 
         if (!string.IsNullOrWhiteSpace(body))
         {
@@ -405,6 +406,10 @@ public sealed class ApiClient : IDisposable
                     {
                         details = d.Clone();
                     }
+                    if (root.TryGetProperty("accounts", out var a) && a.ValueKind == JsonValueKind.Array)
+                    {
+                        blockedAccounts = JsonSerializer.Deserialize<List<BlockedAccount>>(a.GetRawText(), JsonOptions);
+                    }
                 }
             }
             catch (JsonException)
@@ -417,6 +422,10 @@ public sealed class ApiClient : IDisposable
 
         return status switch
         {
+            // A 403 the caller can act on: the account connected but never granted calendar
+            // access, so it is thrown as its own type carrying the accounts to reconnect.
+            403 when codeField == "calendar_permission_required"
+                => new CalendarPermissionException(message, blockedAccounts),
             401 or 403 => new AuthenticationException(message),
             404 => new NotFoundException(message),
             400 or 422 => new ValidationException(message, details),

@@ -86,6 +86,53 @@ def test_connection_status_oauth_path(client):
 
 
 @respx.mock
+def test_connection_status_reports_calendar_permission(client):
+    client.auth.set_credentials(TokenResponse(access_token="t"))
+    respx.get("https://connect.mobiscroll.com/api/oauth/connection-status").mock(
+        return_value=httpx.Response(200, json={
+            "connections": {
+                "google": [
+                    {
+                        "id": "granted@gmail.com",
+                        "grantedScopes": ["openid", "https://www.googleapis.com/auth/calendar"],
+                        "calendarPermissionGranted": True,
+                    },
+                    {
+                        "id": "withheld@gmail.com",
+                        "grantedScopes": ["openid", "https://www.googleapis.com/auth/userinfo.email"],
+                        "calendarPermissionGranted": False,
+                    },
+                ],
+                "apple": [{"id": "u@icloud.com", "grantedScopes": [], "calendarPermissionGranted": None}],
+            },
+            "limitReached": False,
+        })
+    )
+    status = client.auth.get_connection_status()
+    granted, withheld = status.connections["google"]
+    assert granted.calendar_permission_granted is True
+    assert withheld.calendar_permission_granted is False
+    assert "https://www.googleapis.com/auth/calendar" not in withheld.granted_scopes
+    # Apple has no scopes to withhold, so the flag is None rather than False.
+    assert status.connections["apple"][0].calendar_permission_granted is None
+
+
+@respx.mock
+def test_connection_status_defaults_when_fields_absent(client):
+    client.auth.set_credentials(TokenResponse(access_token="t"))
+    respx.get("https://connect.mobiscroll.com/api/oauth/connection-status").mock(
+        return_value=httpx.Response(200, json={
+            "connections": {"google": [{"id": "u@gmail.com"}]},
+            "limitReached": False,
+        })
+    )
+    status = client.auth.get_connection_status()
+    account = status.connections["google"][0]
+    assert account.granted_scopes == []
+    assert account.calendar_permission_granted is None
+
+
+@respx.mock
 def test_connection_status_legacy_fallback(client):
     client.auth.set_credentials(TokenResponse(access_token="t"))
     respx.get("https://connect.mobiscroll.com/api/oauth/connection-status").mock(

@@ -9,6 +9,8 @@ import httpx
 
 from ..exceptions import (
     AuthenticationError,
+    BlockedAccount,
+    CalendarPermissionError,
     MobiscrollConnectError,
     NetworkError,
     NotFoundError,
@@ -33,6 +35,16 @@ def map_response_error(response: httpx.Response) -> MobiscrollConnectError:
     message = str(data.get("message") or response.reason_phrase or f"HTTP {status}")
 
     if status in (401, 403):
+        # A 403 the caller can act on: the account connected but never granted calendar
+        # access, so it is raised as its own type carrying the accounts to reconnect.
+        if status == 403 and data.get("code") == "calendar_permission_required":
+            raw = data.get("accounts")
+            accounts = [
+                BlockedAccount(provider=str(a.get("provider", "")), account=str(a.get("account", "")))
+                for a in raw
+                if isinstance(a, Mapping)
+            ] if isinstance(raw, list) else []
+            return CalendarPermissionError(message, accounts)
         return AuthenticationError(message)
     if status == 404:
         return NotFoundError(message)

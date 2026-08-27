@@ -109,6 +109,45 @@ public class AuthTests
     }
 
     [Fact]
+    public async Task GetConnectionStatusAsync_ReportsCalendarPermissionPerAccount()
+    {
+        var statusJson = """
+        {"connections":{"google":[
+          {"id":"granted@g.com","grantedScopes":["openid","https://www.googleapis.com/auth/calendar"],"calendarPermissionGranted":true},
+          {"id":"withheld@g.com","grantedScopes":["openid","https://www.googleapis.com/auth/userinfo.email"],"calendarPermissionGranted":false}
+        ],"microsoft":[],"apple":[{"id":"u@icloud.com","grantedScopes":[],"calendarPermissionGranted":null}],"caldav":[]},"limitReached":false}
+        """;
+
+        var handler = new FakeHttpMessageHandler().Enqueue(HttpStatusCode.OK, statusJson);
+
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        var status = await client.Auth.GetConnectionStatusAsync();
+
+        Assert.True(status.Connections["google"][0].CalendarPermissionGranted);
+        Assert.False(status.Connections["google"][1].CalendarPermissionGranted);
+        Assert.DoesNotContain("https://www.googleapis.com/auth/calendar", status.Connections["google"][1].GrantedScopes);
+        // Apple has no scopes to withhold, so the flag is null rather than false.
+        Assert.Null(status.Connections["apple"][0].CalendarPermissionGranted);
+    }
+
+    [Fact]
+    public async Task GetConnectionStatusAsync_DefaultsWhenScopeFieldsAbsent()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Enqueue(HttpStatusCode.OK, """{"connections":{"google":[{"id":"u@g.com"}]},"limitReached":false}""");
+
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        var status = await client.Auth.GetConnectionStatusAsync();
+
+        Assert.Empty(status.Connections["google"][0].GrantedScopes);
+        Assert.Null(status.Connections["google"][0].CalendarPermissionGranted);
+    }
+
+    [Fact]
     public async Task DisconnectAsync_PostsEmptyBodyWithProviderAndAccountInQuery()
     {
         var handler = new FakeHttpMessageHandler()

@@ -7,8 +7,8 @@ specific subclasses (e.g. :class:`AuthenticationError`).
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, NamedTuple
 
 
 class MobiscrollConnectError(Exception):
@@ -33,6 +33,35 @@ class AuthenticationError(MobiscrollConnectError):
 
     def __init__(self, message: str = "Authentication failed") -> None:
         super().__init__(message)
+
+
+class BlockedAccount(NamedTuple):
+    """A connected account that withheld calendar access on its consent screen."""
+
+    provider: str
+    account: str
+
+
+class CalendarPermissionError(AuthenticationError):
+    """Raised when no connected account has the calendar access the request needs.
+
+    The user completed sign-in but did not grant the calendar permission — Google's
+    consent screen presents it as a separate checkbox. This cannot be repaired
+    server-side, because providers only issue permissions at consent time: the
+    accounts in ``accounts`` have to run the connect flow again and allow access.
+
+    Subclasses :class:`AuthenticationError`, so existing handlers keep working.
+    """
+
+    code = "CALENDAR_PERMISSION_REQUIRED"
+
+    def __init__(
+        self,
+        message: str = "No connected account has calendar access",
+        accounts: Sequence[BlockedAccount] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.accounts: list[BlockedAccount] = list(accounts or [])
 
 
 class NotFoundError(MobiscrollConnectError):

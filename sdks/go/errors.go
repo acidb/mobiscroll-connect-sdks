@@ -26,6 +26,25 @@ type AuthenticationError struct{ Message string }
 func (e *AuthenticationError) Error() string { return e.Message }
 func (*AuthenticationError) Code() string    { return "AUTHENTICATION_ERROR" }
 
+// CalendarPermissionError is returned when no connected account has the calendar
+// access the request needs.
+//
+// The user completed sign-in but did not grant the calendar permission — Google's
+// consent screen presents it as a separate checkbox. This cannot be repaired
+// server-side, because providers only issue permissions at consent time: the
+// accounts in Accounts have to run the connect flow again and allow access.
+//
+// It unwraps to an *AuthenticationError, so existing
+// errors.As(err, &authErr) checks keep matching.
+type CalendarPermissionError struct {
+	Message  string
+	Accounts []BlockedAccount
+}
+
+func (e *CalendarPermissionError) Error() string { return e.Message }
+func (*CalendarPermissionError) Code() string    { return "CALENDAR_PERMISSION_REQUIRED" }
+func (e *CalendarPermissionError) Unwrap() error { return &AuthenticationError{Message: e.Message} }
+
 // NotFoundError is returned for HTTP 404 responses.
 type NotFoundError struct{ Message string }
 
@@ -95,6 +114,13 @@ func mapResponseError(resp *http.Response) error {
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized, http.StatusForbidden:
+		// A 403 the caller can act on: the account connected but never granted
+		// calendar access, so it gets its own type naming the accounts.
+		if resp.StatusCode == http.StatusForbidden {
+			if accounts, ok := parseCalendarPermission(body); ok {
+				return &CalendarPermissionError{Message: msg, Accounts: accounts}
+			}
+		}
 		return &AuthenticationError{Message: msg}
 	case http.StatusNotFound:
 		return &NotFoundError{Message: msg}
@@ -112,6 +138,22 @@ func mapResponseError(resp *http.Response) error {
 		return &ServerError{Message: msg, StatusCode: resp.StatusCode}
 	}
 	return &genericError{Message: msg, StatusCode: resp.StatusCode}
+}
+
+// parseCalendarPermission reports whether the body is a calendar_permission_required
+// error, along with the accounts that must reconnect.
+func parseCalendarPermission(body []byte) ([]BlockedAccount, bool) {
+	var parsed struct {
+		Code     string           `json:"code"`
+		Accounts []BlockedAccount `json:"accounts"`
+	}
+	if len(body) == 0 || json.Unmarshal(body, &parsed) != nil {
+		return nil, false
+	}
+	if parsed.Code != "calendar_permission_required" {
+		return nil, false
+	}
+	return parsed.Accounts, true
 }
 
 // extractMessage pulls a human-readable message and the optional details field

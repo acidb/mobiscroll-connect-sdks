@@ -29,6 +29,40 @@ RSpec.describe 'Error mapping' do
   include_examples 'raises correct error', 500, Mobiscroll::Connect::ServerError
   include_examples 'raises correct error', 503, Mobiscroll::Connect::ServerError
 
+  it 'raises CalendarPermissionError for a 403 that names the missing permission' do
+    WebMock.stub_request(:get, "#{MockServer::BASE_URL}/events")
+           .to_return(
+             status: 403,
+             body: JSON.generate(
+               'error' => 'Forbidden',
+               'code' => 'calendar_permission_required',
+               'message' => 'No connected account has calendar access',
+               'accounts' => [{ 'provider' => 'google', 'account' => 'withheld@gmail.com' }]
+             ),
+             headers: { 'Content-Type' => 'application/json' }
+           )
+
+    expect { client.events.list }.to raise_error(Mobiscroll::Connect::CalendarPermissionError) do |err|
+      # Still an AuthenticationError, so existing rescue clauses keep working.
+      expect(err).to be_a(Mobiscroll::Connect::AuthenticationError)
+      expect(err.code).to eq('CALENDAR_PERMISSION_REQUIRED')
+      expect(err.accounts.map(&:account)).to eq(['withheld@gmail.com'])
+    end
+  end
+
+  it 'leaves a plain 403 as a generic AuthenticationError' do
+    WebMock.stub_request(:get, "#{MockServer::BASE_URL}/events")
+           .to_return(
+             status: 403,
+             body: JSON.generate('message' => 'Write access denied for current scope'),
+             headers: { 'Content-Type' => 'application/json' }
+           )
+
+    expect { client.events.list }.to raise_error(Mobiscroll::Connect::AuthenticationError) do |err|
+      expect(err).not_to be_a(Mobiscroll::Connect::CalendarPermissionError)
+    end
+  end
+
   it 'raises RateLimitError for 429 with retry_after' do
     WebMock.stub_request(:get, "#{MockServer::BASE_URL}/events")
            .to_return(

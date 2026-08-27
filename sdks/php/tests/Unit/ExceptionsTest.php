@@ -7,6 +7,7 @@ namespace Mobiscroll\Connect\Tests\Unit;
 use Mobiscroll\Connect\Exceptions\{
     MobiscrollConnectException,
     AuthenticationError,
+    CalendarPermissionError,
     ValidationError,
     NotFoundError,
     RateLimitError,
@@ -25,6 +26,25 @@ class ExceptionsTest extends TestCase
         $this->assertSame('Token expired', $e->getMessage());
         $this->assertSame('AUTHENTICATION_ERROR', $e->getCodeString());
         $this->assertSame(401, $e->getCode());
+    }
+
+    public function testCalendarPermissionErrorCarriesAccounts(): void
+    {
+        $accounts = [['provider' => 'google', 'account' => 'withheld@gmail.com']];
+        $e = new CalendarPermissionError('No connected account has calendar access', $accounts);
+
+        // Still an AuthenticationError, so existing catch blocks keep working.
+        $this->assertInstanceOf(AuthenticationError::class, $e);
+        $this->assertSame('CALENDAR_PERMISSION_REQUIRED', $e->getCodeString());
+        $this->assertSame($accounts, $e->getAccounts());
+    }
+
+    public function testCalendarPermissionErrorDefaults(): void
+    {
+        $e = new CalendarPermissionError();
+
+        $this->assertSame('No connected account has calendar access', $e->getMessage());
+        $this->assertSame([], $e->getAccounts());
     }
 
     public function testAuthenticationErrorDefaultMessage(): void

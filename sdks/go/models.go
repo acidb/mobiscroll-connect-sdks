@@ -35,13 +35,32 @@ type AuthURLParams struct {
 	Scope     string     // optional: "read-write" | "free-busy" | "read"
 	State     string     // optional CSRF state
 	Providers []Provider // optional: restrict to specific providers
-	Lng       string     // optional: Connect page language ("en", "es", "fr", "ar"); falls back to Accept-Language then English
+	Lng       string     // optional: Connect page language, e.g. "es"; falls back to Accept-Language then English. Supported languages: https://mobiscroll.com/docs/connect/localization#supported-languages
+}
+
+// BlockedAccount is a connected account that withheld calendar access on its
+// provider's consent screen.
+type BlockedAccount struct {
+	Provider string `json:"provider"`
+	Account  string `json:"account"`
 }
 
 // ConnectedAccount is one connected account under a provider.
 type ConnectedAccount struct {
 	ID      string `json:"id"`
 	Display string `json:"display,omitempty"`
+
+	// GrantedScopes are the scopes the provider actually granted for this account, which
+	// are not necessarily the ones Connect asked for: Google's consent screen lets the
+	// user untick the calendar permission and still complete sign-in. Empty for Apple and
+	// CalDav, which authenticate with a username and app password.
+	GrantedScopes []string `json:"grantedScopes,omitempty"`
+
+	// CalendarPermissionGranted reports whether this account granted calendar access
+	// sufficient for the project's scope. False means the account is connected but no
+	// calendars can be read from it until the user reconnects and allows access. Nil
+	// means the question does not apply (Apple, CalDav) or no scopes were recorded.
+	CalendarPermissionGranted *bool `json:"calendarPermissionGranted,omitempty"`
 }
 
 // ConnectionStatus is the result of Auth.GetConnectionStatus. Connections is
@@ -96,25 +115,31 @@ type RecurrenceRule struct {
 // CalendarEvent is an event returned by the API. The field set mirrors the
 // Node SDK's response shape exactly.
 type CalendarEvent struct {
-	Provider         Provider                   `json:"provider"`
-	ID               string                     `json:"id"`
-	CalendarID       string                     `json:"calendarId"`
-	Title            string                     `json:"title"`
-	Start            *time.Time                 `json:"start,omitempty"`
-	End              *time.Time                 `json:"end,omitempty"`
-	AllDay           bool                       `json:"allDay,omitempty"`
-	RecurringEventID string                     `json:"recurringEventId,omitempty"`
-	Color            string                     `json:"color,omitempty"`
-	Location         string                     `json:"location,omitempty"`
-	Attendees        []Attendee                 `json:"attendees,omitempty"`
-	Custom           map[string]any             `json:"custom,omitempty"`
-	Conference       string                     `json:"conference,omitempty"`
-	Availability     string                     `json:"availability,omitempty"`
-	Privacy          string                     `json:"privacy,omitempty"`
-	Status           string                     `json:"status,omitempty"`
-	Link             string                     `json:"link,omitempty"`
-	Original         json.RawMessage            `json:"original,omitempty"`
-	Additional       map[string]json.RawMessage `json:"-"`
+	Provider         Provider       `json:"provider"`
+	ID               string         `json:"id"`
+	CalendarID       string         `json:"calendarId"`
+	Title            string         `json:"title"`
+	Description      string         `json:"description,omitempty"`
+	Start            *time.Time     `json:"start,omitempty"`
+	End              *time.Time     `json:"end,omitempty"`
+	AllDay           bool           `json:"allDay,omitempty"`
+	RecurringEventID string         `json:"recurringEventId,omitempty"`
+	Color            string         `json:"color,omitempty"`
+	Location         string         `json:"location,omitempty"`
+	Attendees        []Attendee     `json:"attendees,omitempty"`
+	Custom           map[string]any `json:"custom,omitempty"`
+	Conference       string         `json:"conference,omitempty"`
+	// ConferenceData carries provider-specific conference metadata; its keys vary
+	// per provider, so it is left unmapped. For the plain join URL use Conference.
+	ConferenceData map[string]any `json:"conferenceData,omitempty"`
+	Availability   string         `json:"availability,omitempty"`
+	Privacy        string         `json:"privacy,omitempty"`
+	Status         string         `json:"status,omitempty"`
+	// LastModified is an ISO 8601 timestamp, e.g. "2026-03-10T13:36:08.000Z".
+	LastModified string                     `json:"lastModified,omitempty"`
+	Link         string                     `json:"link,omitempty"`
+	Original     json.RawMessage            `json:"original,omitempty"`
+	Additional   map[string]json.RawMessage `json:"-"`
 }
 
 // EventListParams is the input to Events.List. All fields are optional.

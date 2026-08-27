@@ -1,6 +1,7 @@
 import {
   MobiscrollConnectError,
   AuthenticationError,
+  CalendarPermissionError,
   NotFoundError,
   ValidationError,
   RateLimitError,
@@ -35,6 +36,23 @@ describe('Errors', () => {
     it('should create error with custom message', () => {
       const error = new AuthenticationError('Invalid token');
       expect(error.message).toBe('Invalid token');
+    });
+  });
+
+  describe('CalendarPermissionError', () => {
+    it('carries the accounts that must reconnect', () => {
+      const error = new CalendarPermissionError('No connected account has calendar access.', [
+        { provider: 'google', account: 'withheld@gmail.com' },
+      ]);
+      expect(error.name).toBe('CalendarPermissionError');
+      expect(error.code).toBe('CALENDAR_PERMISSION_REQUIRED');
+      expect(error.accounts).toEqual([{ provider: 'google', account: 'withheld@gmail.com' }]);
+    });
+
+    it('is an AuthenticationError, so existing handlers still catch it', () => {
+      const error = new CalendarPermissionError('nope');
+      expect(error).toBeInstanceOf(AuthenticationError);
+      expect(error.accounts).toEqual([]);
     });
   });
 

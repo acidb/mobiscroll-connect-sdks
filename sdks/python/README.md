@@ -53,7 +53,7 @@ auth_url = client.auth.generate_auth_url(
     scope="calendar",       # optional
     state="csrf-value",     # optional
     providers="google,microsoft",  # optional
-    lng="es",               # optional: Connect page language ("en" | "es" | "fr" | "ar")
+    lng="es",               # optional: Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
 )
 
 # Step 2 — exchange the code (in your callback handler)
@@ -194,6 +194,12 @@ client.events.delete({
 status = client.auth.get_connection_status()
 for provider, accounts in status.connections.items():
     print(f"{provider}: {len(accounts)} account(s)")
+
+    # Google's consent screen lets the user untick the calendar permission and still
+    # finish signing in. Such an account is connected but lists no calendars.
+    for account in accounts:
+        if account.calendar_permission_granted is False:
+            print(f"  {account.id} must reconnect and allow calendar access")
 
 if status.limit_reached:
     print(f"Connection limit of {status.limit} reached")

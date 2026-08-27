@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.mobiscroll.connect.exceptions.AuthenticationException;
+import com.mobiscroll.connect.exceptions.CalendarPermissionException;
 import com.mobiscroll.connect.exceptions.NotFoundException;
 import com.mobiscroll.connect.exceptions.RateLimitException;
 import com.mobiscroll.connect.exceptions.ServerException;
@@ -48,6 +49,28 @@ class ErrorMappingTest {
     @Test void mapsFourOhThreeToAuthentication() {
         server.enqueue(new MockResponse().setResponseCode(403).setBody("{\"message\":\"no scope\"}"));
         assertThatThrownBy(() -> client.calendars().list()).isInstanceOf(AuthenticationException.class);
+    }
+
+    @Test void mapsCalendarPermissionFourOhThreeToItsOwnType() {
+        server.enqueue(new MockResponse().setResponseCode(403).setBody(
+                "{\"error\":\"Forbidden\",\"code\":\"calendar_permission_required\"," +
+                "\"message\":\"No connected account has calendar access\"," +
+                "\"accounts\":[{\"provider\":\"google\",\"account\":\"withheld@gmail.com\"}]}"));
+        assertThatThrownBy(() -> client.calendars().list())
+                // Still an AuthenticationException, so existing handlers keep catching it.
+                .isInstanceOf(AuthenticationException.class)
+                .isInstanceOfSatisfying(CalendarPermissionException.class, e -> {
+                    assertThat(e.getAccounts()).hasSize(1);
+                    assertThat(e.getAccounts().get(0).getProvider()).isEqualTo("google");
+                    assertThat(e.getAccounts().get(0).getAccount()).isEqualTo("withheld@gmail.com");
+                });
+    }
+
+    @Test void plainFourOhThreeStaysAGenericAuthenticationException() {
+        server.enqueue(new MockResponse().setResponseCode(403).setBody("{\"message\":\"no scope\"}"));
+        assertThatThrownBy(() -> client.calendars().list())
+                .isInstanceOf(AuthenticationException.class)
+                .isNotInstanceOf(CalendarPermissionException.class);
     }
 
     @Test void mapsFourTwentyNineToRateLimitWithRetryAfter() {

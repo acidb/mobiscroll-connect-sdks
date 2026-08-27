@@ -9,6 +9,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use Mobiscroll\Connect\Exceptions\{
     AuthenticationError,
+    CalendarPermissionError,
     MobiscrollConnectException,
     NetworkError,
     NotFoundError,
@@ -358,7 +359,12 @@ class ApiClient
         $message = $data['message'] ?? $e->getMessage();
 
         return match ($status) {
-            401, 403 => new AuthenticationError($message),
+            // A 403 the caller can act on: the account connected but never granted
+            // calendar access, so it is thrown as its own type naming the accounts.
+            403 => ($data['code'] ?? null) === 'calendar_permission_required'
+                ? new CalendarPermissionError($message, $data['accounts'] ?? [])
+                : new AuthenticationError($message),
+            401 => new AuthenticationError($message),
             404 => new NotFoundError($message),
             400, 422 => new ValidationError($message, $data['details'] ?? []),
             429 => new RateLimitError(

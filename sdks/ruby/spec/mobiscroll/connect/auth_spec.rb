@@ -90,6 +90,47 @@ RSpec.describe Mobiscroll::Connect::Resources::Auth do
       expect(status.limit_reached).to be false
     end
 
+    it 'reports granted scopes and calendar permission per account' do
+      MockServer.stub_json(:get, '/oauth/connection-status', {
+                             'connections' => {
+                               'google' => [
+                                 { 'id' => 'granted@gmail.com',
+                                   'grantedScopes' => ['openid', 'https://www.googleapis.com/auth/calendar'],
+                                   'calendarPermissionGranted' => true },
+                                 { 'id' => 'withheld@gmail.com',
+                                   'grantedScopes' => ['openid'],
+                                   'calendarPermissionGranted' => false }
+                               ],
+                               'apple' => [
+                                 { 'id' => 'u@icloud.com', 'grantedScopes' => [], 'calendarPermissionGranted' => nil }
+                               ]
+                             },
+                             'limitReached' => false
+                           })
+
+      status = MockServer.client_with_tokens.auth.get_connection_status
+      granted, withheld = status.connections['google']
+
+      expect(granted.calendar_permission_granted).to be true
+      expect(granted.granted_scopes).to include('https://www.googleapis.com/auth/calendar')
+      expect(withheld.calendar_permission_granted).to be false
+      expect(withheld.granted_scopes).not_to include('https://www.googleapis.com/auth/calendar')
+      # Apple has no scopes to withhold, so the flag is nil rather than false.
+      expect(status.connections['apple'].first.calendar_permission_granted).to be_nil
+    end
+
+    it 'defaults the scope fields when the server omits them' do
+      MockServer.stub_json(:get, '/oauth/connection-status', {
+                             'connections' => { 'google' => [{ 'id' => 'u@gmail.com' }] },
+                             'limitReached' => false
+                           })
+
+      account = MockServer.client_with_tokens.auth.get_connection_status.connections['google'].first
+
+      expect(account.granted_scopes).to eq([])
+      expect(account.calendar_permission_granted).to be_nil
+    end
+
     it 'falls back to /connection-status on 404' do
       WebMock.stub_request(:get, "#{MockServer::BASE_URL}/oauth/connection-status")
              .to_return(status: 404, body: '{"message":"not found"}',

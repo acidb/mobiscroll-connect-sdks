@@ -4,6 +4,8 @@ import pytest
 from mobiscroll_connect._internal.errors import map_response_error, map_transport_error
 from mobiscroll_connect.exceptions import (
     AuthenticationError,
+    BlockedAccount,
+    CalendarPermissionError,
     MobiscrollConnectError,
     NetworkError,
     NotFoundError,
@@ -25,6 +27,33 @@ class TestErrorMapping:
 
     def test_403_also_auth(self):
         assert isinstance(map_response_error(_resp(403)), AuthenticationError)
+
+    def test_403_with_permission_code_to_calendar_permission_error(self):
+        e = map_response_error(
+            _resp(
+                403,
+                {
+                    "error": "Forbidden",
+                    "code": "calendar_permission_required",
+                    "message": "No connected account has calendar access",
+                    "accounts": [{"provider": "google", "account": "withheld@gmail.com"}],
+                },
+            )
+        )
+        assert isinstance(e, CalendarPermissionError)
+        # Still an AuthenticationError, so existing handlers keep catching it.
+        assert isinstance(e, AuthenticationError)
+        assert e.accounts == [BlockedAccount(provider="google", account="withheld@gmail.com")]
+
+    def test_403_with_permission_code_tolerates_missing_accounts(self):
+        e = map_response_error(_resp(403, {"code": "calendar_permission_required", "message": "nope"}))
+        assert isinstance(e, CalendarPermissionError)
+        assert e.accounts == []
+
+    def test_plain_403_stays_a_generic_auth_error(self):
+        e = map_response_error(_resp(403, {"message": "Write access denied for current scope"}))
+        assert isinstance(e, AuthenticationError)
+        assert not isinstance(e, CalendarPermissionError)
 
     def test_404_to_not_found(self):
         assert isinstance(map_response_error(_resp(404)), NotFoundError)

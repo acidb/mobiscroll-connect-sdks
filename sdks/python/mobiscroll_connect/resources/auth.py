@@ -38,9 +38,11 @@ class Auth:
         :param state: Opaque CSRF protection value.
         :param providers: Comma-separated list (e.g. ``"google,microsoft"``)
             to restrict the provider picker.
-        :param lng: Language code for the Connect authorization pages
-            (``"en"``, ``"es"``, ``"fr"``, ``"ar"``). When omitted, the Connect
-            UI falls back to the browser ``Accept-Language`` header, then English.
+        :param lng: Language code for the Connect authorization pages, e.g. ``"es"``.
+            For the languages Connect supports, see
+            https://mobiscroll.com/docs/connect/localization#supported-languages
+            When omitted, the Connect UI falls back to the browser
+            ``Accept-Language`` header, then English.
         """
         cfg = self._api.config
         params = {
@@ -89,7 +91,12 @@ class Auth:
 
     def get_connection_status(self) -> ConnectionStatusResponse:
         """Connected providers and account counts. Falls back to the legacy
-        ``/connection-status`` route on older deployments."""
+        ``/connection-status`` route on older deployments.
+
+        Each account reports ``granted_scopes`` and ``calendar_permission_granted``;
+        the latter is ``False`` for accounts that connected but withheld calendar
+        access on the provider's consent screen, which list no calendars until the
+        user reconnects and allows it."""
         try:
             data = self._api.get("oauth/connection-status")
         except MobiscrollConnectError:

@@ -28,6 +28,40 @@ class ConnectionStatusResponseTest extends BaseTestCase
         $this->assertSame('user@gmail.com', $response->connections['google'][0]['id']);
     }
 
+    public function testFromArrayCarriesCalendarPermission(): void
+    {
+        $data = [
+            'connections' => [
+                'google' => [
+                    [
+                        'id' => 'granted@gmail.com',
+                        'grantedScopes' => ['openid', 'https://www.googleapis.com/auth/calendar'],
+                        'calendarPermissionGranted' => true,
+                    ],
+                    [
+                        'id' => 'withheld@gmail.com',
+                        'grantedScopes' => ['openid', 'https://www.googleapis.com/auth/userinfo.email'],
+                        'calendarPermissionGranted' => false,
+                    ],
+                ],
+                'apple' => [
+                    ['id' => 'user@icloud.com', 'grantedScopes' => [], 'calendarPermissionGranted' => null],
+                ],
+            ],
+            'limitReached' => false,
+        ];
+
+        $response = ConnectionStatusResponse::fromArray($data);
+
+        $this->assertTrue($response->connections['google'][0]['calendarPermissionGranted']);
+        $this->assertFalse($response->connections['google'][1]['calendarPermissionGranted']);
+        $this->assertNotContains(
+            'https://www.googleapis.com/auth/calendar',
+            $response->connections['google'][1]['grantedScopes']
+        );
+        $this->assertNull($response->connections['apple'][0]['calendarPermissionGranted']);
+    }
+
     public function testFromArrayDefaults(): void
     {
         $response = ConnectionStatusResponse::fromArray([]);

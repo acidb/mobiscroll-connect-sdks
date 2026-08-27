@@ -30,6 +30,41 @@ public class ErrorMappingTests
     }
 
     [Fact]
+    public async Task CalendarPermissionException_CarriesBlockedAccounts()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Enqueue(HttpStatusCode.Forbidden, """
+            {"error":"Forbidden","code":"calendar_permission_required","message":"No connected account has calendar access",
+             "accounts":[{"provider":"google","account":"withheld@gmail.com"}]}
+            """);
+
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        var ex = await Assert.ThrowsAsync<CalendarPermissionException>(() => client.Calendars.ListAsync());
+
+        // Still an AuthenticationException, so existing handlers keep catching it.
+        Assert.IsAssignableFrom<AuthenticationException>(ex);
+        Assert.Equal("CALENDAR_PERMISSION_REQUIRED", ex.CodeString);
+        var account = Assert.Single(ex.Accounts);
+        Assert.Equal("google", account.Provider);
+        Assert.Equal("withheld@gmail.com", account.Account);
+    }
+
+    [Fact]
+    public async Task PlainForbidden_StaysAGenericAuthenticationException()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Enqueue(HttpStatusCode.Forbidden, """{"error":"Forbidden","message":"Write access denied for current scope"}""");
+
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        var ex = await Assert.ThrowsAsync<AuthenticationException>(() => client.Calendars.ListAsync());
+        Assert.IsNotType<CalendarPermissionException>(ex);
+    }
+
+    [Fact]
     public async Task RateLimitException_CapturesRetryAfterHeader()
     {
         var handler = new FakeHttpMessageHandler()
