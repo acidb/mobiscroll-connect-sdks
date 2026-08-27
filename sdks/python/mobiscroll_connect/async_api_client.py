@@ -19,7 +19,7 @@ from .config import Config
 from .exceptions import AuthenticationError, MobiscrollConnectError
 from .models import TokenResponse
 
-AsyncTokensRefreshedCallback = Callable[[TokenResponse], Union[None, Awaitable[None]]]
+AsyncTokensRefreshedCallback = Callable[[TokenResponse], Union[Awaitable[None], None]]
 
 
 class AsyncApiClient:

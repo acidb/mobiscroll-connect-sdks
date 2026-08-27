@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	mobiscroll "github.com/acidb/mobiscroll-connect-sdks/sdks/go"
 	"github.com/acidb/mobiscroll-connect-sdks/sdks/go/testsupport"
@@ -76,17 +77,53 @@ func TestRefreshPreservesOldRefreshToken(t *testing.T) {
 
 // TestRefreshDedup is the critical concurrency test: N parallel 401-returning
 // requests must trigger exactly ONE refresh.
+//
+// The server answers by path rather than from a FIFO queue, and holds every
+// first-round list request open until all N have arrived. Without that barrier
+// the test only passes when the goroutines happen to overlap: an early refresh
+// would consume a queued response meant for a later list call, and every
+// subsequent answer would be off by one.
 func TestRefreshDedup(t *testing.T) {
 	const N = 10
 	srv := testsupport.NewMockServer(t)
-	// Queue: N initial 401s, then ONE token refresh, then N successful retries.
-	for i := 0; i < N; i++ {
-		srv.Enqueue(testsupport.MockResponse{Status: 401})
-	}
-	srv.EnqueueJSON(`{"access_token":"new-at","token_type":"Bearer","expires_in":3600,"refresh_token":"new-rt"}`)
-	for i := 0; i < N; i++ {
-		srv.EnqueueJSON(`[]`)
-	}
+
+	var (
+		mu       sync.Mutex
+		listSeen int
+	)
+	allArrived := make(chan struct{})
+
+	srv.Dispatch(func(r testsupport.RecordedRequest) testsupport.MockResponse {
+		jsonHdr := map[string]string{"Content-Type": "application/json"}
+
+		if strings.HasSuffix(r.Path, "/oauth/token") {
+			return testsupport.MockResponse{
+				Status:  200,
+				Body:    `{"access_token":"new-at","token_type":"Bearer","expires_in":3600,"refresh_token":"new-rt"}`,
+				Headers: jsonHdr,
+			}
+		}
+
+		mu.Lock()
+		listSeen++
+		n := listSeen
+		if n == N {
+			close(allArrived)
+		}
+		mu.Unlock()
+
+		if n > N {
+			// Retry after the refresh.
+			return testsupport.MockResponse{Status: 200, Body: `[]`, Headers: jsonHdr}
+		}
+
+		select {
+		case <-allArrived:
+		case <-time.After(10 * time.Second):
+			t.Errorf("only %d of %d list requests reached the server", n, N)
+		}
+		return testsupport.MockResponse{Status: 401}
+	})
 
 	c := mobiscroll.NewClient("id", "secret", "https://app/cb",
 		mobiscroll.WithBaseURL(srv.URL+"/api"),

@@ -38,6 +38,7 @@ type MockServer struct {
 	mu       sync.Mutex
 	queue    []MockResponse
 	requests []RecordedRequest
+	dispatch func(RecordedRequest) MockResponse
 }
 
 // NewMockServer starts a server that responds with whatever has been queued
@@ -49,6 +50,19 @@ func NewMockServer(t testing.TB) *MockServer {
 	m.Server = httptest.NewServer(http.HandlerFunc(m.handle))
 	t.Cleanup(m.Close)
 	return m
+}
+
+// Dispatch installs a handler that decides each response from the request
+// itself, replacing the FIFO queue.
+//
+// Use it whenever the order requests arrive in is not guaranteed: a queue
+// answers the Nth request to arrive, which under concurrency is not
+// necessarily the Nth request the test meant. The handler runs on the server's
+// own goroutine per request, so it may block to hold a request open.
+func (m *MockServer) Dispatch(fn func(RecordedRequest) MockResponse) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.dispatch = fn
 }
 
 // Enqueue adds a response to the FIFO queue.
@@ -91,23 +105,35 @@ func (m *MockServer) handle(w http.ResponseWriter, r *http.Request) {
 	_ = r.Body.Close()
 	r.Body = io.NopCloser(bytes.NewReader(body))
 
-	m.mu.Lock()
-	m.requests = append(m.requests, RecordedRequest{
+	rec := RecordedRequest{
 		Method: r.Method,
 		Path:   r.URL.RequestURI(),
 		URL:    r.URL.String(),
 		Header: r.Header.Clone(),
 		Body:   body,
-	})
-	var resp MockResponse
-	if len(m.queue) == 0 {
-		m.mu.Unlock()
-		http.Error(w, `{"message":"mock queue empty"}`, http.StatusInternalServerError)
-		return
 	}
-	resp = m.queue[0]
-	m.queue = m.queue[1:]
+
+	m.mu.Lock()
+	m.requests = append(m.requests, rec)
+	dispatch := m.dispatch
 	m.mu.Unlock()
+
+	var resp MockResponse
+	if dispatch != nil {
+		// Called without the lock held: a dispatcher is allowed to block, and
+		// holding the mutex would stop any other request from being recorded.
+		resp = dispatch(rec)
+	} else {
+		m.mu.Lock()
+		if len(m.queue) == 0 {
+			m.mu.Unlock()
+			http.Error(w, `{"message":"mock queue empty"}`, http.StatusInternalServerError)
+			return
+		}
+		resp = m.queue[0]
+		m.queue = m.queue[1:]
+		m.mu.Unlock()
+	}
 
 	for k, v := range resp.Headers {
 		w.Header().Set(k, v)
