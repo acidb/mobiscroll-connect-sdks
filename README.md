@@ -7,7 +7,7 @@ Official client SDKs for the [Mobiscroll Connect](https://mobiscroll.com/connect
 | SDK | Language | Package | Registry |
 |-----|----------|---------|----------|
 | [sdks/node](sdks/node/) | TypeScript / Node.js 20+ | `@mobiscroll/connect-sdk` | [npm](https://www.npmjs.com/package/@mobiscroll/connect-sdk) |
-| [sdks/python](sdks/python/) | Python 3.9+ | `mobiscroll-connect` | [PyPI](https://pypi.org/project/mobiscroll-connect/) |
+| [sdks/python](sdks/python/) | Python 3.9+ | `mobiscroll-connect-sdk` | [PyPI](https://pypi.org/project/mobiscroll-connect-sdk/) |
 | [sdks/php](sdks/php/) | PHP 8.1+ | `mobiscroll/connect-php` | [Packagist](https://packagist.org/packages/mobiscroll/connect-php) |
 | [sdks/dotnet](sdks/dotnet/) | .NET 8 | `Mobiscroll.Connect` | [NuGet](https://www.nuget.org/packages/Mobiscroll.Connect) |
 | [sdks/java](sdks/java/) | Java 11+ | `com.mobiscroll:connect-sdk` | [Maven Central](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk) |
