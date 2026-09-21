@@ -57,7 +57,15 @@ module Mobiscroll
     # no calendars can be read from them until the user reconnects and allows access. It
     # is nil when the question does not apply (Apple and CalDav authenticate with a
     # username and app password) or no scopes were recorded for the account.
-    ConnectedAccount = Struct.new(:id, :display, :granted_scopes, :calendar_permission_granted, keyword_init: true) do
+    # `sync_state` reports whether the stored credentials still work: 'active', or
+    # 'reauth_required' once the provider has rejected them. It answers a different question
+    # from `calendar_permission_granted`, which records what was agreed at consent time and
+    # never changes afterwards. An account with no observed failure is 'active'. Recovery is
+    # the same reconnect — it cannot be repaired server-side.
+    ConnectedAccount = Struct.new(
+      :id, :display, :granted_scopes, :calendar_permission_granted, :sync_state, :sync_state_updated_at,
+      keyword_init: true
+    ) do
       def self.from_h(hash)
         return nil if hash.nil?
 
@@ -67,7 +75,9 @@ module Mobiscroll
           id: hash['id'] || hash[:id],
           display: hash['display'] || hash[:display],
           granted_scopes: Array(hash['grantedScopes'] || hash[:grantedScopes]),
-          calendar_permission_granted: granted
+          calendar_permission_granted: granted,
+          sync_state: hash['syncState'] || hash[:syncState] || 'active',
+          sync_state_updated_at: hash['syncStateUpdatedAt'] || hash[:syncStateUpdatedAt]
         )
       end
     end

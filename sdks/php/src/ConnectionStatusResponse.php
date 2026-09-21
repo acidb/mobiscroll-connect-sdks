@@ -16,7 +16,13 @@ class ConnectionStatusResponse
      * does not apply (Apple and CalDav authenticate with a username and app password) or
      * no scopes were recorded for the account.
      *
-     * @param array<string, array<array{id: string, display?: string, grantedScopes: list<string>, calendarPermissionGranted: bool|null}>> $connections
+     * `syncState` answers a different question — whether the stored credentials still
+     * work. It reads `reauth_required` once the provider has rejected them and `active`
+     * otherwise, where `calendarPermissionGranted` records what was agreed at consent
+     * time and never changes afterwards. Neither is repairable server-side; the user has
+     * to run the connect flow again.
+     *
+     * @param array<string, array<array{id: string, display?: string, grantedScopes: list<string>, calendarPermissionGranted: bool|null, syncState: string, syncStateUpdatedAt: string|null}>> $connections
      */
     public function __construct(
         public readonly array $connections,

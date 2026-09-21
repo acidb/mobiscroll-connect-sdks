@@ -22,6 +22,21 @@ public sealed class ConnectedAccount
     /// not apply (Apple, CalDav) or no scopes were recorded for the account.
     /// </summary>
     public bool? CalendarPermissionGranted { get; set; }
+
+    /// <summary>
+    /// Whether the stored credentials for this account still work: <c>"active"</c>, or
+    /// <c>"reauth_required"</c> once the provider has rejected them. This answers a
+    /// different question from <see cref="CalendarPermissionGranted"/>, which records what
+    /// was agreed at consent time and never changes afterwards — so it cannot report a
+    /// grant the user revoked later. Neither is repairable server-side; the user must run
+    /// the connect flow again.
+    /// </summary>
+    public string SyncState { get; set; } = "active";
+
+    /// <summary>
+    /// ISO 8601 time <see cref="SyncState"/> last changed, or <c>null</c> if it never has.
+    /// </summary>
+    public string? SyncStateUpdatedAt { get; set; }
 }
 
 public sealed class ConnectionStatusResponse

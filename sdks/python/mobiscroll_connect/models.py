@@ -217,12 +217,20 @@ class ConnectedAccount:
     but no calendars can be read from them until the user reconnects and allows access.
     It is ``None`` when the question does not apply (Apple and CalDav authenticate with a
     username and app password) or no scopes were recorded for the account.
+
+    ``sync_state`` answers a different question: whether the stored credentials still
+    work. It is ``"reauth_required"`` once the provider has rejected them, and
+    ``"active"`` otherwise. ``calendar_permission_granted`` records what was agreed at
+    consent time and never changes afterwards, so it cannot report a revoked grant.
+    Neither can be repaired server-side — the user must run the connect flow again.
     """
 
     id: str
     display: str | None = None
     granted_scopes: list[str] = field(default_factory=list)
     calendar_permission_granted: bool | None = None
+    sync_state: str = "active"
+    sync_state_updated_at: str | None = None
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> ConnectedAccount:
@@ -231,6 +239,8 @@ class ConnectedAccount:
             display=data.get("display"),
             granted_scopes=[str(s) for s in (data.get("grantedScopes") or [])],
             calendar_permission_granted=data.get("calendarPermissionGranted"),
+            sync_state=data.get("syncState") or "active",
+            sync_state_updated_at=data.get("syncStateUpdatedAt"),
         )
 
 

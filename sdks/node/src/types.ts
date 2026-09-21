@@ -396,6 +396,22 @@ export interface ConnectedAccount {
    * apply (Apple, CalDav) or no scopes were recorded for the account.
    */
   calendarPermissionGranted: boolean | null;
+
+  /**
+   * Whether the stored credentials for this account still work.
+   *
+   * `reauth_required` means the provider has rejected them — the user revoked access, an
+   * administrator withdrew consent, or the credentials were invalidated — so the account's
+   * calendars have stopped syncing. Distinct from `calendarPermissionGranted`, which records
+   * what was agreed at consent time and never changes afterwards. An account with no observed
+   * failure is `active`.
+   *
+   * It cannot be repaired from your backend; send the user through the connect flow again.
+   */
+  syncState: 'active' | 'reauth_required';
+
+  /** ISO 8601 timestamp of the last `syncState` change, or `null` if it has never changed. */
+  syncStateUpdatedAt: string | null;
 }
 
 /**

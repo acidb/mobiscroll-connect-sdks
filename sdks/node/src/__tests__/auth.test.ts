@@ -105,6 +105,8 @@ describe('Auth Resource', () => {
               display: 'user@gmail.com',
               grantedScopes: ['openid', 'https://www.googleapis.com/auth/calendar'],
               calendarPermissionGranted: true,
+              syncState: 'active',
+              syncStateUpdatedAt: null,
             },
           ],
           microsoft: [
@@ -113,6 +115,8 @@ describe('Auth Resource', () => {
               display: 'user@outlook.com',
               grantedScopes: ['openid', 'profile', 'https://graph.microsoft.com/Calendars.ReadWrite'],
               calendarPermissionGranted: true,
+              syncState: 'reauth_required',
+              syncStateUpdatedAt: '2026-09-01T10:00:00.000Z',
             },
           ],
           apple: [],
@@ -132,6 +136,8 @@ describe('Auth Resource', () => {
       expect(mockApiClient.get).toHaveBeenCalledWith('/oauth/connection-status');
       expect(result).toEqual(mockResponse);
       expect(result.connections.google).toHaveLength(1);
+      expect(result.connections.google[0].syncState).toBe('active');
+      expect(result.connections.microsoft[0].syncState).toBe('reauth_required');
     });
 
     it('should surface accounts that withheld calendar permission', async () => {
@@ -143,10 +149,14 @@ describe('Auth Resource', () => {
               display: 'user@gmail.com',
               grantedScopes: ['openid', 'https://www.googleapis.com/auth/userinfo.email'],
               calendarPermissionGranted: false,
+              syncState: 'active',
+              syncStateUpdatedAt: null,
             },
           ],
           microsoft: [],
-          apple: [{ id: 'user@icloud.com', grantedScopes: [], calendarPermissionGranted: null }],
+          apple: [
+            { id: 'user@icloud.com', grantedScopes: [], calendarPermissionGranted: null, syncState: 'active', syncStateUpdatedAt: null },
+          ],
           caldav: [],
         },
         limitReached: false,

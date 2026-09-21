@@ -61,6 +61,16 @@ type ConnectedAccount struct {
 	// calendars can be read from it until the user reconnects and allows access. Nil
 	// means the question does not apply (Apple, CalDav) or no scopes were recorded.
 	CalendarPermissionGranted *bool `json:"calendarPermissionGranted,omitempty"`
+
+	// SyncState reports whether the stored credentials for this account still work:
+	// "active", or "reauth_required" once the provider has rejected them. It is distinct
+	// from CalendarPermissionGranted, which records what was agreed at consent time and
+	// never changes afterwards. An account with no observed failure is "active". It cannot
+	// be repaired server-side — the user must run the connect flow again.
+	SyncState string `json:"syncState,omitempty"`
+
+	// SyncStateUpdatedAt is the ISO 8601 time SyncState last changed, empty if never.
+	SyncStateUpdatedAt string `json:"syncStateUpdatedAt,omitempty"`
 }
 
 // ConnectionStatus is the result of Auth.GetConnectionStatus. Connections is
