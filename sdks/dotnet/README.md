@@ -11,6 +11,7 @@ A .NET client library for the Mobiscroll Connect API, enabling seamless calendar
 - **Automatic token refresh**: Silently refreshes expired access tokens and retries the original request
 - **Event management**: Create, read, update, and delete calendar events
 - **Calendar operations**: List calendars from all connected providers
+- **Webhooks**: Subscribe to and unsubscribe from calendar change notifications
 - **Connection management**: Check provider connection status and disconnect accounts
 - **Typed exceptions**: Distinct error classes for authentication, validation, rate limiting, and more
 - **ASP.NET Core integration**: First-class dependency injection support via `AddMobiscrollConnect()`
@@ -220,6 +221,32 @@ await client.Events.DeleteAsync(new EventDeleteParams
 });
 ```
 
+### Webhooks
+
+```csharp
+// Subscribe to change notifications for a calendar
+WebhookSubscribeResponse subscription = await client.Webhooks.SubscribeWebhookAsync(new WebhookSubscribeData
+{
+    Provider   = Provider.Google,
+    CalendarId = "primary",
+});
+
+Console.WriteLine($"Subscribed: {subscription.Subscription.ChannelId}");
+
+// Unsubscribe later — resourceId is required by some providers (e.g. Google) to fully unsubscribe
+WebhookUnsubscribeResponse result = await client.Webhooks.UnsubscribeWebhookAsync(new WebhookUnsubscribeData
+{
+    Provider   = Provider.Google,
+    ChannelId  = subscription.Subscription.ChannelId,
+    ResourceId = subscription.Subscription.ResourceId,
+});
+
+// Success is still true even if the provider-side subscription had already expired;
+// check Message for details in that case.
+if (result.Success)
+    Console.WriteLine("Unsubscribed successfully");
+```
+
 ### Connection Management
 
 ```csharp
@@ -340,11 +367,16 @@ src/
     │   ├── EventDeleteParams.cs
     │   ├── DisconnectParams.cs
     │   ├── EventAttendee.cs
-    │   └── RecurrenceRule.cs
+    │   ├── RecurrenceRule.cs
+    │   ├── WebhookSubscribeData.cs
+    │   ├── WebhookSubscribeResponse.cs
+    │   ├── WebhookUnsubscribeData.cs
+    │   └── WebhookUnsubscribeResponse.cs
     ├── Resources/
     │   ├── Auth.cs
     │   ├── Calendars.cs
-    │   └── Events.cs
+    │   ├── Events.cs
+    │   └── Webhooks.cs
     ├── ApiClient.cs
     ├── MobiscrollConnectClient.cs
     ├── MobiscrollConnectConfig.cs
@@ -355,6 +387,7 @@ tests/
     ├── AuthTests.cs
     ├── CalendarsTests.cs
     ├── EventsTests.cs
+    ├── WebhooksTests.cs
     ├── ErrorMappingTests.cs
     └── SerializationTests.cs
 samples/

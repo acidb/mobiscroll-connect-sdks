@@ -40,7 +40,8 @@ Formatting:
 MobiscrollConnectClient        — public entry point; constructs ApiClient + resources; holds credentials
   ├── Auth: Auth               — GenerateAuthUrl, GetTokenAsync, GetConnectionStatusAsync, DisconnectAsync
   ├── Calendars: Calendars     — ListAsync()
-  └── Events: Events           — ListAsync(), CreateAsync(), UpdateAsync(), DeleteAsync()
+  ├── Events: Events           — ListAsync(), CreateAsync(), UpdateAsync(), DeleteAsync()
+  └── Webhooks: Webhooks       — SubscribeWebhookAsync(), UnsubscribeWebhookAsync()
 
 ApiClient                      — HttpClient wrapper; Bearer auth; 401 → token refresh → retry; error mapping
   └── SemaphoreSlim            — deduplicates concurrent 401-triggered refreshes via _inflightRefresh Task
@@ -111,7 +112,8 @@ dotnet add package Mobiscroll.Connect          # consume (in another project)
 | `src/Mobiscroll.Connect/Resources/Auth.cs` | OAuth flow: GenerateAuthUrl, GetTokenAsync, GetConnectionStatusAsync, DisconnectAsync |
 | `src/Mobiscroll.Connect/Resources/Calendars.cs` | ListAsync() |
 | `src/Mobiscroll.Connect/Resources/Events.cs` | ListAsync, CreateAsync, UpdateAsync, DeleteAsync; ISO 8601 date formatting |
-| `src/Mobiscroll.Connect/Models/` | Request/response DTOs (TokenResponse, CalendarEvent, EventCreateData, etc.) |
+| `src/Mobiscroll.Connect/Resources/Webhooks.cs` | SubscribeWebhookAsync, UnsubscribeWebhookAsync |
+| `src/Mobiscroll.Connect/Models/` | Request/response DTOs (TokenResponse, CalendarEvent, EventCreateData, WebhookSubscribeData, etc.) |
 | `src/Mobiscroll.Connect/Exceptions/` | Exception hierarchy |
 | `src/Mobiscroll.Connect/Internal/QueryStringBuilder.cs` | URL query string encoding; parity with Node/PHP wire format |
 | `src/Mobiscroll.Connect/DependencyInjection/ServiceCollectionExtensions.cs` | `AddMobiscrollConnect()` for ASP.NET Core |
@@ -119,6 +121,7 @@ dotnet add package Mobiscroll.Connect          # consume (in another project)
 | `tests/Mobiscroll.Connect.Tests/AuthTests.cs` | OAuth flow tests |
 | `tests/Mobiscroll.Connect.Tests/CalendarsTests.cs` | Calendar API tests |
 | `tests/Mobiscroll.Connect.Tests/EventsTests.cs` | Event CRUD tests |
+| `tests/Mobiscroll.Connect.Tests/WebhooksTests.cs` | Webhook subscribe/unsubscribe tests |
 | `tests/Mobiscroll.Connect.Tests/ErrorMappingTests.cs` | Exception type mapping |
 | `tests/Mobiscroll.Connect.Tests/SerializationTests.cs` | JSON round-trip tests |
 | `tests/Mobiscroll.Connect.Tests/TestHelpers/FakeHttpMessageHandler.cs` | Queued-response HTTP handler; records requests for assertion |

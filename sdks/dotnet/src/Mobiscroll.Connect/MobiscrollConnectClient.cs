@@ -8,8 +8,8 @@ namespace Mobiscroll.Connect;
 /// <summary>
 /// Top-level entry point for the Mobiscroll Connect SDK.
 /// Construct once per application (or per user session, if credentials are user-scoped)
-/// and access the <see cref="Auth"/>, <see cref="Calendars"/>, and <see cref="Events"/>
-/// resources as properties.
+/// and access the <see cref="Auth"/>, <see cref="Calendars"/>, <see cref="Events"/>, and
+/// <see cref="Webhooks"/> resources as properties.
 /// </summary>
 public sealed class MobiscrollConnectClient : IDisposable
 {
@@ -31,11 +31,13 @@ public sealed class MobiscrollConnectClient : IDisposable
         Auth = new Auth(_api);
         Calendars = new Calendars(_api);
         Events = new Events(_api);
+        Webhooks = new Webhooks(_api);
     }
 
     public Auth Auth { get; }
     public Calendars Calendars { get; }
     public Events Events { get; }
+    public Webhooks Webhooks { get; }
 
     /// <summary>Underlying API client. Exposed for advanced scenarios (custom requests, test access).</summary>
     public ApiClient ApiClient => _api;
