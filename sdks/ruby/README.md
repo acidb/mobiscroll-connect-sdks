@@ -170,6 +170,29 @@ client.events.delete(
 )
 ```
 
+## Webhooks
+
+### Subscribe to calendar change notifications
+
+```ruby
+result = client.webhooks.subscribe_webhook(
+  provider:    Mobiscroll::Connect::Provider::GOOGLE,
+  calendar_id: 'primary'
+)
+puts result.channel_id
+puts result.server_webhook_url
+```
+
+### Unsubscribe
+
+```ruby
+client.webhooks.unsubscribe_webhook(
+  provider:    'google',
+  channel_id:  result.channel_id,
+  resource_id: result.subscription.resource_id
+)
+```
+
 ## Error handling
 
 All errors are subclasses of `Mobiscroll::Connect::Error`:

@@ -24,7 +24,8 @@ Client                              public facade
   ├── auth     → Resources::Auth   generate_auth_url, get_token, set_credentials,
   │                                get_connection_status, disconnect
   ├── calendars → Resources::Calendars   list
-  └── events   → Resources::Events      list, create, update, delete
+  ├── events   → Resources::Events      list, create, update, delete
+  └── webhooks → Resources::Webhooks    subscribe_webhook, unsubscribe_webhook
 
 ApiClient                           internal HTTP layer
   ├── execute()                     Bearer header, 401 → refresh + retry-once
@@ -95,6 +96,7 @@ cd minimal-app && bundle exec rackup -p 8080  # demo (needs .env)
 | `lib/mobiscroll/connect/resources/auth.rb` | OAuth flow + connection status + disconnect |
 | `lib/mobiscroll/connect/resources/calendars.rb` | `Calendars#list` |
 | `lib/mobiscroll/connect/resources/events.rb` | `Events#list/create/update/delete`; JSON `calendarIds` encoding |
+| `lib/mobiscroll/connect/resources/webhooks.rb` | `Webhooks#subscribe_webhook/unsubscribe_webhook` |
 | `spec/spec_helper.rb` | RSpec config + `WebMock.disable_net_connect!` |
 | `spec/support/mock_server.rb` | WebMock helpers + default/credentialed client builders |
 | `spec/mobiscroll/connect/*_spec.rb` | Per-module tests |

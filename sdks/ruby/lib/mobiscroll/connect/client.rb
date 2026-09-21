@@ -3,7 +3,7 @@
 module Mobiscroll
   module Connect
     class Client
-      attr_reader :auth, :calendars, :events
+      attr_reader :auth, :calendars, :events, :webhooks
 
       def initialize(client_id:, client_secret:, redirect_uri:,
                      base_url: DEFAULT_BASE_URL, timeout: DEFAULT_TIMEOUT,
@@ -20,6 +20,7 @@ module Mobiscroll
         @auth = Resources::Auth.new(@config, @api_client)
         @calendars = Resources::Calendars.new(@config, @api_client)
         @events = Resources::Events.new(@config, @api_client)
+        @webhooks = Resources::Webhooks.new(@config, @api_client)
       end
 
       def set_credentials(tokens)

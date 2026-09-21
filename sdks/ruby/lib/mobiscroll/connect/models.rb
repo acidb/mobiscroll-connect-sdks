@@ -210,5 +210,47 @@ module Mobiscroll
         )
       end
     end
+
+    # The channel details returned by Webhooks#subscribe_webhook. `resource_id` is
+    # present for Google; `expiration` is an ISO date string, present for some providers.
+    WebhookSubscription = Struct.new(:channel_id, :resource_id, :expiration, keyword_init: true) do
+      def self.from_h(hash)
+        return nil if hash.nil?
+
+        new(
+          channel_id: hash['channelId'] || hash[:channelId],
+          resource_id: hash['resourceId'] || hash[:resourceId],
+          expiration: hash['expiration'] || hash[:expiration]
+        )
+      end
+    end
+
+    # Response from Webhooks#subscribe_webhook.
+    SubscribeWebhookResponse = Struct.new(
+      :success, :provider, :subscription, :server_webhook_url, :channel_id, keyword_init: true
+    ) do
+      def self.from_h(hash)
+        return nil if hash.nil?
+
+        new(
+          success: hash['success'] || hash[:success],
+          provider: hash['provider'] || hash[:provider],
+          subscription: WebhookSubscription.from_h(hash['subscription'] || hash[:subscription]),
+          server_webhook_url: hash['serverWebhookUrl'] || hash[:serverWebhookUrl],
+          channel_id: hash['channelId'] || hash[:channelId]
+        )
+      end
+    end
+
+    # Response from Webhooks#unsubscribe_webhook. `success` is true whenever the local
+    # mapping was removed, even if the provider-side unsubscribe itself failed — `message`
+    # explains what happened in that case.
+    UnsubscribeWebhookResponse = Struct.new(:success, :message, keyword_init: true) do
+      def self.from_h(hash)
+        return nil if hash.nil?
+
+        new(success: hash['success'] || hash[:success], message: hash['message'] || hash[:message])
+      end
+    end
   end
 end

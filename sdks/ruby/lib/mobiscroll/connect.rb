@@ -9,6 +9,7 @@ require_relative 'connect/api_client'
 require_relative 'connect/resources/auth'
 require_relative 'connect/resources/calendars'
 require_relative 'connect/resources/events'
+require_relative 'connect/resources/webhooks'
 require_relative 'connect/client'
 
 module Mobiscroll
