@@ -9,6 +9,7 @@ Node.js SDK for Mobiscroll Connect.
 - OAuth authorization and token exchange
 - Listing connected calendars
 - Listing, creating, updating, and deleting calendar events
+- Subscribing to and unsubscribing from calendar webhook notifications
 - Working with multiple providers (Google, Microsoft, Apple, CalDAV)
 
 ## Installation
@@ -121,6 +122,27 @@ await client.events.delete({
 	provider: 'google',
 	calendarId: created.calendarId,
 	eventId: created.id,
+});
+```
+
+### Subscribe to webhook notifications
+
+```ts
+const subscription = await client.webhooks.subscribeWebhook({
+	provider: 'google',
+	calendarId: 'primary',
+});
+
+console.log(subscription.channelId);
+```
+
+### Unsubscribe from webhook notifications
+
+```ts
+await client.webhooks.unsubscribeWebhook({
+	provider: 'google',
+	channelId: subscription.channelId,
+	resourceId: subscription.subscription.resourceId,
 });
 ```
 

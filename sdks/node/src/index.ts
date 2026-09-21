@@ -3,6 +3,7 @@ import { MobiscrollConnectConfig, TokenResponse } from './types';
 import { Calendars } from './resources/calendars';
 import { Events } from './resources/events';
 import { Auth } from './resources/auth';
+import { Webhooks } from './resources/webhooks';
 
 /**
  * Main SDK client for Mobiscroll Connect
@@ -11,6 +12,7 @@ export class MobiscrollConnectClient {
   public calendars: Calendars;
   public events: Events;
   public auth: Auth;
+  public webhooks: Webhooks;
 
   private readonly apiClient: ApiClient;
 
@@ -19,6 +21,7 @@ export class MobiscrollConnectClient {
     this.calendars = new Calendars(this.apiClient);
     this.events = new Events(this.apiClient);
     this.auth = new Auth(this.apiClient);
+    this.webhooks = new Webhooks(this.apiClient);
   }
 
   /**

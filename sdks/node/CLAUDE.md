@@ -39,7 +39,8 @@ TypeScript SDK for the Mobiscroll Connect API. Published to npm as `@mobiscroll/
 MobiscrollConnectClient        — public entry point; constructs ApiClient + resources
   ├── auth: Auth               — generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect
   ├── calendars: Calendars     — list()
-  └── events: Events           — list(), create(), update(), delete()
+  ├── events: Events           — list(), create(), update(), delete()
+  └── webhooks: Webhooks       — subscribeWebhook(), unsubscribeWebhook()
 
 ApiClient (extends EventEmitter)
   — Axios instance with base URL https://connect.mobiscroll.com/api
@@ -97,6 +98,7 @@ npm run prerelease        # bash pre-release.sh (version bump + build)
 | `src/resources/auth.ts`      | `Auth` — OAuth flow: generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect |
 | `src/resources/calendars.ts` | `Calendars` — list()                                                                            |
 | `src/resources/events.ts`    | `Events` — list(), create(), update(), delete()                                                 |
+| `src/resources/webhooks.ts`  | `Webhooks` — subscribeWebhook(), unsubscribeWebhook()                                           |
 | `src/__tests__/`             | Jest tests per resource + client + types                                                        |
 | `dist/`                      | Compiled output (do not edit directly)                                                          |
 

@@ -443,3 +443,50 @@ export interface DisconnectResponse {
   success: boolean;
   message?: string;
 }
+
+/**
+ * Parameters for subscribing to webhook notifications on a calendar
+ */
+export interface SubscribeWebhookParams {
+  provider: ProviderName;
+  calendarId: string;
+  /** Auto-generated server-side when omitted. */
+  channelId?: string;
+  /** Provider-specific expiration timestamp (ms epoch). */
+  expiration?: number;
+}
+
+export interface WebhookSubscription {
+  channelId: string;
+  /** Present for Google. */
+  resourceId?: string;
+  /** ISO 8601 timestamp; present for some providers. */
+  expiration?: string;
+}
+
+export interface SubscribeWebhookResponse {
+  success: boolean;
+  provider: string;
+  subscription: WebhookSubscription;
+  serverWebhookUrl: string;
+  channelId: string;
+}
+
+/**
+ * Parameters for unsubscribing from webhook notifications on a calendar
+ */
+export interface UnsubscribeWebhookParams {
+  provider: ProviderName;
+  channelId: string;
+  /** Required by some providers (e.g. Google) to fully unsubscribe. */
+  resourceId?: string;
+}
+
+export interface UnsubscribeWebhookResponse {
+  success: boolean;
+  /**
+   * Explanatory message, e.g. when the provider-side subscription had already expired.
+   * `success` is still `true` in that case — treat the response as final regardless.
+   */
+  message?: string;
+}
