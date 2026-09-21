@@ -57,6 +57,19 @@ created, err := client.Events().Create(ctx, &mobiscroll.EventCreateData{
     Start:      start,
     End:        start.Add(time.Hour),
 })
+
+// 6. Subscribe to change notifications for a calendar.
+sub, err := client.Webhooks().SubscribeWebhook(ctx, &mobiscroll.SubscribeWebhookParams{
+    Provider:   mobiscroll.ProviderGoogle,
+    CalendarID: "primary",
+})
+
+// 7. Unsubscribe when you no longer need notifications.
+_, err = client.Webhooks().UnsubscribeWebhook(ctx, &mobiscroll.UnsubscribeWebhookParams{
+    Provider:   mobiscroll.ProviderGoogle,
+    ChannelID:  sub.ChannelID,
+    ResourceID: sub.Subscription.ResourceID, // required by some providers, e.g. Google
+})
 ```
 
 The `mobiscroll.Ptr` helper exists so you can fill in optional `*T` fields inline without declaring a local variable just to take its address.

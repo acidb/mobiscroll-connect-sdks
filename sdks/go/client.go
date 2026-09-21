@@ -19,6 +19,7 @@ type Client struct {
 	auth      *authService
 	calendars *calendarsService
 	events    *eventsService
+	webhooks  *webhooksService
 }
 
 // NewClient builds a Client bound to the given OAuth credentials.
@@ -45,6 +46,7 @@ func NewClient(clientID, clientSecret, redirectURI string, opts ...ClientOption)
 	c.auth = &authService{api: api}
 	c.calendars = &calendarsService{api: api}
 	c.events = &eventsService{api: api}
+	c.webhooks = &webhooksService{api: api}
 	return c
 }
 
@@ -56,6 +58,9 @@ func (c *Client) Calendars() *calendarsService { return c.calendars }
 
 // Events returns the events resource.
 func (c *Client) Events() *eventsService { return c.events }
+
+// Webhooks returns the webhook-subscription resource.
+func (c *Client) Webhooks() *webhooksService { return c.webhooks }
 
 // SetCredentials stores a token pair the SDK will use on subsequent requests.
 // Typically called after Auth.GetToken or when restoring credentials from

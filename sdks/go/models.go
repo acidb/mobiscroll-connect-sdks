@@ -217,3 +217,51 @@ type EventDeleteParams struct {
 	RecurringEventID string // optional
 	DeleteMode       string // optional: "this" | "following" | "all"
 }
+
+// SubscribeWebhookParams is the body for Webhooks.SubscribeWebhook. Provider
+// and CalendarID are required.
+type SubscribeWebhookParams struct {
+	Provider   Provider `json:"provider"`
+	CalendarID string   `json:"calendarId"`
+	// ChannelID is auto-generated server-side when omitted.
+	ChannelID string `json:"channelId,omitempty"`
+	// Expiration is a provider-specific timestamp (ms epoch).
+	Expiration *int64 `json:"expiration,omitempty"`
+}
+
+// WebhookSubscription describes the provider-side subscription created by
+// Webhooks.SubscribeWebhook.
+type WebhookSubscription struct {
+	ChannelID string `json:"channelId"`
+	// ResourceID is present for Google.
+	ResourceID string `json:"resourceId,omitempty"`
+	// Expiration is an ISO 8601 timestamp; present for some providers.
+	Expiration string `json:"expiration,omitempty"`
+}
+
+// SubscribeWebhookResponse is the result of Webhooks.SubscribeWebhook.
+type SubscribeWebhookResponse struct {
+	Success          bool                `json:"success"`
+	Provider         string              `json:"provider"`
+	Subscription     WebhookSubscription `json:"subscription"`
+	ServerWebhookURL string              `json:"serverWebhookUrl"`
+	ChannelID        string              `json:"channelId"`
+}
+
+// UnsubscribeWebhookParams is the body for Webhooks.UnsubscribeWebhook.
+// Provider and ChannelID are required.
+type UnsubscribeWebhookParams struct {
+	Provider  Provider `json:"provider"`
+	ChannelID string   `json:"channelId"`
+	// ResourceID is required by some providers (e.g. Google) to fully unsubscribe.
+	ResourceID string `json:"resourceId,omitempty"`
+}
+
+// UnsubscribeWebhookResponse is the result of Webhooks.UnsubscribeWebhook.
+// Success is true even when the provider-side subscription had already
+// expired — check Message for details in that case. Treat a 200 response as
+// final regardless of Message.
+type UnsubscribeWebhookResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message,omitempty"`
+}
