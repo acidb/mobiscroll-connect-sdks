@@ -40,7 +40,10 @@ from .models import (
     EventAttendee,
     EventsListResponse,
     Provider,
+    SubscribeWebhookResponse,
     TokenResponse,
+    UnsubscribeWebhookResponse,
+    WebhookSubscription,
 )
 
 __version__ = "1.2.0"
@@ -66,7 +69,10 @@ __all__ = [
     "Provider",
     "RateLimitError",
     "ServerError",
+    "SubscribeWebhookResponse",
     "TokenResponse",
+    "UnsubscribeWebhookResponse",
     "ValidationError",
+    "WebhookSubscription",
     "__version__",
 ]

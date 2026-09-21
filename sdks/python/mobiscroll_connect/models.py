@@ -275,3 +275,63 @@ class DisconnectResponse:
             success=bool(data.get("success", False)),
             message=data.get("message"),
         )
+
+
+@dataclass(frozen=True)
+class WebhookSubscription:
+    """The provider-side subscription created by ``POST /subscribe-webhook``."""
+
+    channel_id: str
+    resource_id: str | None = None
+    expiration: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> WebhookSubscription:
+        return cls(
+            channel_id=_require(data, "channelId"),
+            resource_id=data.get("resourceId"),
+            expiration=data.get("expiration"),
+        )
+
+
+@dataclass(frozen=True)
+class SubscribeWebhookResponse:
+    success: bool
+    provider: str
+    subscription: WebhookSubscription
+    server_webhook_url: str
+    channel_id: str
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> SubscribeWebhookResponse:
+        subscription_raw = data.get("subscription")
+        return cls(
+            success=bool(data.get("success", False)),
+            provider=data.get("provider", ""),
+            subscription=WebhookSubscription.from_dict(
+                subscription_raw if isinstance(subscription_raw, Mapping) else {}
+            ),
+            server_webhook_url=data.get("serverWebhookUrl", ""),
+            channel_id=data.get("channelId", ""),
+        )
+
+
+@dataclass(frozen=True)
+class UnsubscribeWebhookResponse:
+    """Response from ``POST /unsubscribe-webhook``.
+
+    ``success`` is ``True`` even when the provider-side unsubscribe itself failed
+    (e.g. an already-expired subscription) — the server removes its local mapping
+    regardless and explains the situation in ``message``. Treat a 200 response as
+    final either way.
+    """
+
+    success: bool
+    message: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> UnsubscribeWebhookResponse:
+        return cls(
+            success=bool(data.get("success", False)),
+            message=data.get("message"),
+        )

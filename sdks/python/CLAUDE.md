@@ -39,12 +39,13 @@ MobiscrollConnectClient        — public sync entry point; constructs and wires
   └── ApiClient                — sync HTTP layer (httpx); auth headers; token refresh; error mapping
         ├── resources/Auth     — generate_auth_url, get_token, set_credentials, get_connection_status, disconnect
         ├── resources/Calendars — list()
-        └── resources/Events   — list(), iter_all(), create(), update(), delete()
+        ├── resources/Events   — list(), iter_all(), create(), update(), delete()
+        └── resources/Webhooks — subscribe_webhook(), unsubscribe_webhook()
 
 mobiscroll_connect.aio:
 AsyncMobiscrollConnectClient   — async counterpart; identical public API, all methods are coroutines
   └── AsyncApiClient           — async HTTP layer (httpx.AsyncClient); asyncio.Lock for refresh dedup
-        ├── aio/resources/AsyncAuth, AsyncCalendars, AsyncEvents
+        ├── aio/resources/AsyncAuth, AsyncCalendars, AsyncEvents, AsyncWebhooks
 
 Config                         — frozen dataclass: client_id, client_secret, redirect_uri, base_url, timeout
 TokenResponse                  — frozen dataclass: access_token, token_type, expires_in, refresh_token
@@ -123,6 +124,7 @@ python app.py
 | `mobiscroll_connect/resources/auth.py`     | OAuth flow methods                                                 |
 | `mobiscroll_connect/resources/calendars.py`| Calendar listing                                                   |
 | `mobiscroll_connect/resources/events.py`   | Event CRUD + iter_all pagination helper                            |
+| `mobiscroll_connect/resources/webhooks.py` | Webhook subscribe/unsubscribe                                      |
 | `mobiscroll_connect/_internal/errors.py`   | HTTP status → exception mapping (shared)                           |
 | `mobiscroll_connect/_internal/payloads.py` | Query/payload builders (shared, pure functions)                    |
 | `tests/`                                   | pytest tests (auth, calendars, events, models, payloads, async)    |

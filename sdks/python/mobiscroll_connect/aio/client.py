@@ -9,7 +9,7 @@ import httpx
 from ..async_api_client import AsyncApiClient, AsyncTokensRefreshedCallback
 from ..config import Config
 from ..models import TokenResponse
-from .resources import AsyncAuth, AsyncCalendars, AsyncEvents
+from .resources import AsyncAuth, AsyncCalendars, AsyncEvents, AsyncWebhooks
 
 
 class AsyncMobiscrollConnectClient:
@@ -47,6 +47,7 @@ class AsyncMobiscrollConnectClient:
         self.auth = AsyncAuth(self._api)
         self.calendars = AsyncCalendars(self._api)
         self.events = AsyncEvents(self._api)
+        self.webhooks = AsyncWebhooks(self._api)
 
     @property
     def config(self) -> Config:

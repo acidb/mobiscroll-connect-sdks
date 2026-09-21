@@ -1,11 +1,12 @@
 """Async API. Mirrors the sync surface — every method is a coroutine."""
 
 from .client import AsyncMobiscrollConnectClient
-from .resources import AsyncAuth, AsyncCalendars, AsyncEvents
+from .resources import AsyncAuth, AsyncCalendars, AsyncEvents, AsyncWebhooks
 
 __all__ = [
     "AsyncAuth",
     "AsyncCalendars",
     "AsyncEvents",
     "AsyncMobiscrollConnectClient",
+    "AsyncWebhooks",
 ]

@@ -9,14 +9,15 @@ import httpx
 from .api_client import ApiClient, TokensRefreshedCallback
 from .config import Config
 from .models import TokenResponse
-from .resources import Auth, Calendars, Events
+from .resources import Auth, Calendars, Events, Webhooks
 
 
 class MobiscrollConnectClient:
     """Synchronous Mobiscroll Connect client.
 
     Resources are exposed as attributes (``client.auth``, ``client.calendars``,
-    ``client.events``) — call them directly without parentheses, e.g.::
+    ``client.events``, ``client.webhooks``) — call them directly without
+    parentheses, e.g.::
 
         client.calendars.list()
         client.events.create({...})
@@ -54,6 +55,7 @@ class MobiscrollConnectClient:
         self.auth = Auth(self._api)
         self.calendars = Calendars(self._api)
         self.events = Events(self._api)
+        self.webhooks = Webhooks(self._api)
 
     @property
     def config(self) -> Config:

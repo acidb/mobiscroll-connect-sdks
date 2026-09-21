@@ -188,6 +188,24 @@ client.events.delete({
 })
 ```
 
+## Webhooks
+
+```python
+# Subscribe to change notifications for a calendar
+subscription = client.webhooks.subscribe_webhook("google", "primary")
+print(subscription.channel_id, subscription.subscription.resource_id)
+
+# ...persist subscription.channel_id (and subscription.subscription.resource_id
+# for Google) so you can unsubscribe later...
+
+# Unsubscribe when you're done
+client.webhooks.unsubscribe_webhook(
+    "google",
+    subscription.channel_id,
+    resource_id=subscription.subscription.resource_id,
+)
+```
+
 ## Connection management
 
 ```python
@@ -285,10 +303,11 @@ mobiscroll_connect/
 ├── resources/
 │   ├── auth.py                — Auth (sync)
 │   ├── calendars.py           — Calendars (sync)
-│   └── events.py              — Events (sync)
+│   ├── events.py              — Events (sync)
+│   └── webhooks.py            — Webhooks (sync)
 └── aio/
     ├── client.py              — AsyncMobiscrollConnectClient
-    └── resources.py           — AsyncAuth / AsyncCalendars / AsyncEvents
+    └── resources.py           — AsyncAuth / AsyncCalendars / AsyncEvents / AsyncWebhooks
 ```
 
 ### Why these choices

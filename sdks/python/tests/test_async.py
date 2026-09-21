@@ -78,6 +78,35 @@ async def test_async_token_refresh(async_client):
     assert captured[0].access_token == "new"
 
 
+@respx.mock
+async def test_async_subscribe_webhook(async_client):
+    route = respx.post("https://connect.mobiscroll.com/api/subscribe-webhook").mock(
+        return_value=httpx.Response(200, json={
+            "success": True,
+            "provider": "google",
+            "subscription": {"channelId": "chan-1", "resourceId": "res-1"},
+            "serverWebhookUrl": "https://connect.mobiscroll.com/api/webhooks/google",
+            "channelId": "chan-1",
+        })
+    )
+    response = await async_client.webhooks.subscribe_webhook("google", "primary")
+    assert response.success is True
+    assert response.subscription.resource_id == "res-1"
+    assert route.called
+
+
+@respx.mock
+async def test_async_unsubscribe_webhook(async_client):
+    route = respx.post("https://connect.mobiscroll.com/api/unsubscribe-webhook").mock(
+        return_value=httpx.Response(200, json={"success": True})
+    )
+    response = await async_client.webhooks.unsubscribe_webhook(
+        "google", "chan-1", resource_id="res-1"
+    )
+    assert response.success is True
+    assert route.called
+
+
 async def test_async_context_manager_closes():
     async with AsyncMobiscrollConnectClient(
         client_id="cid", client_secret="csecret", redirect_uri="https://app/cb"

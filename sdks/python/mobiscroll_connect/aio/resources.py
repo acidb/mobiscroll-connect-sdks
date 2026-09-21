@@ -20,7 +20,9 @@ from ..models import (
     DisconnectResponse,
     EventsListResponse,
     Provider,
+    SubscribeWebhookResponse,
     TokenResponse,
+    UnsubscribeWebhookResponse,
 )
 
 ProviderLike = Union[str, Provider]
@@ -186,3 +188,45 @@ class AsyncEvents:
             return CalendarEvent.from_dict(response["event"])
         msg = response.get("message") if isinstance(response, Mapping) else None
         raise ServerError(msg if isinstance(msg, str) else f"Failed to {operation} event", 400)
+
+
+class AsyncWebhooks:
+    def __init__(self, api_client: AsyncApiClient) -> None:
+        self._api = api_client
+
+    async def subscribe_webhook(
+        self,
+        provider: ProviderLike,
+        calendar_id: str,
+        *,
+        channel_id: str | None = None,
+        expiration: int | None = None,
+    ) -> SubscribeWebhookResponse:
+        payload: dict[str, Any] = {
+            "provider": str(provider.value if isinstance(provider, Provider) else provider),
+            "calendarId": calendar_id,
+        }
+        if channel_id is not None:
+            payload["channelId"] = channel_id
+        if expiration is not None:
+            payload["expiration"] = expiration
+
+        data = await self._api.post("subscribe-webhook", json=payload)
+        return SubscribeWebhookResponse.from_dict(data if isinstance(data, Mapping) else {})
+
+    async def unsubscribe_webhook(
+        self,
+        provider: ProviderLike,
+        channel_id: str,
+        *,
+        resource_id: str | None = None,
+    ) -> UnsubscribeWebhookResponse:
+        payload: dict[str, Any] = {
+            "provider": str(provider.value if isinstance(provider, Provider) else provider),
+            "channelId": channel_id,
+        }
+        if resource_id is not None:
+            payload["resourceId"] = resource_id
+
+        data = await self._api.post("unsubscribe-webhook", json=payload)
+        return UnsubscribeWebhookResponse.from_dict(data if isinstance(data, Mapping) else {})
