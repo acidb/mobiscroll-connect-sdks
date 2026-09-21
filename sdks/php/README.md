@@ -203,6 +203,25 @@ $client->events()->delete([
 ]);
 ```
 
+### Webhooks
+
+```php
+// Subscribe to change notifications for a calendar
+$subscription = $client->webhooks()->subscribeWebhook([
+    'provider' => 'google',
+    'calendarId' => 'primary',
+]);
+
+echo "Subscribed: {$subscription->channelId} -> {$subscription->serverWebhookUrl}\n";
+
+// Unsubscribe when you no longer want notifications
+$client->webhooks()->unsubscribeWebhook([
+    'provider' => 'google',
+    'channelId' => $subscription->channelId,
+    'resourceId' => $subscription->subscription->resourceId,
+]);
+```
+
 ### Connection Management
 
 ```php
@@ -304,7 +323,8 @@ src/
 ├── Resources/
 │   ├── Auth.php
 │   ├── Calendars.php
-│   └── Events.php
+│   ├── Events.php
+│   └── Webhooks.php
 ├── ApiClient.php
 ├── Config.php
 ├── MobiscrollConnectClient.php
@@ -313,14 +333,18 @@ src/
 ├── CalendarEvent.php
 ├── EventsListResponse.php
 ├── ConnectionStatusResponse.php
-└── DisconnectResponse.php
+├── DisconnectResponse.php
+├── SubscribeWebhookResponse.php
+├── UnsubscribeWebhookResponse.php
+└── WebhookSubscription.php
 tests/
 ├── Unit/
 │   ├── AuthTest.php
 │   ├── CalendarsTest.php
 │   ├── ConnectionStatusResponseTest.php
 │   ├── EventsTest.php
-│   └── ExceptionsTest.php
+│   ├── ExceptionsTest.php
+│   └── WebhooksTest.php
 └── Smoke/
     └── MinimalAppSmokeTest.php
 ```

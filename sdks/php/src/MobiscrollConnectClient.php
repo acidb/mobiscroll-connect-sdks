@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Mobiscroll\Connect;
 
-use Mobiscroll\Connect\Resources\{Auth, Calendars, Events};
+use Mobiscroll\Connect\Resources\{Auth, Calendars, Events, Webhooks};
 use Mobiscroll\Connect\TokenResponse;
 
 class MobiscrollConnectClient
@@ -12,6 +12,7 @@ class MobiscrollConnectClient
     private Auth $auth;
     private Calendars $calendars;
     private Events $events;
+    private Webhooks $webhooks;
     private ApiClient $apiClient;
 
     public function __construct(
@@ -25,6 +26,7 @@ class MobiscrollConnectClient
         $this->auth = new Auth($this->apiClient);
         $this->calendars = new Calendars($this->apiClient);
         $this->events = new Events($this->apiClient);
+        $this->webhooks = new Webhooks($this->apiClient);
     }
 
     public function auth(): Auth
@@ -40,6 +42,11 @@ class MobiscrollConnectClient
     public function events(): Events
     {
         return $this->events;
+    }
+
+    public function webhooks(): Webhooks
+    {
+        return $this->webhooks;
     }
 
     /**
