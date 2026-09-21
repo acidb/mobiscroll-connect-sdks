@@ -64,6 +64,29 @@ client.events().create(EventCreateData.builder()
     .build());
 ```
 
+## Webhooks
+
+Subscribe to change notifications for a calendar, and unsubscribe when you're done:
+
+```java
+import com.mobiscroll.connect.models.WebhookSubscribeParams;
+import com.mobiscroll.connect.models.WebhookSubscribeResponse;
+import com.mobiscroll.connect.models.WebhookUnsubscribeParams;
+
+WebhookSubscribeResponse subscription = client.webhooks().subscribeWebhook(WebhookSubscribeParams.builder()
+    .provider(Provider.GOOGLE)
+    .calendarId(calendars.get(0).getId())
+    .build());
+// persist subscription.getChannelId() / subscription.getSubscription().getResourceId()
+// so you can unsubscribe later.
+
+client.webhooks().unsubscribeWebhook(WebhookUnsubscribeParams.builder()
+    .provider(Provider.GOOGLE)
+    .channelId(subscription.getChannelId())
+    .resourceId(subscription.getSubscription().getResourceId())
+    .build());
+```
+
 ## Configuration
 
 For a custom base URL, HTTP timeout, OkHttp client, or a token-refresh callback for persistence, use the builder:

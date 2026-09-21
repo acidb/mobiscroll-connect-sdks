@@ -5,6 +5,7 @@ import com.mobiscroll.connect.resources.Auth;
 import java.util.function.Consumer;
 import com.mobiscroll.connect.resources.Calendars;
 import com.mobiscroll.connect.resources.Events;
+import com.mobiscroll.connect.resources.Webhooks;
 
 /**
  * Entry point for the Mobiscroll Connect SDK.
@@ -22,6 +23,7 @@ public final class MobiscrollConnectClient {
     private final Auth auth;
     private final Calendars calendars;
     private final Events events;
+    private final Webhooks webhooks;
 
     public MobiscrollConnectClient(String clientId, String clientSecret, String redirectUri) {
         this(MobiscrollConnectConfig.builder()
@@ -36,6 +38,7 @@ public final class MobiscrollConnectClient {
         this.auth = new Auth(api);
         this.calendars = new Calendars(api);
         this.events = new Events(api);
+        this.webhooks = new Webhooks(api);
     }
 
     public Auth auth() {
@@ -48,6 +51,10 @@ public final class MobiscrollConnectClient {
 
     public Events events() {
         return events;
+    }
+
+    public Webhooks webhooks() {
+        return webhooks;
     }
 
     /** Set the tokens the SDK should use for subsequent authenticated calls. */
