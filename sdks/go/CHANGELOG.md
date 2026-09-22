@@ -4,6 +4,13 @@ All notable changes to the Mobiscroll Connect Go SDK (module: `github.com/acidb/
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). SDKs in this monorepo version independently, so this file covers the Go SDK only. Release tags use the `sdks/go/vX.Y.Z` form the Go module proxy requires.
 
+## [1.5.1] — 2026-09-22
+
+### Changed
+
+- Package doc comment rewritten so the pkg.go.dev synopsis leads with what the SDK does — calendars, providers, OAuth and webhooks — instead of the cross-SDK parity note, which now sits below it.
+- README opens with the category line and carries a pkg.go.dev badge plus package, documentation, changelog and source links.
+
 ## [1.5.0] — 2026-09-21
 
 ### Added
@@ -32,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Automatic token refresh on 401, deduplicated with `singleflight`, retried once.
 - Typed errors satisfying the `MobiscrollError` interface.
 
+[1.5.1]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/sdks%2Fgo%2Fv1.5.1
 [1.5.0]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/sdks%2Fgo%2Fv1.5.0
 [1.2.0]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/sdks%2Fgo%2Fv1.2.0
 [1.1.0]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/sdks%2Fgo%2Fv1.1.0
