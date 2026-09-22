@@ -5,14 +5,25 @@ build-backend = "hatchling.build"
 [project]
 name = "mobiscroll-connect-sdk"
 version = "1.5.0"
-description = "Python client for the Mobiscroll Connect API — calendar and event management across Google, Microsoft, Apple, and CalDAV."
+description = "Python client for Mobiscroll Connect, the calendar connectivity layer for scheduling products — Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV through one API."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Mobiscroll" }]
-keywords = ["mobiscroll", "calendar", "google-calendar", "outlook", "caldav", "oauth2"]
+keywords = [
+    "mobiscroll",
+    "calendar-api",
+    "calendar-connectivity",
+    "google-calendar",
+    "outlook-calendar",
+    "apple-calendar",
+    "caldav",
+    "oauth2",
+    "calendar-sync",
+    "scheduling",
+]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -44,6 +55,8 @@ dev = [
 Homepage = "https://mobiscroll.com/connect"
 Documentation = "https://mobiscroll.com/docs/connect/python-sdk"
 Source = "https://github.com/acidb/mobiscroll-connect-sdks"
+Issues = "https://github.com/acidb/mobiscroll-connect-sdks/issues"
+Changelog = "https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/python/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["mobiscroll_connect"]

@@ -1,8 +1,10 @@
 # Mobiscroll Connect Python SDK
 
-Python client for the Mobiscroll Connect API — calendar and event management across Google Calendar, Microsoft Outlook, Apple Calendar, and CalDAV through a single SDK.
+Python client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calendar connectivity layer for scheduling products — Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV through one API. Backend only — works with your own UI.
 
-📖 **[Full documentation](https://mobiscroll.com/docs/connect/python-sdk)**
+[![PyPI](https://img.shields.io/pypi/v/mobiscroll-connect-sdk?label=PyPI)](https://pypi.org/project/mobiscroll-connect-sdk/)
+
+**[PyPI](https://pypi.org/project/mobiscroll-connect-sdk/)** · **[Documentation](https://mobiscroll.com/docs/connect/python-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/python)**
 
 ## Features
 
