@@ -9,11 +9,13 @@
     <Version>1.5.0</Version>
     <Authors>Mobiscroll</Authors>
     <Company>Mobiscroll</Company>
-    <Description>.NET SDK for the Mobiscroll Connect API. Manage calendars and events across Google, Microsoft, Apple, and CalDAV through a single async client.</Description>
-    <PackageTags>mobiscroll;calendar;oauth;google-calendar;outlook;caldav</PackageTags>
+    <Description>.NET client for Mobiscroll Connect, the calendar connectivity layer for scheduling products. Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV through one async API. Backend only — works with your own UI.</Description>
+    <PackageTags>mobiscroll;calendar-api;calendar-connectivity;google-calendar;outlook-calendar;apple-calendar;caldav;oauth2;calendar-sync;scheduling</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <RepositoryUrl>https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/dotnet</RepositoryUrl>
+    <PackageProjectUrl>https://mobiscroll.com/connect</PackageProjectUrl>
+    <PackageReleaseNotes>https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/dotnet/CHANGELOG.md</PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/acidb/mobiscroll-connect-sdks.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
