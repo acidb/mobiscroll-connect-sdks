@@ -399,4 +399,4 @@ samples/
 
 ## License
 
-[MIT](https://github.com/acidb/mobiscroll-connect-dotnet/tree/main?tab=MIT-1-ov-file#readme)
+[MIT](https://github.com/acidb/mobiscroll-connect-sdks/blob/main/LICENSE)
