@@ -1,8 +1,10 @@
 # @mobiscroll/connect-sdk
 
-Node.js SDK for Mobiscroll Connect.
+Node.js client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calendar connectivity layer for scheduling products — Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV through one API. Backend only — works with your own UI.
 
-📖 **[Full documentation](https://mobiscroll.com/docs/connect/node-sdk)**
+[![npm](https://img.shields.io/npm/v/@mobiscroll/connect-sdk?label=npm)](https://www.npmjs.com/package/@mobiscroll/connect-sdk)
+
+**[npm](https://www.npmjs.com/package/@mobiscroll/connect-sdk)** · **[Documentation](https://mobiscroll.com/docs/connect/node-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/node)**
 
 `@mobiscroll/connect-sdk` provides a typed client for:
 
@@ -10,7 +12,7 @@ Node.js SDK for Mobiscroll Connect.
 - Listing connected calendars
 - Listing, creating, updating, and deleting calendar events
 - Subscribing to and unsubscribing from calendar webhook notifications
-- Working with multiple providers (Google, Microsoft, Apple, CalDAV)
+- Working with Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV
 
 ## Installation
 

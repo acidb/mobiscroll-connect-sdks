@@ -1,7 +1,16 @@
 {
   "name": "@mobiscroll/connect-sdk",
   "version": "1.5.0",
-  "description": "Mobiscroll Connect SDK for Node.js",
+  "description": "Node.js client for Mobiscroll Connect, the calendar connectivity layer for scheduling products — Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV through one API.",
+  "homepage": "https://mobiscroll.com/connect",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/acidb/mobiscroll-connect-sdks.git",
+    "directory": "sdks/node"
+  },
+  "bugs": {
+    "url": "https://github.com/acidb/mobiscroll-connect-sdks/issues"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -26,10 +35,15 @@
   },
   "keywords": [
     "mobiscroll",
-    "connect",
-    "sdk",
-    "api",
-    "client"
+    "calendar-api",
+    "calendar-connectivity",
+    "google-calendar",
+    "outlook-calendar",
+    "apple-calendar",
+    "caldav",
+    "oauth2",
+    "calendar-sync",
+    "scheduling"
   ],
   "author": "Mobiscroll",
   "license": "MIT",
@@ -55,6 +69,7 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {
