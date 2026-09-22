@@ -13,7 +13,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -47,3 +47,24 @@ jobs:
           MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
         run: mvn -B -ntp -Prelease -pl connect-sdk -am deploy -DskipTests
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#java-v}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { flag = 1; next }
+            flag && (/^## \[/ || /^\[[^]]+\]: /) { exit }
+            flag { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          if [ ! -s "$RUNNER_TEMP/release-notes.md" ]; then
+            echo "No CHANGELOG.md entry found for $VERSION" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Java ${{ steps.changelog.outputs.version }}
+          body_path: ${{ runner.temp }}/release-notes.md
