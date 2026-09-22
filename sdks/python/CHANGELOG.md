@@ -4,6 +4,15 @@ All notable changes to the Mobiscroll Connect Python SDK (PyPI: `mobiscroll-conn
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). SDKs in this monorepo version independently, so this file covers the Python SDK only.
 
+## [1.5.1] — 2026-09-22
+
+### Changed
+
+- `Development Status` classifier moved from `4 - Beta` to `5 - Production/Stable`. No other registry signalled beta, and the SDK is generally available.
+- Package description replaced with the Connect category line, naming the calendars rather than the companies that make them.
+- Added `Issues` and `Changelog` project URLs, and extended the keyword set.
+- README opens with the category line and carries a version badge plus package, documentation, changelog and source links.
+
 ## [1.5.0] — 2026-09-21
 
 ### Added
@@ -45,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Automatic token refresh on 401 with lock-based deduplication and an `on_tokens_refreshed` callback.
 - Typed exception hierarchy rooted at `MobiscrollConnectError`.
 
+[1.5.1]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/python-v1.5.1
 [1.5.0]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/python-v1.5.0
 [1.2.0]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/python-v1.2.0
 [1.1.1]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/python-v1.1.1
