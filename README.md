@@ -12,7 +12,7 @@ Official client SDKs for the [Mobiscroll Connect](https://mobiscroll.com/connect
 | [sdks/dotnet](sdks/dotnet/) | .NET 8 | `Mobiscroll.Connect` | [NuGet](https://www.nuget.org/packages/Mobiscroll.Connect) |
 | [sdks/java](sdks/java/) | Java 11+ | `com.mobiscroll:connect-sdk` | [Maven Central](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk) |
 | [sdks/go](sdks/go/) | Go 1.22+ | `github.com/acidb/mobiscroll-connect-sdks/sdks/go` | [pkg.go.dev](https://pkg.go.dev/github.com/acidb/mobiscroll-connect-sdks/sdks/go) |
-| [sdks/ruby](sdks/ruby/) | Ruby 3.1+ | `mobiscroll-connect` | [RubyGems](https://rubygems.org/gems/mobiscroll-connect) |
+| [sdks/ruby](sdks/ruby/) | Ruby 3.2+ | `mobiscroll-connect` | [RubyGems](https://rubygems.org/gems/mobiscroll-connect) |
 
 Each SDK directory contains its own README, CLAUDE.md, and a `minimal-app/` (or `samples/MinimalApp/`) reference app you can run end-to-end.
 
@@ -33,7 +33,7 @@ Each SDK is self-contained — `cd sdks/<lang>` and use that language's normal t
 
 ## Releases
 
-Each SDK releases independently using path-scoped git tags:
+Each SDK releases independently. Six SDKs use a `<sdk>-v*` tag; Go is the one exception and uses `sdks/go/v*`, because the Go module proxy requires the module path as the tag prefix.
 
 | SDK | Tag prefix | Example |
 |-----|-----------|---------|
@@ -45,7 +45,9 @@ Each SDK releases independently using path-scoped git tags:
 | Go | `sdks/go/v*` | `sdks/go/v1.0.0` |
 | Ruby | `ruby-v*` | `ruby-v1.0.0` |
 
-GitHub Actions workflows (`.github/workflows/release-*.yml`) publish to the corresponding registry when a matching tag is pushed.
+GitHub Actions workflows (`.github/workflows/release-*.yml`) publish to the corresponding registry when a matching tag is pushed, and cut a GitHub Release using that version's entry from the SDK's `CHANGELOG.md`. A tag with no matching changelog entry fails the release.
+
+Each SDK keeps its own changelog; [CHANGELOG.md](CHANGELOG.md) indexes them.
 
 ## Documentation
 
