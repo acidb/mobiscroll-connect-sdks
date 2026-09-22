@@ -1,6 +1,10 @@
 # Mobiscroll Connect Ruby SDK
 
-Official Ruby client for the [Mobiscroll Connect API](https://connect.mobiscroll.com). Sync calendar events across Google Calendar, Microsoft Outlook, Apple Calendar, and CalDAV.
+Ruby client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calendar connectivity layer for scheduling products — Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV through one API. Backend only — works with your own UI.
+
+[![RubyGems](https://img.shields.io/gem/v/mobiscroll-connect?label=RubyGems)](https://rubygems.org/gems/mobiscroll-connect)
+
+**[RubyGems](https://rubygems.org/gems/mobiscroll-connect)** · **[Documentation](https://mobiscroll.com/docs/connect/ruby-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/ruby)**
 
 ## Installation
 
