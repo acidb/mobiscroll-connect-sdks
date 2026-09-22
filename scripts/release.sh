@@ -43,6 +43,21 @@ if git rev-parse "$TAG" >/dev/null 2>&1; then
   exit 1
 fi
 
+# The release workflow refuses to publish a tag with no matching CHANGELOG
+# entry, and it builds the GitHub Release notes from it. Check here too, so a
+# missing entry fails before the tag is pushed rather than after.
+CHANGELOG="$ROOT/sdks/$SDK/CHANGELOG.md"
+if [[ ! -f "$CHANGELOG" ]]; then
+  echo "error: $CHANGELOG does not exist." >&2
+  exit 1
+fi
+if ! grep -qE "^## \[${VERSION}\]" "$CHANGELOG"; then
+  echo "error: $CHANGELOG has no '## [$VERSION]' entry." >&2
+  echo "       Add the entry for $VERSION first; the release workflow reads it" >&2
+  echo "       as the GitHub Release notes and fails without it." >&2
+  exit 1
+fi
+
 echo "==> Bumping version for $SDK to $VERSION"
 "$ROOT/scripts/bump-version.sh" "$SDK" "$VERSION"
 
