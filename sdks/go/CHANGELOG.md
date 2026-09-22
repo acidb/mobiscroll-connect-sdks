@@ -8,8 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- Package doc comment rewritten so the pkg.go.dev synopsis leads with what the SDK does — calendars, providers, OAuth and webhooks — instead of the cross-SDK parity note, which now sits below it.
-- README opens with the category line and carries a pkg.go.dev badge plus package, documentation, changelog and source links.
+- Updated package metadata. No code or public API changes.
 
 ## [1.5.0] — 2026-09-21
 

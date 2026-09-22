@@ -8,10 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- `Development Status` classifier moved from `4 - Beta` to `5 - Production/Stable`. No other registry signalled beta, and the SDK is generally available.
-- Package description replaced with the Connect category line, naming the calendars rather than the companies that make them.
-- Added `Issues` and `Changelog` project URLs, and extended the keyword set.
-- README opens with the category line and carries a version badge plus package, documentation, changelog and source links.
+- Updated package metadata. No code or public API changes.
 
 ## [1.5.0] — 2026-09-21
 

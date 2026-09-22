@@ -8,12 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- Package description replaced with the Connect category line.
-- Added `PackageProjectUrl`, so the NuGet page links mobiscroll.com — NuGet renders Project Website separately from Repository, and it was blank.
-- Added `PackageReleaseNotes` pointing at this changelog.
-- `RepositoryUrl` is now a clonable repository URL rather than a `tree/main` path, which is what NuGet and Source Link expect.
-- Extended `PackageTags` with the shared Connect keyword set.
-- README opener no longer uses "seamless" or the "multiple providers" breadth claim, and carries a version badge plus package, documentation, changelog and source links.
+- Updated package metadata. No code or public API changes.
 
 ## [1.5.0] — 2026-09-21
 

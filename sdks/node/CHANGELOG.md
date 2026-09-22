@@ -8,10 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- Package description replaced with the Connect category line, naming the four calendar providers instead of restating the package name.
-- Added `homepage`, `repository` (with `directory`) and `bugs`, so npmjs.com links to the product page, the source and the issue tracker. GitHub can now associate the package with the repository.
-- Replaced the generic keywords with the shared Connect keyword set.
-- README opens with the category line and carries a version badge plus package, documentation, changelog and source links. `CHANGELOG.md` now ships with the package.
+- Updated package metadata. No code or public API changes.
 
 ## [1.5.0] — 2026-09-21
 

@@ -8,10 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- Artifact description replaced with the Connect category line.
-- `url` now points at the product page. Maven Central renders it as the project link, and the repository is already covered by `scm`.
-- Added `issueManagement` pointing at the SDK repository's issue tracker.
-- README opens with the category line and carries a version badge plus package, documentation, changelog and source links.
+- Updated package metadata. No code or public API changes.
 
 ## [1.5.0] — 2026-09-21
 

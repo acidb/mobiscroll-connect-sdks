@@ -8,9 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- Package description replaced with the Connect category line, naming the four calendar providers instead of restating the package name.
-- Added `keywords`, `homepage`, and `support.issues` / `support.source` / `support.docs` to `composer.json`, so the Packagist sidebar links back to mobiscroll.com and the SDK repository.
-- Removed "seamless" and the "multiple providers" breadth claim from the README opener, which Packagist renders as the package page body.
+- Updated package metadata. No code or public API changes.
 
 ## [1.5.0] — 2026-09-21
 
