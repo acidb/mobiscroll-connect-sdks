@@ -1,0 +1,33 @@
+# GitHub language detection
+#
+# This repository holds seven client SDKs. Without these rules GitHub measures
+# every tracked file, so the reference applications and the most verbose test
+# suite decide the repository's language label rather than the libraries people
+# actually install. The rules below take the demos, the test suites and the
+# generated files out of the count, leaving the seven shipped libraries.
+#
+# GitHub still names whichever library is largest as the primary language; what
+# changes is that the breakdown reflects the SDKs instead of the demos.
+
+# Reference applications — demonstrations, not part of any published package.
+sdks/*/minimal-app/**           linguist-vendored
+sdks/dotnet/samples/**          linguist-vendored
+
+# Test suites.
+sdks/node/src/__tests__/**      linguist-vendored
+sdks/python/tests/**            linguist-vendored
+sdks/php/tests/**               linguist-vendored
+sdks/dotnet/tests/**            linguist-vendored
+sdks/java/connect-sdk/src/test/** linguist-vendored
+sdks/ruby/spec/**               linguist-vendored
+sdks/go/**/*_test.go            linguist-vendored
+sdks/go/testsupport/**          linguist-vendored
+
+# Generated and lock files.
+**/package-lock.json            linguist-generated
+**/composer.lock                linguist-generated
+**/Gemfile.lock                 linguist-generated
+**/go.sum                       linguist-generated
+
+# Documentation should not count towards the language breakdown.
+*.md                            linguist-documentation
