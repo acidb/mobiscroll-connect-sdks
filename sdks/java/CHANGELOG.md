@@ -4,6 +4,15 @@ All notable changes to the Mobiscroll Connect Java SDK (Maven Central: `com.mobi
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). SDKs in this monorepo version independently, so this file covers the Java SDK only.
 
+## [1.5.1] — 2026-09-22
+
+### Changed
+
+- Artifact description replaced with the Connect category line.
+- `url` now points at the product page. Maven Central renders it as the project link, and the repository is already covered by `scm`.
+- Added `issueManagement` pointing at the SDK repository's issue tracker.
+- README opens with the category line and carries a version badge plus package, documentation, changelog and source links.
+
 ## [1.5.0] — 2026-09-21
 
 ### Added
@@ -36,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Automatic token refresh on 401 with retry, and a typed exception hierarchy rooted at `MobiscrollConnectException`.
 - Spring Boot reference application under `minimal-app/`.
 
+[1.5.1]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/java-v1.5.1
 [1.5.0]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/java-v1.5.0
 [1.2.0]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/java-v1.2.0
 [1.1.0]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/java-v1.1.0
