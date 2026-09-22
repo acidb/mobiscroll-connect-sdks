@@ -15,8 +15,13 @@
     <packaging>jar</packaging>
 
     <name>Mobiscroll Connect SDK</name>
-    <description>Official Java client for the Mobiscroll Connect API. Manage calendars and events across Google, Microsoft, Apple, and CalDAV providers.</description>
-    <url>https://github.com/acidb/mobiscroll-connect-sdks</url>
+    <description>Java client for Mobiscroll Connect, the calendar connectivity layer for scheduling products. Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV through one API. Backend only — works with your own UI.</description>
+    <url>https://mobiscroll.com/connect</url>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/acidb/mobiscroll-connect-sdks/issues</url>
+    </issueManagement>
 
     <licenses>
         <license>

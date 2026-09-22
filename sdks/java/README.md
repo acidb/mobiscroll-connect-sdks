@@ -1,6 +1,10 @@
 # Mobiscroll Connect — Java SDK
 
-Official Java client for the [Mobiscroll Connect](https://mobiscroll.com/connect) API. One SDK over Google Calendar, Microsoft Outlook, Apple Calendar, and CalDAV.
+Java client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calendar connectivity layer for scheduling products — Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV through one API. Backend only — works with your own UI.
+
+[![Maven Central](https://img.shields.io/maven-central/v/com.mobiscroll/connect-sdk?label=Maven%20Central)](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk)
+
+**[Maven Central](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk)** · **[Documentation](https://mobiscroll.com/docs/connect/java-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/java)**
 
 - **Coordinates:** `com.mobiscroll:connect-sdk`
 - **Min Java:** 11
