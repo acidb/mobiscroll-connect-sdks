@@ -13,7 +13,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -41,3 +41,24 @@ jobs:
           VERSION="${GITHUB_REF_NAME#sdks/go/}"
           curl -fsSL "https://proxy.golang.org/github.com/acidb/mobiscroll-connect-sdks/sdks/go/@v/${VERSION}.info" \
             || echo "Proxy fetch returned non-2xx; the module will be discovered on the next consumer go get."
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#sdks/go/v}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { flag = 1; next }
+            flag && (/^## \[/ || /^\[[^]]+\]: /) { exit }
+            flag { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          if [ ! -s "$RUNNER_TEMP/release-notes.md" ]; then
+            echo "No CHANGELOG.md entry found for $VERSION" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Go ${{ steps.changelog.outputs.version }}
+          body_path: ${{ runner.temp }}/release-notes.md
