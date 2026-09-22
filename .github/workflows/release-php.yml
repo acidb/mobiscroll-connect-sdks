@@ -9,7 +9,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     env:
       MIRROR_REPO: acidb/mobiscroll-connect-php
     steps:
@@ -23,6 +23,15 @@ jobs:
           php-version: '8.2'
           coverage: none
           tools: composer:v2
+
+      - name: Verify tag matches CHANGELOG
+        working-directory: sdks/php
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#php-v}"
+          if ! grep -qE "^## \[${TAG_VERSION}\]" CHANGELOG.md; then
+            echo "Tag ($TAG_VERSION) has no matching CHANGELOG.md entry"
+            exit 1
+          fi
 
       - name: Install and test
         working-directory: sdks/php
@@ -44,3 +53,25 @@ jobs:
           git remote add mirror git@github.com:${MIRROR_REPO}.git
           git push mirror "${SUBTREE_SHA}:refs/heads/main" --force
           git push mirror "${SUBTREE_SHA}:refs/tags/v${VERSION}"
+
+      - name: Extract changelog entry
+        id: changelog
+        working-directory: sdks/php
+        run: |
+          VERSION="${GITHUB_REF_NAME#php-v}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { flag = 1; next }
+            flag && (/^## \[/ || /^\[[^]]+\]: /) { exit }
+            flag { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          if [ ! -s "$RUNNER_TEMP/release-notes.md" ]; then
+            echo "No CHANGELOG.md entry found for $VERSION" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: PHP ${{ steps.changelog.outputs.version }}
+          body_path: ${{ runner.temp }}/release-notes.md
