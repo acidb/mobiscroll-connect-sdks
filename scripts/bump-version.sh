@@ -82,6 +82,17 @@ case "$SDK" in
     sed -i.bak -E "s/VERSION = '[^']+'/VERSION = '$VERSION'/" "$FILE"
     rm -f "$FILE.bak"
     echo "Updated $FILE → VERSION = '$VERSION'"
+    # Gemfile.lock pins the path gem's own version. CI runs bundle install in
+    # frozen mode, which fails if the gemspec version and the lock disagree —
+    # this broke the 1.0.1, 1.1.0, 1.2.0 and 1.5.1 releases in turn. Patch the
+    # PATH spec line directly rather than re-resolving, so the PLATFORMS block
+    # (which needs linux for CI, added in 7382c0f) survives a bump run on macOS.
+    LOCK="$ROOT/sdks/ruby/Gemfile.lock"
+    if [[ -f "$LOCK" ]]; then
+      sed -i.bak -E "s/^(    mobiscroll-connect )\([^)]+\)$/\1($VERSION)/" "$LOCK"
+      rm -f "$LOCK.bak"
+      echo "Updated $LOCK → mobiscroll-connect ($VERSION)"
+    fi
     ;;
 
   *)
