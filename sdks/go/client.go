@@ -1,5 +1,11 @@
-// Package mobiscroll is the Go SDK for the Mobiscroll Connect API. It mirrors
-// the public surface of the Node/Python/PHP/.NET/Java SDKs, adjusted for Go
+// Package mobiscroll is the Go client for Mobiscroll Connect, the calendar
+// connectivity layer for scheduling products.
+//
+// It reaches Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV
+// through one API, with OAuth 2.0, normalized calendar data and webhooks. It is
+// backend only and works with your own UI.
+//
+// The API matches the other Mobiscroll Connect SDKs, adjusted for Go
 // conventions.
 //
 // Quick start:
