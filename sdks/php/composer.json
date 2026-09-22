@@ -1,14 +1,32 @@
 {
   "name": "mobiscroll/connect-php",
-  "description": "PHP SDK for Mobiscroll Connect API",
+  "description": "PHP client for Mobiscroll Connect, the calendar connectivity layer for scheduling products — Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV through one API.",
   "type": "library",
   "license": "MIT",
+  "homepage": "https://mobiscroll.com/connect",
+  "keywords": [
+    "mobiscroll",
+    "calendar-api",
+    "calendar-connectivity",
+    "google-calendar",
+    "outlook-calendar",
+    "apple-calendar",
+    "caldav",
+    "oauth2",
+    "calendar-sync",
+    "scheduling"
+  ],
   "authors": [
     {
       "name": "Mobiscroll",
       "email": "support@mobiscroll.com"
     }
   ],
+  "support": {
+    "issues": "https://github.com/acidb/mobiscroll-connect-sdks/issues",
+    "source": "https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/php",
+    "docs": "https://mobiscroll.com/docs/connect/php-sdk"
+  },
   "require": {
     "php": "^8.1",
     "guzzlehttp/guzzle": "^7.5",
