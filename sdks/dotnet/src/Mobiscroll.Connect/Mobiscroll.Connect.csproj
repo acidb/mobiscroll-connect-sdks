@@ -6,7 +6,7 @@
     <AssemblyName>Mobiscroll.Connect</AssemblyName>
 
     <PackageId>Mobiscroll.Connect</PackageId>
-    <Version>1.5.0</Version>
+    <Version>1.5.1</Version>
     <Authors>Mobiscroll</Authors>
     <Company>Mobiscroll</Company>
     <Description>.NET client for Mobiscroll Connect, the calendar connectivity layer for scheduling products. Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV through one async API. Backend only — works with your own UI.</Description>

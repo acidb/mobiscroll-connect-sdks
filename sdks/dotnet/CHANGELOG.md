@@ -4,6 +4,17 @@ All notable changes to the Mobiscroll Connect .NET SDK (NuGet: `Mobiscroll.Conne
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). SDKs in this monorepo version independently, so this file covers the .NET SDK only.
 
+## [1.5.1] — 2026-09-22
+
+### Changed
+
+- Package description replaced with the Connect category line.
+- Added `PackageProjectUrl`, so the NuGet page links mobiscroll.com — NuGet renders Project Website separately from Repository, and it was blank.
+- Added `PackageReleaseNotes` pointing at this changelog.
+- `RepositoryUrl` is now a clonable repository URL rather than a `tree/main` path, which is what NuGet and Source Link expect.
+- Extended `PackageTags` with the shared Connect keyword set.
+- README opener no longer uses "seamless" or the "multiple providers" breadth claim, and carries a version badge plus package, documentation, changelog and source links.
+
 ## [1.5.0] — 2026-09-21
 
 ### Added
@@ -39,6 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `AddMobiscrollConnect()` extension for ASP.NET Core dependency injection.
 - Typed exception hierarchy rooted at `MobiscrollConnectException`.
 
+[1.5.1]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/dotnet-v1.5.1
 [1.5.0]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/dotnet-v1.5.0
 [1.2.0]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/dotnet-v1.2.0
 [1.1.1]: https://github.com/acidb/mobiscroll-connect-sdks/releases/tag/dotnet-v1.1.1
