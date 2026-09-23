@@ -4,7 +4,7 @@ Python client for [Mobiscroll Connect](https://mobiscroll.com/connect), the cale
 
 [![PyPI](https://img.shields.io/pypi/v/mobiscroll-connect-sdk?label=PyPI)](https://pypi.org/project/mobiscroll-connect-sdk/)
 
-**[PyPI](https://pypi.org/project/mobiscroll-connect-sdk/)** · **[Documentation](https://mobiscroll.com/docs/connect/python-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/python)**
+**[PyPI](https://pypi.org/project/mobiscroll-connect-sdk/)** · **[Documentation](https://mobiscroll.com/docs/connect/python-sdk)** · **[Changelog](https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/python/CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/python)**
 
 ## Features
 

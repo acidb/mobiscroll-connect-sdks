@@ -4,7 +4,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/Mobiscroll.Connect?label=NuGet)](https://www.nuget.org/packages/Mobiscroll.Connect)
 
-**[NuGet](https://www.nuget.org/packages/Mobiscroll.Connect)** · **[Documentation](https://mobiscroll.com/docs/connect/dotnet-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/dotnet)**
+**[NuGet](https://www.nuget.org/packages/Mobiscroll.Connect)** · **[Documentation](https://mobiscroll.com/docs/connect/dotnet-sdk)** · **[Changelog](https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/dotnet/CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/dotnet)**
 
 ## Features
 

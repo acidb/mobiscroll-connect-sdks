@@ -4,7 +4,7 @@ Ruby client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calend
 
 [![RubyGems](https://img.shields.io/gem/v/mobiscroll-connect?label=RubyGems)](https://rubygems.org/gems/mobiscroll-connect)
 
-**[RubyGems](https://rubygems.org/gems/mobiscroll-connect)** · **[Documentation](https://mobiscroll.com/docs/connect/ruby-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/ruby)**
+**[RubyGems](https://rubygems.org/gems/mobiscroll-connect)** · **[Documentation](https://mobiscroll.com/docs/connect/ruby-sdk)** · **[Changelog](https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/ruby/CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/ruby)**
 
 ## Installation
 

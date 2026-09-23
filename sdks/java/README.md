@@ -4,7 +4,7 @@ Java client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calend
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.mobiscroll/connect-sdk?label=Maven%20Central)](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk)
 
-**[Maven Central](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk)** · **[Documentation](https://mobiscroll.com/docs/connect/java-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/java)**
+**[Maven Central](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk)** · **[Documentation](https://mobiscroll.com/docs/connect/java-sdk)** · **[Changelog](https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/java/CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/java)**
 
 - **Coordinates:** `com.mobiscroll:connect-sdk`
 - **Min Java:** 11

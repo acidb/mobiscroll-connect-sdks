@@ -4,7 +4,7 @@ PHP client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calenda
 
 [![Packagist](https://img.shields.io/packagist/v/mobiscroll/connect-php?label=Packagist)](https://packagist.org/packages/mobiscroll/connect-php)
 
-**[Packagist](https://packagist.org/packages/mobiscroll/connect-php)** · **[Documentation](https://mobiscroll.com/docs/connect/php-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/php)**
+**[Packagist](https://packagist.org/packages/mobiscroll/connect-php)** · **[Documentation](https://mobiscroll.com/docs/connect/php-sdk)** · **[Changelog](https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/php/CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/php)**
 
 ## Features
 

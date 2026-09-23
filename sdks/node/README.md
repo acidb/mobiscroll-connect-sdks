@@ -4,7 +4,7 @@ Node.js client for [Mobiscroll Connect](https://mobiscroll.com/connect), the cal
 
 [![npm](https://img.shields.io/npm/v/@mobiscroll/connect-sdk?label=npm)](https://www.npmjs.com/package/@mobiscroll/connect-sdk)
 
-**[npm](https://www.npmjs.com/package/@mobiscroll/connect-sdk)** · **[Documentation](https://mobiscroll.com/docs/connect/node-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/node)**
+**[npm](https://www.npmjs.com/package/@mobiscroll/connect-sdk)** · **[Documentation](https://mobiscroll.com/docs/connect/node-sdk)** · **[Changelog](https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/node/CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/node)**
 
 `@mobiscroll/connect-sdk` provides a typed client for:
 

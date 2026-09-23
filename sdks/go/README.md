@@ -4,7 +4,7 @@ Go client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calendar
 
 [![pkg.go.dev](https://pkg.go.dev/badge/github.com/acidb/mobiscroll-connect-sdks/sdks/go.svg)](https://pkg.go.dev/github.com/acidb/mobiscroll-connect-sdks/sdks/go)
 
-**[pkg.go.dev](https://pkg.go.dev/github.com/acidb/mobiscroll-connect-sdks/sdks/go)** · **[Documentation](https://mobiscroll.com/docs/connect/go-sdk)** · **[Changelog](CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/go)**
+**[pkg.go.dev](https://pkg.go.dev/github.com/acidb/mobiscroll-connect-sdks/sdks/go)** · **[Documentation](https://mobiscroll.com/docs/connect/go-sdk)** · **[Changelog](https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/go/CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/go)**
 
 The API matches the other Mobiscroll Connect SDKs in this monorepo, adjusted for Go conventions.
 
