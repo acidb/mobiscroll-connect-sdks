@@ -43,7 +43,7 @@
     <scm>
         <connection>scm:git:https://github.com/acidb/mobiscroll-connect-sdks.git</connection>
         <developerConnection>scm:git:git@github.com:acidb/mobiscroll-connect-sdks.git</developerConnection>
-        <url>https://github.com/acidb/mobiscroll-connect-sdks</url>
+        <url>https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/java</url>
         <tag>HEAD</tag>
     </scm>
 

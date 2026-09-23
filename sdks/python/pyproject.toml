@@ -54,7 +54,7 @@ dev = [
 [project.urls]
 Homepage = "https://mobiscroll.com/connect"
 Documentation = "https://mobiscroll.com/docs/connect/python-sdk"
-Source = "https://github.com/acidb/mobiscroll-connect-sdks"
+Source = "https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/python"
 Issues = "https://github.com/acidb/mobiscroll-connect-sdks/issues"
 Changelog = "https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/python/CHANGELOG.md"
 

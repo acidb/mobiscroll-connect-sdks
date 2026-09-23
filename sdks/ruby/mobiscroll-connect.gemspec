@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
 
   spec.metadata = {
     'homepage_uri' => spec.homepage,
-    'source_code_uri' => 'https://github.com/acidb/mobiscroll-connect-sdks',
+    'source_code_uri' => 'https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/ruby',
     'documentation_uri' => 'https://mobiscroll.com/docs/connect/ruby-sdk',
     'bug_tracker_uri' => 'https://github.com/acidb/mobiscroll-connect-sdks/issues',
     'changelog_uri' => 'https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/ruby/CHANGELOG.md',
