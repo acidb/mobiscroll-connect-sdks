@@ -25,6 +25,7 @@ public final class MobiscrollConnectConfig {
     private final Duration timeout;
     private final OkHttpClient httpClient;
     private final Consumer<TokenResponse> onTokensRefreshed;
+    private final String webhookPublicKey;
 
     private MobiscrollConnectConfig(Builder b) {
         this.clientId = require(b.clientId, "clientId");
@@ -34,6 +35,7 @@ public final class MobiscrollConnectConfig {
         this.timeout = b.timeout != null ? b.timeout : DEFAULT_TIMEOUT;
         this.httpClient = b.httpClient;
         this.onTokensRefreshed = b.onTokensRefreshed;
+        this.webhookPublicKey = b.webhookPublicKey;
     }
 
     public String getClientId() {
@@ -64,6 +66,11 @@ public final class MobiscrollConnectConfig {
         return onTokensRefreshed;
     }
 
+    /** Pinned {@code whpk_} webhook public key, or {@code null}. See {@link Builder#webhookPublicKey(String)}. */
+    public String getWebhookPublicKey() {
+        return webhookPublicKey;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -87,6 +94,7 @@ public final class MobiscrollConnectConfig {
         private Duration timeout;
         private OkHttpClient httpClient;
         private Consumer<TokenResponse> onTokensRefreshed;
+        private String webhookPublicKey;
 
         public Builder clientId(String v) {
             this.clientId = v;
@@ -120,6 +128,16 @@ public final class MobiscrollConnectConfig {
 
         public Builder onTokensRefreshed(Consumer<TokenResponse> v) {
             this.onTokensRefreshed = Objects.requireNonNull(v, "onTokensRefreshed");
+            return this;
+        }
+
+        /**
+         * A pinned {@code whpk_} public key for {@code webhooks().verifyWebhook(...)}, used only when the
+         * keys endpoint cannot be reached. It stops verifying once Mobiscroll retires that key, so it must
+         * be replaced on every rotation.
+         */
+        public Builder webhookPublicKey(String v) {
+            this.webhookPublicKey = v;
             return this;
         }
 

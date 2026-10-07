@@ -37,6 +37,7 @@ class MobiscrollConnectClient:
         *,
         base_url: str | None = None,
         timeout: float | None = None,
+        webhook_public_key: str | None = None,
         http_client: httpx.Client | None = None,
         on_tokens_refreshed: TokensRefreshedCallback | None = None,
     ) -> None:
@@ -45,6 +46,8 @@ class MobiscrollConnectClient:
             config_kwargs["base_url"] = base_url
         if timeout is not None:
             config_kwargs["timeout"] = timeout
+        if webhook_public_key is not None:
+            config_kwargs["webhook_public_key"] = webhook_public_key
 
         self._config = Config(**config_kwargs)
         self._api = ApiClient(

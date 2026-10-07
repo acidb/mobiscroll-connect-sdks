@@ -24,6 +24,7 @@ type apiClient struct {
 	cfg       *config
 	http      *http.Client // base client; transport is the user's (or default), no bearer injection here
 	tokenHTTP *http.Client // side-channel client for token-exchange/refresh; bypasses the 401 retry loop
+	keysHTTP  *http.Client // unauthenticated client for the public webhook keys endpoint
 	creds     atomic.Pointer[TokenResponse]
 	refresh   singleflight.Group
 	onRefresh atomic.Pointer[func(*TokenResponse)] // overrides config callback when set
@@ -41,7 +42,8 @@ func newAPIClient(cfg *config) *apiClient {
 	}
 	// tokenHTTP shares the same transport but has no bearer wrapping.
 	tokenHTTP := &http.Client{Timeout: cfg.timeout, Transport: httpClient.Transport}
-	return &apiClient{cfg: cfg, http: httpClient, tokenHTTP: tokenHTTP}
+	keysHTTP := &http.Client{Timeout: webhookKeysFetchTimeout, Transport: httpClient.Transport}
+	return &apiClient{cfg: cfg, http: httpClient, tokenHTTP: tokenHTTP, keysHTTP: keysHTTP}
 }
 
 func (a *apiClient) setCredentials(t *TokenResponse) { a.creds.Store(t) }

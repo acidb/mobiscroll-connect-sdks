@@ -11,15 +11,28 @@ namespace Mobiscroll.Connect.Tests.TestHelpers;
 /// <summary>
 /// Minimal HttpMessageHandler that returns pre-scripted responses in FIFO order.
 /// Records every request it sees so tests can assert on method, uri, headers, body.
+/// Safe to call from concurrent requests.
 /// </summary>
 internal sealed class FakeHttpMessageHandler : HttpMessageHandler
 {
-    private readonly Queue<Func<HttpRequestMessage, HttpResponseMessage>> _responders = new();
-    public List<RecordedRequest> Requests { get; } = new();
+    private readonly object _sync = new();
+    private readonly Queue<Func<HttpRequestMessage, Task<HttpResponseMessage>>> _responders = new();
+    private readonly List<RecordedRequest> _requests = new();
+
+    public List<RecordedRequest> Requests
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return new List<RecordedRequest>(_requests);
+            }
+        }
+    }
 
     public FakeHttpMessageHandler Enqueue(HttpStatusCode status, string? jsonBody = null, IDictionary<string, string>? headers = null)
     {
-        _responders.Enqueue(_ =>
+        return EnqueueRaw(_ =>
         {
             var resp = new HttpResponseMessage(status);
             if (jsonBody is not null)
@@ -35,12 +48,20 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
             }
             return resp;
         });
-        return this;
     }
 
     public FakeHttpMessageHandler EnqueueRaw(Func<HttpRequestMessage, HttpResponseMessage> factory)
     {
-        _responders.Enqueue(factory);
+        return EnqueueAsync(request => Task.FromResult(factory(request)));
+    }
+
+    /// <summary>Queue a responder that completes later, e.g. to hold a request in flight.</summary>
+    public FakeHttpMessageHandler EnqueueAsync(Func<HttpRequestMessage, Task<HttpResponseMessage>> factory)
+    {
+        lock (_sync)
+        {
+            _responders.Enqueue(factory);
+        }
         return this;
     }
 
@@ -52,22 +73,27 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
             body = await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        Requests.Add(new RecordedRequest(
-            request.Method,
-            request.RequestUri!,
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Authorization"] = request.Headers.Authorization?.ToString() ?? string.Empty,
-                ["CLIENT_ID"] = HeaderOrEmpty(request, "CLIENT_ID"),
-                ["Content-Type"] = request.Content?.Headers.ContentType?.ToString() ?? string.Empty,
-            },
-            body));
-
-        if (_responders.Count == 0)
+        Func<HttpRequestMessage, Task<HttpResponseMessage>> responder;
+        lock (_sync)
         {
-            throw new InvalidOperationException($"No response queued for {request.Method} {request.RequestUri}");
+            _requests.Add(new RecordedRequest(
+                request.Method,
+                request.RequestUri!,
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Authorization"] = request.Headers.Authorization?.ToString() ?? string.Empty,
+                    ["CLIENT_ID"] = HeaderOrEmpty(request, "CLIENT_ID"),
+                    ["Content-Type"] = request.Content?.Headers.ContentType?.ToString() ?? string.Empty,
+                },
+                body));
+
+            if (_responders.Count == 0)
+            {
+                throw new InvalidOperationException($"No response queued for {request.Method} {request.RequestUri}");
+            }
+            responder = _responders.Dequeue();
         }
-        return _responders.Dequeue()(request);
+        return await responder(request).ConfigureAwait(false);
     }
 
     private static string HeaderOrEmpty(HttpRequestMessage request, string name)

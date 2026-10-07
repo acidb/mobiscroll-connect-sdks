@@ -11,7 +11,7 @@ Node.js client for [Mobiscroll Connect](https://mobiscroll.com/connect), the cal
 - OAuth authorization and token exchange
 - Listing connected calendars
 - Listing, creating, updating, and deleting calendar events
-- Subscribing to and unsubscribing from calendar webhook notifications
+- Subscribing to and unsubscribing from calendar webhook notifications, and verifying their signatures
 - Working with Google Calendar, Microsoft Outlook, Apple Calendar and CalDAV
 
 ## Installation
@@ -73,6 +73,8 @@ client.on('tokens', (updatedTokens) => {
 	console.log(updatedTokens);
 });
 ```
+
+**Running more than one instance.** Concurrent calls on the same client that hit an expired token share one in-flight refresh. The SDK does not coordinate across processes — separate containers, cluster workers or serverless invocations each refresh from the tokens they hold in memory. Connect accepts concurrent refreshes of the same token, but refreshing with a copy that is two or more refreshes out of date revokes the user's authorization. Persist refreshed tokens to storage every instance reads, and call `client.setCredentials(tokens)` with the current tokens when a process starts a job or handles a request. See [Refreshing from several instances](https://mobiscroll.com/docs/connect/api/oauth#concurrent-refresh).
 
 ## API usage
 
@@ -148,6 +150,45 @@ await client.webhooks.unsubscribeWebhook({
 });
 ```
 
+### Verify webhook deliveries
+
+Every delivery to your webhook URL is signed. `verifyWebhook()` checks the signature and the timestamp, then returns the parsed delivery, or throws `WebhookVerificationError`. Pass the **raw** request body: a JSON body parser that runs first changes the bytes and every check fails.
+
+```ts
+import express from 'express';
+import { WebhookVerificationError } from '@mobiscroll/connect-sdk';
+
+app.post('/webhooks/mobiscroll', express.raw({ type: 'application/json' }), async (req, res) => {
+	let delivery;
+	try {
+		delivery = await client.webhooks.verifyWebhook(req.body, req.headers);
+	} catch (error) {
+		if (error instanceof WebhookVerificationError) {
+			// 503 lets Connect retry when the keys could not be loaded; 401 is final.
+			return res.sendStatus(error.reason === 'no_public_keys' ? 503 : 401);
+		}
+		throw error;
+	}
+	res.sendStatus(204);
+	handleDelivery(delivery);
+});
+```
+
+The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side.
+
+If your handler cannot make outbound requests, pin the key. `webhookPublicKey` is used only when the keys endpoint cannot be reached; it stops working when Mobiscroll retires that key, so you must replace it on every rotation.
+
+```ts
+const client = new MobiscrollConnectClient({
+	clientId: process.env.MOBISCROLL_CLIENT_ID!,
+	clientSecret: process.env.MOBISCROLL_CLIENT_SECRET!,
+	redirectUri: process.env.MOBISCROLL_REDIRECT_URI!,
+	webhookPublicKey: process.env.MOBISCROLL_WEBHOOK_PUBLIC_KEY, // whpk_...
+});
+```
+
+To check against keys you supply, with no fetching, call `verifyWebhookSignature(rawBody, headers, ['whpk_...'])`. It throws `WebhookVerificationError` and returns nothing. See [Verifying deliveries](https://mobiscroll.com/docs/connect/api/webhooks#verifying-deliveries).
+
 ## Connection management
 
 ```ts
@@ -172,6 +213,7 @@ The SDK exposes typed errors:
 - `RateLimitError`
 - `ServerError`
 - `NetworkError`
+- `WebhookVerificationError` (from `verifyWebhook()`; its `reason` says why)
 - `MobiscrollConnectError`
 
 Example:
@@ -196,6 +238,7 @@ The package exports:
 
 - `MobiscrollConnectClient`
 - `ApiClient`
+- `verifyWebhookSignature`
 - All public TypeScript types from `types.ts`
 
 ## Notes

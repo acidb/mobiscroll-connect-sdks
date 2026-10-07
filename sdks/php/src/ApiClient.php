@@ -26,6 +26,8 @@ class ApiClient
     private GuzzleClient $httpClient;
     /** @var callable(TokenResponse): void|null */
     private $onTokensRefreshed = null;
+    // Trailing slash is required so relative request paths resolve under /api/
+    private string $baseUri = 'https://connect.mobiscroll.com/api/';
 
     public function __construct(private Config $config)
     {
@@ -36,8 +38,7 @@ class ApiClient
         }
 
         $this->httpClient = new GuzzleClient([
-            // Trailing slash is required so relative request paths resolve under /api/
-            'base_uri' => 'https://connect.mobiscroll.com/api/',
+            'base_uri' => $this->baseUri,
             'timeout' => 30.0,
             'headers' => [
                 'Content-Type' => 'application/json',
@@ -61,6 +62,11 @@ class ApiClient
     public function getConfig(): Config
     {
         return $this->config;
+    }
+
+    public function getBaseUri(): string
+    {
+        return $this->baseUri;
     }
 
     /**

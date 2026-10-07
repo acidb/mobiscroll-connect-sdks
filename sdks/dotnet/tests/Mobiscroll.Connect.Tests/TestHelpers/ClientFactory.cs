@@ -5,7 +5,10 @@ namespace Mobiscroll.Connect.Tests.TestHelpers;
 
 internal static class ClientFactory
 {
-    public static MobiscrollConnectClient Create(FakeHttpMessageHandler handler, string baseUrl = "https://connect.mobiscroll.com/api/")
+    public static MobiscrollConnectClient Create(
+        FakeHttpMessageHandler handler,
+        string baseUrl = "https://connect.mobiscroll.com/api/",
+        string? webhookPublicKey = null)
     {
         var http = new HttpClient(handler);
         var config = new MobiscrollConnectConfig
@@ -13,6 +16,7 @@ internal static class ClientFactory
             ClientId = "test-client-id",
             ClientSecret = "test-client-secret",
             RedirectUri = "http://localhost:5000/callback",
+            WebhookPublicKey = webhookPublicKey,
         };
         return new MobiscrollConnectClient(config, http, baseUrl);
     }

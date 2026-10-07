@@ -25,7 +25,7 @@ Client                              public facade
   │                                get_connection_status, disconnect
   ├── calendars → Resources::Calendars   list
   ├── events   → Resources::Events      list, create, update, delete
-  └── webhooks → Resources::Webhooks    subscribe_webhook, unsubscribe_webhook
+  └── webhooks → Resources::Webhooks    subscribe_webhook, unsubscribe_webhook, verify_webhook
 
 ApiClient                           internal HTTP layer
   ├── execute()                     Bearer header, 401 → refresh + retry-once
@@ -33,8 +33,11 @@ ApiClient                           internal HTTP layer
   └── Monitor + condition variable  dedup of concurrent refreshes
 
 Provider                            string constants (GOOGLE, MICROSOFT, APPLE, CALDAV)
-Config                              client_id, client_secret, redirect_uri, base_url, timeout
-errors.rb                           6 typed errors + Connect.map_response_error
+Config                              client_id, client_secret, redirect_uri, base_url, timeout,
+                                    webhook_public_key
+errors.rb                           typed errors (incl. WebhookVerificationError) + Connect.map_response_error
+webhook_verification.rb             Connect.verify_webhook_signature (pure Ed25519 v1a check) +
+                                    WebhookKeyStore (process-wide key cache)
 models.rb                           Value objects (Struct): TokenResponse, Calendar,
                                     CalendarEvent, RecurrenceRule, EventsListResponse, …
 ```
@@ -57,6 +60,7 @@ Token merge: `TokenResponse#merged_with` preserves the existing `refresh_token` 
 | 429 | `RateLimitError` | `retry_after` (seconds) |
 | 5xx | `ServerError` | `status_code` |
 | Transport | `NetworkError` | `cause` |
+| — | `WebhookVerificationError` | `reason` (from `verify_webhook`) |
 
 All are subclasses of `Mobiscroll::Connect::Error`.
 
@@ -96,11 +100,13 @@ cd minimal-app && bundle exec rackup -p 8080  # demo (needs .env)
 | `lib/mobiscroll/connect/resources/auth.rb` | OAuth flow + connection status + disconnect |
 | `lib/mobiscroll/connect/resources/calendars.rb` | `Calendars#list` |
 | `lib/mobiscroll/connect/resources/events.rb` | `Events#list/create/update/delete`; JSON `calendarIds` encoding |
-| `lib/mobiscroll/connect/resources/webhooks.rb` | `Webhooks#subscribe_webhook/unsubscribe_webhook` |
+| `lib/mobiscroll/connect/resources/webhooks.rb` | `Webhooks#subscribe_webhook/unsubscribe_webhook/verify_webhook` |
+| `lib/mobiscroll/connect/webhook_verification.rb` | `Connect.verify_webhook_signature` (pure `v1a` Ed25519 check) + `WebhookKeyStore` (process-wide key cache) |
 | `spec/spec_helper.rb` | RSpec config + `WebMock.disable_net_connect!` |
 | `spec/support/mock_server.rb` | WebMock helpers + default/credentialed client builders |
 | `spec/mobiscroll/connect/*_spec.rb` | Per-module tests |
 | `spec/mobiscroll/connect/refresh_dedup_spec.rb` | Concurrent 401 dedup test (threads) |
+| `spec/fixtures/webhook-vectors.json` | Webhook signature vectors from the Connect server's signer, shared by all seven SDKs |
 | `minimal-app/app.rb` | Sinatra demo app |
 | `minimal-app/views/` | ERB templates |
 | `minimal-app/public/` | Static assets (CSS + JS) |
@@ -125,3 +131,4 @@ cd minimal-app && bundle exec rackup -p 8080  # demo (needs .env)
 - `CalendarEvent#end_time` maps the wire field `"end"` (avoids the Ruby keyword `end`).
 - Version is sourced from `version.rb`. `scripts/bump-version.sh ruby X.Y.Z` updates it.
 - Release tag format is `ruby-vX.Y.Z`.
+- Webhook verification: the key cache is **per keys URL, process-wide** (`WebhookKeyStore`, Mutex + ConditionVariable; one in-flight fetch shared across threads), fetched lazily, refreshed per `Cache-Control`, re-fetched at most once a minute after a failed match, and keeps the last good keys when a fetch fails. The pinned `webhook_public_key` is used **only when no fetched keys exist** — merging it in would keep a retired key valid. The key fetch uses a plain `Faraday.new`, never `@api_conn`. Ed25519 keys are built by DER-wrapping the raw key (`OpenSSL::PKey.new_raw_public_key` needs openssl gem 3.2+, not bundled with Ruby 3.2). Tests reset the cache with `WebhookKeyStore.reset!`.

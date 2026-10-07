@@ -10,7 +10,7 @@ Communication:
 
 Coding standards:
 
-- Java 11 baseline. No Lombok, no records (records are 14+).
+- Java 17 baseline (raised from 11 for the JDK's built-in Ed25519). No Lombok; DTOs stay classes, not records, for consistency.
 - All classes are `final` unless inheritance is genuinely required (exception hierarchy is the exception).
 - DTOs: private final fields, public getters, static `Builder` (or `@JsonCreator` constructor for response DTOs).
 - Javadoc on every public type and method that isn't self-evident. No comments that restate code.
@@ -23,7 +23,7 @@ Coding standards:
 - **Entry point:** [`MobiscrollConnectClient`](connect-sdk/src/main/java/com/mobiscroll/connect/MobiscrollConnectClient.java)
 - **HTTP client:** OkHttp 4 (30-second call timeout default)
 - **JSON:** Jackson databind + `jackson-datatype-jsr310`
-- **Min Java:** 11 (CI matrix runs 11, 17, 21)
+- **Min Java:** 17 (CI matrix runs 17, 21, 25)
 - **Tests:** JUnit 5 + OkHttp MockWebServer + AssertJ
 - **Build:** Maven (parent aggregator + `connect-sdk` library module + `minimal-app` Spring Boot demo)
 
@@ -34,7 +34,8 @@ MobiscrollConnectClient            facade; wires ApiClient + resources
   ├── Auth                          generateAuthUrl, getToken, setCredentials,
   │                                 getConnectionStatus, disconnect
   ├── Calendars                     list()
-  └── Events                        list, create, update, delete
+  ├── Events                        list, create, update, delete
+  └── Webhooks                      subscribeWebhook, unsubscribeWebhook, verifyWebhook
 
 ApiClient                          OkHttp wrapper
   ├── execute()                     Bearer header, 401 → refresh → retry-once
@@ -45,9 +46,11 @@ ApiClient                          OkHttp wrapper
 Provider                            enum {GOOGLE, MICROSOFT, APPLE, CALDAV}
                                     wire form lowercase via @JsonValue/@JsonCreator
 MobiscrollConnectConfig             immutable config + Builder
+WebhookVerifier                     static verifyWebhookSignature (pure Ed25519 v1a check)
+internal/WebhookKeyStore            process-wide webhook key cache, one per keys URL
 internal/JsonMapperHolder           singleton ObjectMapper
 internal/QueryStringBuilder         booleans → "true"/"false"; OffsetDateTime → ISO-8601
-exceptions/*                        7-class hierarchy under MobiscrollConnectException
+exceptions/*                        hierarchy under MobiscrollConnectException
 ```
 
 ### Token refresh
@@ -64,6 +67,7 @@ On 401, `ApiClient.refreshAccessToken()` does a `compareAndSet(null, future)` on
 | 429 | `RateLimitException` | `Integer retryAfter` from `Retry-After` |
 | 5xx | `ServerException` | `int statusCode` |
 | `IOException` / timeout | `NetworkException` | wraps cause |
+| (webhook delivery fails verification) | `WebhookVerificationException` | `Reason reason` |
 
 All extend `MobiscrollConnectException(RuntimeException)`. The hierarchy maps one-to-one to the cross-SDK error taxonomy in the root [`CLAUDE.md`](../../CLAUDE.md).
 
@@ -101,6 +105,9 @@ cd minimal-app && mvn spring-boot:run          # run the Spring Boot demo
 | `connect-sdk/src/main/java/com/mobiscroll/connect/resources/Auth.java` | OAuth flow |
 | `connect-sdk/src/main/java/com/mobiscroll/connect/resources/Calendars.java` | List calendars |
 | `connect-sdk/src/main/java/com/mobiscroll/connect/resources/Events.java` | Events CRUD |
+| `connect-sdk/src/main/java/com/mobiscroll/connect/resources/Webhooks.java` | subscribe / unsubscribe / `verifyWebhook` |
+| `connect-sdk/src/main/java/com/mobiscroll/connect/WebhookVerifier.java` | `verifyWebhookSignature` (pure Ed25519 `v1a` check, JDK crypto) |
+| `connect-sdk/src/main/java/com/mobiscroll/connect/internal/WebhookKeyStore.java` | Process-wide webhook key cache + test clock hook |
 | `connect-sdk/src/main/java/com/mobiscroll/connect/models/*.java` | Request/response DTOs |
 | `connect-sdk/src/main/java/com/mobiscroll/connect/exceptions/*.java` | Exception hierarchy |
 | `connect-sdk/src/main/java/com/mobiscroll/connect/internal/JsonMapperHolder.java` | ObjectMapper singleton |
@@ -112,6 +119,9 @@ cd minimal-app && mvn spring-boot:run          # run the Spring Boot demo
 | `connect-sdk/src/test/java/com/mobiscroll/connect/ErrorMappingTest.java` | HTTP status → exception |
 | `connect-sdk/src/test/java/com/mobiscroll/connect/SerializationTest.java` | DTO JSON round-trips |
 | `connect-sdk/src/test/java/com/mobiscroll/connect/TokenRefreshConcurrencyTest.java` | 10 parallel 401s → exactly one refresh |
+| `connect-sdk/src/test/java/com/mobiscroll/connect/WebhookVerifierTest.java` | Shared signature vectors through the pure check |
+| `connect-sdk/src/test/java/com/mobiscroll/connect/WebhookVerificationTest.java` | `verifyWebhook` key fetching / caching / rotation / pinned key |
+| `connect-sdk/src/test/resources/fixtures/webhook-vectors.json` | Cross-SDK vectors from the Connect server's signer (byte-identical in every SDK) |
 | `connect-sdk/src/test/java/com/mobiscroll/connect/support/ClientFactory.java` | Helpers to build a client over MockWebServer |
 | `minimal-app/src/main/java/com/mobiscroll/connect/sample/MinimalAppApplication.java` | Spring Boot entry |
 | `minimal-app/src/main/java/com/mobiscroll/connect/sample/SdkConfig.java` | Wires one `MobiscrollConnectClient` bean from `application.yml` |
@@ -133,5 +143,6 @@ cd minimal-app && mvn spring-boot:run          # run the Spring Boot demo
 - `Auth.getConnectionStatus()` and `Auth.disconnect()` try `/oauth/*` first and fall back to the legacy path (e.g. `/connections`, `/disconnect`) on 404 to support older server deployments.
 - `Auth.generateAuthUrl` derives the host from `ApiClient.getBaseUrl()` — never a hardcoded string.
 - Token-exchange and refresh send both `Authorization: Basic` *and* a `CLIENT_ID` header (parity with .NET / Node / PHP / Python).
+- Webhook verification: the key cache is **per keys URL, process-wide** (static, shared by every client — customers often create a client per request), fetched lazily, refreshed per `Cache-Control`, re-fetched at most once a minute after a failed match, and keeps the last good keys when a fetch fails; concurrent callers share one in-flight fetch. The pinned `webhookPublicKey` is used **only when no fetched keys exist** — merging it in would keep a retired (possibly compromised) key valid. The key fetch uses its own static `OkHttpClient`, never `ApiClient`. Tests reset it with `WebhookKeyStore.reset()` and drive time with `WebhookKeyStore.useClock(...)`.
 - `target/` and `.flattened-pom.xml` are build outputs — never edited directly.
 - Version is sourced from `sdks/java/.mvn/maven.config` (`-Drevision=X.Y.Z`); both parent and child POMs consume `${revision}`. `flatten-maven-plugin` rewrites the published POM so consumers see the resolved version.

@@ -4,7 +4,8 @@ using System.Text.Json;
 
 namespace Mobiscroll.Connect.Models;
 
-public sealed class CalendarEvent
+/// <summary>A calendar event. Not sealed: <see cref="WebhookEvent"/> extends it with the change type.</summary>
+public class CalendarEvent
 {
     public Provider Provider { get; set; }
     public string Id { get; set; } = string.Empty;

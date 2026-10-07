@@ -77,6 +77,12 @@ public sealed class ApiClient : IDisposable
 
     public TokenResponse? Credentials => _credentials;
 
+    /// <summary>
+    /// The underlying HTTP client, for requests outside the authenticated pipeline
+    /// (the webhook keys fetch). Requests sent on it directly carry no Bearer token.
+    /// </summary>
+    internal HttpClient Http => _http;
+
     public void SetCredentials(TokenResponse tokens)
     {
         _credentials = tokens ?? throw new ArgumentNullException(nameof(tokens));

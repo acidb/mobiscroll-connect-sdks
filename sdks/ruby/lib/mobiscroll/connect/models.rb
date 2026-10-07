@@ -242,6 +242,52 @@ module Mobiscroll
       end
     end
 
+    # A changed event in a webhook delivery: every CalendarEvent field plus `change_type`
+    # ('created', 'updated' or 'deleted').
+    WebhookEvent = Struct.new(*CalendarEvent.members, :change_type, keyword_init: true) do
+      def self.from_h(hash)
+        return nil if hash.nil?
+
+        new(**CalendarEvent.from_h(hash).to_h, change_type: hash['changeType'] || hash[:changeType])
+      end
+    end
+
+    # `metadata` of a webhook delivery.
+    WebhookDeliveryMetadata = Struct.new(:channel_id, :event_count, :is_initial_sync, keyword_init: true) do
+      def self.from_h(hash)
+        return nil if hash.nil?
+
+        key = 'isInitialSync'
+        new(
+          channel_id: hash['channelId'] || hash[:channelId],
+          event_count: hash['eventCount'] || hash[:eventCount],
+          is_initial_sync: hash.key?(key) ? hash[key] : hash[key.to_sym]
+        )
+      end
+    end
+
+    # A verified webhook delivery, returned by Webhooks#verify_webhook. `change_type` is
+    # 'created', 'updated', 'deleted' or 'mixed'; `timestamp` is the ISO 8601 time Connect
+    # processed the change.
+    WebhookDelivery = Struct.new(
+      :provider, :user_id, :calendar_id, :events, :change_type, :timestamp, :metadata, keyword_init: true
+    ) do
+      def self.from_h(hash)
+        return nil if hash.nil?
+
+        metadata = hash['metadata'] || hash[:metadata]
+        new(
+          provider: hash['provider'] || hash[:provider],
+          user_id: hash['userId'] || hash[:userId],
+          calendar_id: hash['calendarId'] || hash[:calendarId],
+          events: Array(hash['events'] || hash[:events]).filter_map { |e| WebhookEvent.from_h(e) if e.is_a?(Hash) },
+          change_type: hash['changeType'] || hash[:changeType],
+          timestamp: hash['timestamp'] || hash[:timestamp],
+          metadata: metadata.is_a?(Hash) ? WebhookDeliveryMetadata.from_h(metadata) : nil
+        )
+      end
+    end
+
     # Response from Webhooks#unsubscribe_webhook. `success` is true whenever the local
     # mapping was removed, even if the provider-side unsubscribe itself failed — `message`
     # explains what happened in that case.

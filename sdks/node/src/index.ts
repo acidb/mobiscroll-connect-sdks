@@ -50,3 +50,4 @@ export class MobiscrollConnectClient {
 
 export * from './types';
 export { ApiClient } from './client';
+export { verifyWebhookSignature, WEBHOOK_TOLERANCE_SECONDS } from './webhookVerification';

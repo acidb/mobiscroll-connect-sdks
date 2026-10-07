@@ -98,6 +98,8 @@ The SDK automatically refreshes expired access tokens. When a request returns 40
 
 Concurrent 401s share a single in-flight refresh — only one `POST /oauth/token` is ever issued per `Client` instance at a time.
 
+**Running more than one instance.** The single in-flight refresh above is per `Client` instance. The SDK does not coordinate across processes — separate containers, cluster workers or serverless invocations each refresh from the tokens they hold in memory. Connect accepts concurrent refreshes of the same token, but refreshing with a copy that is two or more refreshes out of date revokes the user's authorization. Persist refreshed tokens to storage every instance reads, and call `client.set_credentials(...)` with the current tokens when a process starts a job or handles a request. See [Refreshing from several instances](https://mobiscroll.com/docs/connect/api/oauth#concurrent-refresh).
+
 To persist refreshed tokens (e.g., back to a session or database):
 
 ```ruby
@@ -197,6 +199,40 @@ client.webhooks.unsubscribe_webhook(
 )
 ```
 
+### Verify webhook deliveries
+
+Every delivery to your webhook URL is signed. `verify_webhook` checks the signature and the timestamp, then returns the parsed `WebhookDelivery`, or raises `WebhookVerificationError`. Pass the **raw** request body: a JSON body parser that runs first changes the bytes and every check fails.
+
+```ruby
+post '/webhooks/mobiscroll' do
+  begin
+    delivery = client.webhooks.verify_webhook(request.body.read, request.env)
+  rescue Mobiscroll::Connect::WebhookVerificationError => e
+    # 503 lets Connect retry when the keys could not be loaded; 401 is final.
+    halt(e.reason == 'no_public_keys' ? 503 : 401)
+  end
+  handle_delivery(delivery)
+  status 204
+end
+```
+
+`headers` can be a Hash with any key casing, a Rack env (`HTTP_WEBHOOK_ID` keys), or Rails' `request.headers` (pass `request.raw_post` as the body in Rails).
+
+The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side.
+
+If your handler cannot make outbound requests, pin the key. `webhook_public_key` is used only when the keys endpoint cannot be reached; it stops working when Mobiscroll retires that key, so you must replace it on every rotation.
+
+```ruby
+client = Mobiscroll::Connect::Client.new(
+  client_id:          ENV['MOBISCROLL_CLIENT_ID'],
+  client_secret:      ENV['MOBISCROLL_CLIENT_SECRET'],
+  redirect_uri:       ENV['MOBISCROLL_REDIRECT_URI'],
+  webhook_public_key: ENV['MOBISCROLL_WEBHOOK_PUBLIC_KEY'] # whpk_...
+)
+```
+
+To check against keys you supply, with no fetching, call `Mobiscroll::Connect.verify_webhook_signature(raw_body, headers, ['whpk_...'])`. It raises `WebhookVerificationError` and returns `nil`. See [Verifying deliveries](https://mobiscroll.com/docs/connect/api/webhooks#verifying-deliveries).
+
 ## Error handling
 
 All errors are subclasses of `Mobiscroll::Connect::Error`:
@@ -229,6 +265,7 @@ end
 | `RateLimitError` | 429 | `retry_after` (seconds) |
 | `ServerError` | 5xx | `status_code` |
 | `NetworkError` | transport | `cause` |
+| `WebhookVerificationError` | — (from `verify_webhook`) | `reason` |
 
 ## Minimal demo app
 

@@ -11,8 +11,14 @@ from .._internal.payloads import (
     build_event_payload,
     build_list_events_query,
 )
+from .._internal.webhook_keys import (
+    WebhookKeyStore,
+    is_retryable,
+    keys_or_pinned,
+    webhook_keys_url,
+)
 from ..async_api_client import AsyncApiClient
-from ..exceptions import MobiscrollConnectError, ServerError
+from ..exceptions import MobiscrollConnectError, ServerError, WebhookVerificationError
 from ..models import (
     Calendar,
     CalendarEvent,
@@ -23,6 +29,12 @@ from ..models import (
     SubscribeWebhookResponse,
     TokenResponse,
     UnsubscribeWebhookResponse,
+    WebhookDelivery,
+)
+from ..webhook_verification import (
+    WebhookPayload,
+    parse_webhook_delivery,
+    verify_webhook_signature,
 )
 
 ProviderLike = Union[str, Provider]
@@ -230,3 +242,26 @@ class AsyncWebhooks:
 
         data = await self._api.post("unsubscribe-webhook", json=payload)
         return UnsubscribeWebhookResponse.from_dict(data if isinstance(data, Mapping) else {})
+
+    async def verify_webhook(
+        self, payload: WebhookPayload, headers: Mapping[str, Any]
+    ) -> WebhookDelivery:
+        """Async variant of :meth:`mobiscroll_connect.resources.Webhooks.verify_webhook`.
+
+        Concurrent calls share one key fetch, and the key cache is shared with every
+        other client in the process.
+        """
+        store = WebhookKeyStore.for_url(webhook_keys_url(self._api.base_url))
+        pinned_key = self._api.config.webhook_public_key
+
+        try:
+            keys = await store.get_keys_async()
+            verify_webhook_signature(payload, headers, keys_or_pinned(keys, pinned_key))
+        except WebhookVerificationError as error:
+            if not is_retryable(error) or not store.can_refetch():
+                raise
+            await store.refresh_async()
+            keys = await store.get_keys_async()
+            verify_webhook_signature(payload, headers, keys_or_pinned(keys, pinned_key))
+
+        return parse_webhook_delivery(payload)

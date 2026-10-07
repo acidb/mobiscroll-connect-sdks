@@ -38,6 +38,7 @@ classifiers = [
 ]
 dependencies = [
     "httpx>=0.24,<1.0",
+    "cryptography>=3.4",
     "typing-extensions>=4.0; python_version < '3.11'",
 ]
 

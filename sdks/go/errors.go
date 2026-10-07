@@ -95,6 +95,36 @@ func (e *NetworkError) Error() string {
 func (e *NetworkError) Unwrap() error { return e.Err }
 func (*NetworkError) Code() string    { return "NETWORK_ERROR" }
 
+// WebhookVerificationReason says why a webhook delivery failed verification.
+type WebhookVerificationReason string
+
+// Reasons reported by WebhookVerificationError.
+const (
+	// WebhookMissingHeaders: webhook-id, webhook-timestamp or webhook-signature is missing or empty.
+	WebhookMissingHeaders WebhookVerificationReason = "missing_headers"
+	// WebhookInvalidTimestamp: webhook-timestamp is not a Unix time in seconds.
+	WebhookInvalidTimestamp WebhookVerificationReason = "invalid_timestamp"
+	// WebhookTimestampOutOfTolerance: webhook-timestamp is too far from the current time.
+	WebhookTimestampOutOfTolerance WebhookVerificationReason = "timestamp_out_of_tolerance"
+	// WebhookNoPublicKeys: no valid public key was available to verify against.
+	WebhookNoPublicKeys WebhookVerificationReason = "no_public_keys"
+	// WebhookNoMatchingSignature: no v1a signature verified against any public key.
+	WebhookNoMatchingSignature WebhookVerificationReason = "no_matching_signature"
+	// WebhookInvalidPayload: the verified body is not valid JSON.
+	WebhookInvalidPayload WebhookVerificationReason = "invalid_payload"
+)
+
+// WebhookVerificationError is returned when a webhook delivery fails
+// verification. Respond with a 4xx and do not process the delivery. Reason
+// says why it failed.
+type WebhookVerificationError struct {
+	Message string
+	Reason  WebhookVerificationReason
+}
+
+func (e *WebhookVerificationError) Error() string { return e.Message }
+func (*WebhookVerificationError) Code() string    { return "WEBHOOK_VERIFICATION_ERROR" }
+
 // genericError is the fallback for unmapped status codes.
 type genericError struct {
 	Message    string

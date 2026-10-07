@@ -40,7 +40,7 @@ MobiscrollConnectClient        — public entry point; constructs ApiClient + re
   ├── auth: Auth               — generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect
   ├── calendars: Calendars     — list()
   ├── events: Events           — list(), create(), update(), delete()
-  └── webhooks: Webhooks       — subscribeWebhook(), unsubscribeWebhook()
+  └── webhooks: Webhooks       — subscribeWebhook(), unsubscribeWebhook(), verifyWebhook()
 
 ApiClient (extends EventEmitter)
   — Axios instance with base URL https://connect.mobiscroll.com/api
@@ -98,7 +98,8 @@ npm run prerelease        # bash pre-release.sh (version bump + build)
 | `src/resources/auth.ts`      | `Auth` — OAuth flow: generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect |
 | `src/resources/calendars.ts` | `Calendars` — list()                                                                            |
 | `src/resources/events.ts`    | `Events` — list(), create(), update(), delete()                                                 |
-| `src/resources/webhooks.ts`  | `Webhooks` — subscribeWebhook(), unsubscribeWebhook()                                           |
+| `src/resources/webhooks.ts`  | `Webhooks` — subscribeWebhook(), unsubscribeWebhook(), verifyWebhook()                          |
+| `src/webhookVerification.ts` | `verifyWebhookSignature` (pure Ed25519 `v1a` check) + `WebhookKeyStore` (process-wide key cache) |
 | `src/__tests__/`             | Jest tests per resource + client + types                                                        |
 | `dist/`                      | Compiled output (do not edit directly)                                                          |
 
@@ -135,3 +136,4 @@ npm run prerelease        # bash pre-release.sh (version bump + build)
 - `CLIENT_ID` header is sent alongside `Authorization: Basic` on token exchange requests (`getToken` and `refreshAccessToken`).
 - The `on()` method on `MobiscrollConnectClient` delegates to `ApiClient` (which extends `EventEmitter`) and returns `this` for chaining.
 - `dist/` is the published output. `src/` is the source of truth. Never edit `dist/` directly.
+- Webhook verification: the key cache is **per keys URL, process-wide** (customers often create a client per request), fetched lazily, refreshed per `Cache-Control`, re-fetched at most once a minute after a failed match, and keeps the last good keys when a fetch fails. The pinned `webhookPublicKey` is used **only when no fetched keys exist** — merging it in would keep a retired (possibly compromised) key valid. The key fetch uses plain `axios.get`, never the authenticated instance. Test vectors in `src/__tests__/fixtures/webhook-vectors.json` come from the Connect server's signer and are shared by all seven SDKs.

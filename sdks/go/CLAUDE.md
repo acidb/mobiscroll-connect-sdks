@@ -36,7 +36,8 @@ Client                           public facade
   ├── Auth() -> *authService     GenerateAuthURL, GetToken, SetCredentials,
   │                              GetConnectionStatus, Disconnect
   ├── Calendars() -> *calendarsService   List
-  └── Events() -> *eventsService          List, Create, Update, Delete
+  ├── Events() -> *eventsService          List, Create, Update, Delete
+  └── Webhooks() -> *webhooksService      SubscribeWebhook, UnsubscribeWebhook, VerifyWebhook
 
 apiClient                        internal HTTP layer
   ├── execute()                  Bearer header, 401 -> refresh + retry-once
@@ -45,7 +46,8 @@ apiClient                        internal HTTP layer
 
 Provider                         enum-style string with constants
 config                           unexported; built by ClientOption funcs
-errors.go                        6 typed errors + MobiscrollError interface
+errors.go                        typed errors + MobiscrollError interface
+webhook_verification.go          VerifyWebhookSignature (pure) + process-wide webhook key store
 internal/querybuilder            URL query encoder (booleans -> "true"/"false")
 ```
 
@@ -65,6 +67,7 @@ Token merge: the existing `refresh_token` is preserved when the server omits one
 | 429 | `*RateLimitError` | `RetryAfter int` (from `Retry-After`) |
 | 5xx | `*ServerError` | `StatusCode int` |
 | Transport | `*NetworkError` | `Err error` (`Unwrap`) |
+| Webhook verification | `*WebhookVerificationError` | `Reason WebhookVerificationReason` |
 
 All satisfy `MobiscrollError`. The hierarchy maps one-to-one to the cross-SDK taxonomy in the root [`CLAUDE.md`](../../CLAUDE.md).
 
@@ -99,6 +102,10 @@ cd minimal-app && go run .                         # run the demo (needs env var
 | `auth.go` | `authService`: OAuth flow + connection status + disconnect |
 | `calendars.go` | `calendarsService.List` |
 | `events.go` | `eventsService.List/Create/Update/Delete`; JSON-encoded `calendarIds` |
+| `webhooks.go` | `webhooksService.SubscribeWebhook/UnsubscribeWebhook/VerifyWebhook` |
+| `webhook_verification.go` | `VerifyWebhookSignature` (pure Ed25519 `v1a` check) + `webhookKeyStore` (process-wide key cache) |
+| `export_test.go` | Test-only hooks: `ResetWebhookKeyStores`, `SetWebhookClock` |
+| `testdata/webhook-vectors.json` | Signature vectors from the Connect server's signer, shared by all seven SDKs |
 | `internal/querybuilder/querybuilder.go` | URL query builder (booleans -> strings, time.Time -> RFC3339) |
 | `testsupport/testserver.go` | `httptest.Server` wrapper with FIFO response queue + request log |
 | `*_test.go` | One test file per source file; concurrency test in `transport_test.go` |
@@ -122,5 +129,6 @@ cd minimal-app && go run .                         # run the demo (needs env var
 - Token-exchange and refresh send both `Authorization: Basic` AND a `CLIENT_ID` header.
 - `Auth.Disconnect` uses `POST` (matches Node/Python/PHP/.NET/Java).
 - `Events.List`'s `calendarIds` is a `map[Provider][]string` JSON-encoded into a single query parameter — matches the cross-SDK wire format.
+- Webhook verification: the key cache is **per keys URL, process-wide** (customers often create a client per request), fetched lazily, refreshed per `Cache-Control`, re-fetched at most once a minute after a failed match, and keeps the last good keys when a fetch fails. Concurrent callers wait on one in-flight fetch, which is detached from any single caller's ctx. The pinned `WithWebhookPublicKey` key is used **only when no fetched keys exist** — merging it in would keep a retired (possibly compromised) key valid. The fetch uses `apiClient.keysHTTP` (no Bearer, 10 s timeout), never the authenticated path.
 - Version is sourced from `version.go` (`const Version = "X.Y.Z"`). `scripts/bump-version.sh go X.Y.Z` updates it.
 - Release tag format is `sdks/go/vX.Y.Z` — this is mandated by the Go module proxy, which requires the module path as the tag prefix. The other SDKs use `<sdk>-v*`; Go is the documented exception.

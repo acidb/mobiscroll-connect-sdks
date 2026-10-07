@@ -65,7 +65,8 @@ func (c *Client) Calendars() *calendarsService { return c.calendars }
 // Events returns the events resource.
 func (c *Client) Events() *eventsService { return c.events }
 
-// Webhooks returns the webhook-subscription resource.
+// Webhooks returns the webhooks resource: subscribe, unsubscribe, and verify
+// deliveries.
 func (c *Client) Webhooks() *webhooksService { return c.webhooks }
 
 // SetCredentials stores a token pair the SDK will use on subsequent requests.

@@ -29,6 +29,7 @@ class AsyncMobiscrollConnectClient:
         *,
         base_url: str | None = None,
         timeout: float | None = None,
+        webhook_public_key: str | None = None,
         http_client: httpx.AsyncClient | None = None,
         on_tokens_refreshed: AsyncTokensRefreshedCallback | None = None,
     ) -> None:
@@ -37,6 +38,8 @@ class AsyncMobiscrollConnectClient:
             config_kwargs["base_url"] = base_url
         if timeout is not None:
             config_kwargs["timeout"] = timeout
+        if webhook_public_key is not None:
+            config_kwargs["webhook_public_key"] = webhook_public_key
 
         self._config = Config(**config_kwargs)
         self._api = AsyncApiClient(

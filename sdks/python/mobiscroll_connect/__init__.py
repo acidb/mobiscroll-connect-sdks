@@ -30,6 +30,8 @@ from .exceptions import (
     RateLimitError,
     ServerError,
     ValidationError,
+    WebhookVerificationError,
+    WebhookVerificationFailure,
 )
 from .models import (
     Calendar,
@@ -43,12 +45,17 @@ from .models import (
     SubscribeWebhookResponse,
     TokenResponse,
     UnsubscribeWebhookResponse,
+    WebhookDelivery,
+    WebhookDeliveryMetadata,
+    WebhookEvent,
     WebhookSubscription,
 )
+from .webhook_verification import WEBHOOK_TOLERANCE_SECONDS, verify_webhook_signature
 
 __version__ = "1.5.1"
 
 __all__ = [
+    "WEBHOOK_TOLERANCE_SECONDS",
     "AuthenticationError",
     "BlockedAccount",
     "Calendar",
@@ -73,6 +80,12 @@ __all__ = [
     "TokenResponse",
     "UnsubscribeWebhookResponse",
     "ValidationError",
+    "WebhookDelivery",
+    "WebhookDeliveryMetadata",
+    "WebhookEvent",
     "WebhookSubscription",
+    "WebhookVerificationError",
+    "WebhookVerificationFailure",
     "__version__",
+    "verify_webhook_signature",
 ]

@@ -44,6 +44,12 @@ export interface MobiscrollConnectConfig {
    * Redirect URI for OAuth authentication
    */
   redirectUri: string;
+
+  /**
+   * Pinned `whpk_` webhook public key. Used by `webhooks.verifyWebhook()` only when the keys
+   * endpoint cannot be reached; it stops verifying once Mobiscroll retires that key.
+   */
+  webhookPublicKey?: string;
 }
 
 export interface ApiResponse<T = unknown> {
@@ -489,4 +495,58 @@ export interface UnsubscribeWebhookResponse {
    * `success` is still `true` in that case — treat the response as final regardless.
    */
   message?: string;
+}
+
+/**
+ * Request headers of a webhook delivery: a plain header object (Node `IncomingHttpHeaders`,
+ * any casing) or a Fetch API `Headers` instance.
+ */
+export type WebhookHeaders =
+  | Record<string, string | string[] | undefined>
+  | { get(name: string): string | null };
+
+export interface VerifyWebhookSignatureOptions {
+  /** Maximum age, in seconds, of `webhook-timestamp` in either direction. Default 300. */
+  toleranceSeconds?: number;
+  /** Current Unix time in seconds; defaults to the system clock. */
+  now?: number;
+}
+
+/**
+ * A verified webhook delivery sent by Mobiscroll Connect to the project's webhook URL.
+ */
+export interface WebhookDelivery {
+  provider: ProviderName;
+  userId: string;
+  calendarId: string;
+  events: WebhookEvent[];
+  changeType?: 'created' | 'updated' | 'deleted' | 'mixed';
+  /** ISO 8601 timestamp of when Connect processed the change. */
+  timestamp: string;
+  metadata: {
+    channelId: string;
+    eventCount: number;
+    isInitialSync?: boolean;
+  };
+}
+
+export type WebhookVerificationFailure =
+  | 'missing_headers'
+  | 'invalid_timestamp'
+  | 'timestamp_out_of_tolerance'
+  | 'no_public_keys'
+  | 'no_matching_signature'
+  | 'invalid_payload';
+
+/**
+ * Thrown when a webhook delivery fails verification. Respond with a 4xx and do not process it.
+ */
+export class WebhookVerificationError extends MobiscrollConnectError {
+  constructor(
+    message: string,
+    public reason: WebhookVerificationFailure
+  ) {
+    super(message, 'WEBHOOK_VERIFICATION_ERROR');
+    this.name = 'WebhookVerificationError';
+  }
 }

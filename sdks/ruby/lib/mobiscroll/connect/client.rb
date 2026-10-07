@@ -7,14 +7,15 @@ module Mobiscroll
 
       def initialize(client_id:, client_secret:, redirect_uri:,
                      base_url: DEFAULT_BASE_URL, timeout: DEFAULT_TIMEOUT,
-                     on_tokens_refreshed: nil)
+                     on_tokens_refreshed: nil, webhook_public_key: nil)
         @config = Config.new(
           client_id: client_id,
           client_secret: client_secret,
           redirect_uri: redirect_uri,
           base_url: base_url,
           timeout: timeout,
-          on_tokens_refreshed: on_tokens_refreshed
+          on_tokens_refreshed: on_tokens_refreshed,
+          webhook_public_key: webhook_public_key
         )
         @api_client = ApiClient.new(@config)
         @auth = Resources::Auth.new(@config, @api_client)

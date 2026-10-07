@@ -2,7 +2,15 @@
 
 All notable changes to the Mobiscroll Connect Go SDK (module: `github.com/acidb/mobiscroll-connect-sdks/sdks/go`) are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). SDKs in this monorepo version independently, so this file covers the Go SDK only. Release tags use the `sdks/go/vX.Y.Z` form the Go module proxy requires.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK's major.minor always matches the Connect API's (for example API 1.5.x → SDK 1.5.x): each release bumps only the patch, including releases with breaking changes. Patch numbers are independent per SDK, so this file covers the Go SDK only. Release tags use the `sdks/go/vX.Y.Z` form the Go module proxy requires.
+
+## [Unreleased]
+
+### Added
+
+- `Webhooks().VerifyWebhook()` checks a delivery's Ed25519 signature and timestamp and returns the parsed `*WebhookDelivery`, or a `*WebhookVerificationError`. It fetches and caches the public keys from `/.well-known/webhook-keys` and re-fetches them once before rejecting, so key rotations need no action.
+- `WithWebhookPublicKey` client option: a pinned key, used only when the keys endpoint cannot be reached.
+- `VerifyWebhookSignature()` for verifying against keys you supply, with no fetching.
 
 ## [1.5.1] — 2026-09-22
 

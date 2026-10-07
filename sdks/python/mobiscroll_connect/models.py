@@ -8,7 +8,7 @@ and tolerate missing optional fields.
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
@@ -334,4 +334,87 @@ class UnsubscribeWebhookResponse:
         return cls(
             success=bool(data.get("success", False)),
             message=data.get("message"),
+        )
+
+
+@dataclass(frozen=True)
+class WebhookEvent(CalendarEvent):
+    """A changed event inside a :class:`WebhookDelivery`.
+
+    ``change_type`` is ``"created"``, ``"updated"`` or ``"deleted"``. ``provider`` and
+    ``calendar_id`` fall back to the delivery's own when the event omits them.
+    """
+
+    change_type: str | None = None
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        *,
+        provider: str = "",
+        calendar_id: str = "",
+    ) -> WebhookEvent:
+        merged = dict(data)
+        for key, fallback in (("provider", provider), ("calendarId", calendar_id), ("id", "")):
+            if merged.get(key) is None:
+                merged[key] = fallback
+        event = CalendarEvent.from_dict(merged)
+        return cls(
+            **{f.name: getattr(event, f.name) for f in fields(CalendarEvent)},
+            change_type=data.get("changeType"),
+        )
+
+
+@dataclass(frozen=True)
+class WebhookDeliveryMetadata:
+    channel_id: str = ""
+    event_count: int = 0
+    is_initial_sync: bool | None = None
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> WebhookDeliveryMetadata:
+        return cls(
+            channel_id=data.get("channelId") or "",
+            event_count=int(data.get("eventCount") or 0),
+            is_initial_sync=data.get("isInitialSync"),
+        )
+
+
+@dataclass(frozen=True)
+class WebhookDelivery:
+    """A verified webhook delivery sent by Mobiscroll Connect to the project's webhook URL.
+
+    ``change_type`` is ``"created"``, ``"updated"``, ``"deleted"`` or ``"mixed"`` when
+    present. ``timestamp`` is the ISO 8601 time Connect processed the change.
+    """
+
+    provider: str
+    user_id: str
+    calendar_id: str
+    events: list[WebhookEvent] = field(default_factory=list)
+    change_type: str | None = None
+    timestamp: str = ""
+    metadata: WebhookDeliveryMetadata = field(default_factory=WebhookDeliveryMetadata)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> WebhookDelivery:
+        provider = data.get("provider") or ""
+        calendar_id = data.get("calendarId") or ""
+        events_raw = data.get("events") or []
+        metadata_raw = data.get("metadata")
+        return cls(
+            provider=provider,
+            user_id=data.get("userId") or "",
+            calendar_id=calendar_id,
+            events=[
+                WebhookEvent.from_dict(e, provider=provider, calendar_id=calendar_id)
+                for e in events_raw
+                if isinstance(e, Mapping)
+            ],
+            change_type=data.get("changeType"),
+            timestamp=data.get("timestamp") or "",
+            metadata=WebhookDeliveryMetadata.from_dict(
+                metadata_raw if isinstance(metadata_raw, Mapping) else {}
+            ),
         )

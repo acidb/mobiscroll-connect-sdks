@@ -40,20 +40,21 @@ MobiscrollConnectClient        — public sync entry point; constructs and wires
         ├── resources/Auth     — generate_auth_url, get_token, set_credentials, get_connection_status, disconnect
         ├── resources/Calendars — list()
         ├── resources/Events   — list(), iter_all(), create(), update(), delete()
-        └── resources/Webhooks — subscribe_webhook(), unsubscribe_webhook()
+        └── resources/Webhooks — subscribe_webhook(), unsubscribe_webhook(), verify_webhook()
 
 mobiscroll_connect.aio:
 AsyncMobiscrollConnectClient   — async counterpart; identical public API, all methods are coroutines
   └── AsyncApiClient           — async HTTP layer (httpx.AsyncClient); asyncio.Lock for refresh dedup
         ├── aio/resources/AsyncAuth, AsyncCalendars, AsyncEvents, AsyncWebhooks
 
-Config                         — frozen dataclass: client_id, client_secret, redirect_uri, base_url, timeout
+Config                         — frozen dataclass: client_id, client_secret, redirect_uri, base_url, timeout, webhook_public_key
 TokenResponse                  — frozen dataclass: access_token, token_type, expires_in, refresh_token
 CalendarEvent                  — frozen dataclass for API event responses
 EventsListResponse             — frozen dataclass wrapping list[CalendarEvent] + pagination; iterable
 Calendar                       — frozen dataclass for calendar list entries
 ConnectionStatusResponse       — frozen dataclass for /oauth/connection-status
 DisconnectResponse             — frozen dataclass for /oauth/disconnect
+WebhookDelivery                — frozen dataclass for a verified delivery; events are WebhookEvent (CalendarEvent + change_type)
 
 Exceptions:
   MobiscrollConnectError       — base; .message and .code
@@ -63,9 +64,12 @@ Exceptions:
   RateLimitError               — 429; .retry_after
   ServerError                  — 5xx; .status_code
   NetworkError                 — transport failures
+  WebhookVerificationError     — webhook delivery failed verification; .reason
 
 _internal/errors.py            — map_response_error, map_transport_error (pure functions, shared by sync+async)
 _internal/payloads.py          — build_list_events_query, build_event_payload, build_delete_query (pure, shared)
+_internal/webhook_keys.py      — WebhookKeyStore: process-wide webhook key cache (shared by sync+async)
+webhook_verification.py        — verify_webhook_signature (pure Ed25519 v1a check), parse_webhook_delivery
 ```
 
 ### Token refresh
@@ -117,16 +121,18 @@ python app.py
 | `mobiscroll_connect/api_client.py`         | Sync HTTP methods, token refresh, error mapping                    |
 | `mobiscroll_connect/async_api_client.py`   | Async HTTP layer; identical surface, asyncio.Lock                  |
 | `mobiscroll_connect/aio/client.py`         | AsyncMobiscrollConnectClient                                       |
-| `mobiscroll_connect/aio/resources.py`      | AsyncAuth, AsyncCalendars, AsyncEvents                             |
+| `mobiscroll_connect/aio/resources.py`      | AsyncAuth, AsyncCalendars, AsyncEvents, AsyncWebhooks              |
 | `mobiscroll_connect/config.py`             | Immutable client config dataclass                                  |
 | `mobiscroll_connect/models.py`             | All response DTOs (frozen dataclasses with `from_dict` classmethods)|
 | `mobiscroll_connect/exceptions.py`         | Exception hierarchy                                                |
 | `mobiscroll_connect/resources/auth.py`     | OAuth flow methods                                                 |
 | `mobiscroll_connect/resources/calendars.py`| Calendar listing                                                   |
 | `mobiscroll_connect/resources/events.py`   | Event CRUD + iter_all pagination helper                            |
-| `mobiscroll_connect/resources/webhooks.py` | Webhook subscribe/unsubscribe                                      |
+| `mobiscroll_connect/resources/webhooks.py` | Webhook subscribe/unsubscribe/verify                               |
+| `mobiscroll_connect/webhook_verification.py` | `verify_webhook_signature` (pure Ed25519 `v1a` check)            |
 | `mobiscroll_connect/_internal/errors.py`   | HTTP status → exception mapping (shared)                           |
 | `mobiscroll_connect/_internal/payloads.py` | Query/payload builders (shared, pure functions)                    |
+| `mobiscroll_connect/_internal/webhook_keys.py` | Process-wide webhook key cache (shared by sync+async)          |
 | `tests/`                                   | pytest tests (auth, calendars, events, models, payloads, async)    |
 | `minimal-app/app.py`                       | Reference Flask implementation (action-dispatch pattern)           |
 | `minimal-app/templates/`                   | Dark-theme UI pages (ui, calendars, events, event_edit)            |
@@ -135,7 +141,7 @@ python app.py
 
 ## Coding Standards
 
-- All models are `@dataclass(frozen=True)` — no Pydantic, zero extra runtime dependencies.
+- All models are `@dataclass(frozen=True)` — no Pydantic. Runtime dependencies are `httpx` and `cryptography` (Ed25519 webhook signatures) only.
 - Wire format is camelCase; all Python-facing properties are snake_case. `from_dict` classmethods handle the mapping.
 - Resources are attributes on the client (`client.events.list()`), not callable getters.
 - Use `from __future__ import annotations` on every file for forward-reference compatibility with Python 3.9.
@@ -161,3 +167,4 @@ python app.py
 - All HTTP verbs set `Authorization: Bearer {token}` headers — never embed tokens in query strings or bodies.
 - `on_tokens_refreshed` callback exceptions are swallowed — persistence failures must not break the refresh path.
 - The async `on_tokens_refreshed` callback can be sync or async; `AsyncApiClient` detects coroutines via `asyncio.iscoroutine` and awaits them.
+- Webhook verification: the key cache is **per keys URL, process-wide**, shared by sync and async clients (customers often create a client per request), fetched lazily, refreshed per `Cache-Control`, re-fetched at most once a minute after a failed match, and keeps the last good keys when a fetch fails. A fetch in flight is a `concurrent.futures.Future` that threads and coroutines all wait on. The pinned `webhook_public_key` is used **only when no fetched keys exist** — merging it in would keep a retired (possibly compromised) key valid. The key fetch is a plain `httpx.get`, never the authenticated client. Test vectors in `tests/fixtures/webhook-vectors.json` come from the Connect server's signer and are shared by all seven SDKs.

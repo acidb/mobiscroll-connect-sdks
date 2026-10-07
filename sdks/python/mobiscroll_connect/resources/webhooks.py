@@ -1,16 +1,33 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Union
+from typing import Any, Union
 
+from .._internal.webhook_keys import (
+    WebhookKeyStore,
+    is_retryable,
+    keys_or_pinned,
+    webhook_keys_url,
+)
 from ..api_client import ApiClient
-from ..models import Provider, SubscribeWebhookResponse, UnsubscribeWebhookResponse
+from ..exceptions import WebhookVerificationError
+from ..models import (
+    Provider,
+    SubscribeWebhookResponse,
+    UnsubscribeWebhookResponse,
+    WebhookDelivery,
+)
+from ..webhook_verification import (
+    WebhookPayload,
+    parse_webhook_delivery,
+    verify_webhook_signature,
+)
 
 ProviderLike = Union[str, Provider]
 
 
 class Webhooks:
-    """Webhook subscriptions for calendar change notifications."""
+    """Webhook subscriptions for calendar change notifications, and delivery verification."""
 
     def __init__(self, api_client: ApiClient) -> None:
         self._api = api_client
@@ -72,3 +89,48 @@ class Webhooks:
 
         data = self._api.post("unsubscribe-webhook", json=payload)
         return UnsubscribeWebhookResponse.from_dict(data if isinstance(data, Mapping) else {})
+
+    def verify_webhook(
+        self, payload: WebhookPayload, headers: Mapping[str, Any]
+    ) -> WebhookDelivery:
+        """Verify that a webhook delivery came from Mobiscroll Connect, and parse it.
+
+        Fetches the public keys from ``/.well-known/webhook-keys`` on first use and
+        caches them for the whole process, refreshing them as the endpoint's
+        ``Cache-Control`` allows. When no signature matches, it re-fetches the keys once
+        (at most once a minute) before rejecting, so a key rotation never rejects genuine
+        deliveries. ``webhook_public_key`` from the config is used only when the endpoint
+        cannot be reached.
+
+        :param payload: The raw request body, exactly as received (``bytes`` or ``str``);
+            not a parsed object.
+        :param headers: The request headers — any mapping, e.g. Flask's
+            ``request.headers``; lookup is case-insensitive.
+        :raises WebhookVerificationError: When the delivery is not genuine; respond
+            with a 4xx.
+
+        Example::
+
+            @app.post("/webhooks/mobiscroll")
+            def mobiscroll_webhook():
+                try:
+                    delivery = client.webhooks.verify_webhook(request.get_data(), request.headers)
+                except WebhookVerificationError:
+                    return "", 401
+                handle_delivery(delivery)
+                return "", 204
+        """
+        store = WebhookKeyStore.for_url(webhook_keys_url(self._api.base_url))
+        pinned_key = self._api.config.webhook_public_key
+
+        try:
+            keys = store.get_keys()
+            verify_webhook_signature(payload, headers, keys_or_pinned(keys, pinned_key))
+        except WebhookVerificationError as error:
+            if not is_retryable(error) or not store.can_refetch():
+                raise
+            store.refresh()
+            keys = store.get_keys()
+            verify_webhook_signature(payload, headers, keys_or_pinned(keys, pinned_key))
+
+        return parse_webhook_delivery(payload)

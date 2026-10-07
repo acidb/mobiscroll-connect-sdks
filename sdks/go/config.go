@@ -20,6 +20,7 @@ type config struct {
 	timeout           time.Duration
 	httpClient        *http.Client
 	onTokensRefreshed func(*TokenResponse)
+	webhookPublicKey  string
 }
 
 // ClientOption mutates a config during NewClient.
@@ -51,4 +52,11 @@ func WithTimeout(d time.Duration) ClientOption {
 // goroutine; keep it fast and panic-free.
 func WithTokensRefreshedCallback(cb func(*TokenResponse)) ClientOption {
 	return func(c *config) { c.onTokensRefreshed = cb }
+}
+
+// WithWebhookPublicKey pins a "whpk_" webhook public key. Webhooks.VerifyWebhook
+// uses it only when the keys endpoint cannot be reached; it stops verifying
+// once Mobiscroll retires that key, so replace it on every rotation.
+func WithWebhookPublicKey(key string) ClientOption {
+	return func(c *config) { c.webhookPublicKey = key }
 }

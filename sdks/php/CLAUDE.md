@@ -39,9 +39,13 @@ MobiscrollConnectClient        — public entry point; constructs and wires all 
   └── ApiClient                — HTTP layer (Guzzle); auth headers; token refresh; error mapping
         ├── Resources/Auth     — generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect
         ├── Resources/Calendars — list()
-        └── Resources/Events   — list(), create(), update(), delete()
+        ├── Resources/Events   — list(), create(), update(), delete()
+        └── Resources/Webhooks — subscribeWebhook(), unsubscribeWebhook(), verifyWebhook()
 
-Config                         — readonly DTO: clientId, clientSecret, redirectUri
+Config                         — readonly DTO: clientId, clientSecret, redirectUri, webhookPublicKey, webhookKeyCache
+WebhookVerifier                — static verifyWebhookSignature(): pure Ed25519 `v1a` check, no network
+WebhookKeyStore                — @internal process-wide webhook key cache (+ optional PSR-16 sharing)
+WebhookDelivery                — readonly DTO for a verified delivery; events are WebhookEvent (CalendarEvent + changeType)
 TokenResponse                  — readonly DTO: access_token, token_type, expires_in, refresh_token
 CalendarEvent                  — readonly DTO for API event responses
 EventsListResponse             — readonly DTO wrapping []CalendarEvent + pagination
@@ -57,6 +61,7 @@ Exceptions/
   RateLimitError               — 429; adds getRetryAfter()
   ServerError                  — 5xx; adds getStatusCode()
   NetworkError                 — connection failures
+  WebhookVerificationError     — failed webhook verification; adds getReason()
 ```
 
 ### Token refresh
@@ -101,8 +106,13 @@ vendor/bin/phpunit tests/Unit/AuthTest.php   # single test file
 | `src/Resources/Auth.php`           | OAuth flow methods                                                            |
 | `src/Resources/Calendars.php`      | Calendar listing                                                              |
 | `src/Resources/Events.php`         | Event CRUD + query building                                                   |
+| `src/Resources/Webhooks.php`       | Webhook subscribe/unsubscribe + verifyWebhook                                 |
+| `src/WebhookVerifier.php`          | `verifyWebhookSignature` (pure Ed25519 `v1a` check via libsodium)             |
+| `src/WebhookKeyStore.php`          | Process-wide webhook key cache keyed by keys URL; optional PSR-16 sharing     |
+| `src/WebhookDelivery.php`          | Verified delivery DTO (+ `WebhookEvent`, `WebhookDeliveryMetadata`)           |
 | `src/Exceptions/`                  | Exception hierarchy                                                           |
-| `tests/Unit/`                      | PHPUnit tests (Auth, Calendars, Events, ConnectionStatusResponse, Exceptions) |
+| `tests/Unit/`                      | PHPUnit tests (Auth, Calendars, Events, Webhooks, WebhookVerification, ...)   |
+| `tests/Unit/fixtures/`             | `webhook-vectors.json`, shared by all seven SDKs                              |
 | `tests/Smoke/`                     | Minimal app smoke test                                                        |
 | `minimal-app/public/index.php`     | Reference implementation backend                                              |
 | `minimal-app/public/ui.php`        | Reference implementation frontend UI                                          |
@@ -139,3 +149,4 @@ vendor/bin/phpunit tests/Unit/AuthTest.php   # single test file
 - `buildListQuery` converts `pageSize` to string and caps it at 1000. `singleEvents` is serialised as `'true'`/`'false'` strings (not booleans) because it goes into a URL query string.
 - `CalendarEvent::fromArray` throws `\InvalidArgumentException` for missing required fields (`provider`, `id`, `calendarId`).
 - All HTTP verbs set `Authorization: Bearer {token}` headers — never embed tokens in query strings or request bodies.
+- Webhook verification: the key cache is **per keys URL, process-wide** (static, shared by every client), fetched lazily, refreshed per `Cache-Control`, fetch attempted at most once a minute, and keeps the last good keys when a fetch fails. Under PHP-FPM that state lives for one request, so `webhookKeyCache` (PSR-16) persists keys and the last-attempt time across requests. The pinned `webhookPublicKey` is used **only when no fetched keys exist** — merging it in would keep a retired (possibly compromised) key valid. The key fetch uses its own plain Guzzle client, never `ApiClient`. Test vectors in `tests/Unit/fixtures/webhook-vectors.json` come from the Connect server's signer.

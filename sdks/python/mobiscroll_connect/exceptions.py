@@ -8,7 +8,7 @@ specific subclasses (e.g. :class:`AuthenticationError`).
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, NamedTuple
+from typing import Any, Literal, NamedTuple
 
 
 class MobiscrollConnectError(Exception):
@@ -118,3 +118,24 @@ class NetworkError(MobiscrollConnectError):
 
     def __init__(self, message: str = "Network error") -> None:
         super().__init__(message)
+
+
+WebhookVerificationFailure = Literal[
+    "missing_headers",
+    "invalid_timestamp",
+    "timestamp_out_of_tolerance",
+    "no_public_keys",
+    "no_matching_signature",
+    "invalid_payload",
+]
+
+
+class WebhookVerificationError(MobiscrollConnectError):
+    """Raised when a webhook delivery fails verification. Respond with a 4xx and
+    do not process it. ``reason`` says which check failed."""
+
+    code = "WEBHOOK_VERIFICATION_ERROR"
+
+    def __init__(self, message: str, reason: WebhookVerificationFailure) -> None:
+        super().__init__(message)
+        self.reason: WebhookVerificationFailure = reason

@@ -41,12 +41,14 @@ MobiscrollConnectClient        — public entry point; constructs ApiClient + re
   ├── Auth: Auth               — GenerateAuthUrl, GetTokenAsync, GetConnectionStatusAsync, DisconnectAsync
   ├── Calendars: Calendars     — ListAsync()
   ├── Events: Events           — ListAsync(), CreateAsync(), UpdateAsync(), DeleteAsync()
-  └── Webhooks: Webhooks       — SubscribeWebhookAsync(), UnsubscribeWebhookAsync()
+  └── Webhooks: Webhooks       — SubscribeWebhookAsync(), UnsubscribeWebhookAsync(), VerifyWebhookAsync()
 
 ApiClient                      — HttpClient wrapper; Bearer auth; 401 → token refresh → retry; error mapping
   └── SemaphoreSlim            — deduplicates concurrent 401-triggered refreshes via _inflightRefresh Task
 
-MobiscrollConnectConfig        — sealed DTO: ClientId, ClientSecret, RedirectUri
+MobiscrollConnectConfig        — sealed DTO: ClientId, ClientSecret, RedirectUri, WebhookPublicKey
+WebhookVerifier (static)       — VerifyWebhookSignature: pure Ed25519 `v1a` check (NSec.Cryptography / libsodium)
+WebhookKeyStore (internal)     — process-wide webhook key cache per keys URL
 Provider (enum)                — Google, Microsoft, Apple, CalDav; serialised via ProviderJsonConverter
 QueryStringBuilder (internal)  — builds URL query strings; booleans → "true"/"false" strings
 ServiceCollectionExtensions    — AddMobiscrollConnect() for ASP.NET Core DI
@@ -112,7 +114,9 @@ dotnet add package Mobiscroll.Connect          # consume (in another project)
 | `src/Mobiscroll.Connect/Resources/Auth.cs` | OAuth flow: GenerateAuthUrl, GetTokenAsync, GetConnectionStatusAsync, DisconnectAsync |
 | `src/Mobiscroll.Connect/Resources/Calendars.cs` | ListAsync() |
 | `src/Mobiscroll.Connect/Resources/Events.cs` | ListAsync, CreateAsync, UpdateAsync, DeleteAsync; ISO 8601 date formatting |
-| `src/Mobiscroll.Connect/Resources/Webhooks.cs` | SubscribeWebhookAsync, UnsubscribeWebhookAsync |
+| `src/Mobiscroll.Connect/Resources/Webhooks.cs` | SubscribeWebhookAsync, UnsubscribeWebhookAsync, VerifyWebhookAsync |
+| `src/Mobiscroll.Connect/WebhookVerifier.cs` | `WebhookVerifier.VerifyWebhookSignature` (pure Ed25519 `v1a` check) + `WebhookVerificationOptions` |
+| `src/Mobiscroll.Connect/Internal/WebhookKeyStore.cs` | Process-wide webhook key cache (`Reset()` and `Clock` are test hooks) |
 | `src/Mobiscroll.Connect/Models/` | Request/response DTOs (TokenResponse, CalendarEvent, EventCreateData, WebhookSubscribeData, etc.) |
 | `src/Mobiscroll.Connect/Exceptions/` | Exception hierarchy |
 | `src/Mobiscroll.Connect/Internal/QueryStringBuilder.cs` | URL query string encoding; parity with Node/PHP wire format |
@@ -122,6 +126,8 @@ dotnet add package Mobiscroll.Connect          # consume (in another project)
 | `tests/Mobiscroll.Connect.Tests/CalendarsTests.cs` | Calendar API tests |
 | `tests/Mobiscroll.Connect.Tests/EventsTests.cs` | Event CRUD tests |
 | `tests/Mobiscroll.Connect.Tests/WebhooksTests.cs` | Webhook subscribe/unsubscribe tests |
+| `tests/Mobiscroll.Connect.Tests/WebhookVerifierTests.cs` | Shared signature vectors through `VerifyWebhookSignature` |
+| `tests/Mobiscroll.Connect.Tests/WebhookVerificationTests.cs` | `VerifyWebhookAsync` key fetching, caching, rotation, pinned key |
 | `tests/Mobiscroll.Connect.Tests/ErrorMappingTests.cs` | Exception type mapping |
 | `tests/Mobiscroll.Connect.Tests/SerializationTests.cs` | JSON round-trip tests |
 | `tests/Mobiscroll.Connect.Tests/TestHelpers/FakeHttpMessageHandler.cs` | Queued-response HTTP handler; records requests for assertion |
@@ -163,3 +169,4 @@ dotnet add package Mobiscroll.Connect          # consume (in another project)
 - `GenerateAuthUrl` builds the URL from `ApiClient.BaseAddress` — never a hardcoded string — so changing the base URL propagates automatically.
 - `CLIENT_ID` header is sent alongside `Authorization: Basic` on token exchange requests (`GetTokenAsync` and `RefreshAccessTokenAsync`).
 - `dist/` / build output is never edited directly; `src/` is the source of truth.
+- Webhook verification: the key cache is **per keys URL, process-wide** (customers often create a client per request), fetched lazily, refreshed per `Cache-Control`, re-fetched at most once a minute after a failed match, and keeps the last good keys when a fetch fails. The pinned `WebhookPublicKey` is used **only when no fetched keys exist** — merging it in would keep a retired (possibly compromised) key valid. The key fetch goes through the client's `HttpClient` as a plain request (no Bearer token, no refresh path) with a 10 s timeout, and is not cancelled by any one caller's token. Ed25519 comes from `NSec.Cryptography` pinned to `25.4.*` (last release supporting net8.0). Test vectors in `tests/Mobiscroll.Connect.Tests/Fixtures/webhook-vectors.json` come from the Connect server's signer and are shared by all seven SDKs.

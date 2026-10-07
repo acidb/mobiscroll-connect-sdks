@@ -7,7 +7,7 @@ Java client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calend
 **[Maven Central](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk)** · **[Documentation](https://mobiscroll.com/docs/connect/java-sdk)** · **[Changelog](https://github.com/acidb/mobiscroll-connect-sdks/blob/main/sdks/java/CHANGELOG.md)** · **[Source](https://github.com/acidb/mobiscroll-connect-sdks/tree/main/sdks/java)**
 
 - **Coordinates:** `com.mobiscroll:connect-sdk`
-- **Min Java:** 11
+- **Min Java:** 17
 - **HTTP:** OkHttp 4
 - **JSON:** Jackson
 
@@ -91,6 +91,45 @@ client.webhooks().unsubscribeWebhook(WebhookUnsubscribeParams.builder()
     .build());
 ```
 
+### Verify webhook deliveries
+
+Every delivery to your webhook URL is signed. `verifyWebhook()` checks the signature and the timestamp, then returns the parsed `WebhookDelivery`, or throws `WebhookVerificationException`. Pass the **raw** request body: binding the body to a parsed object first changes the bytes and every check fails. Header names are matched case-insensitively; both `Map<String, String>` and `Map<String, List<String>>` work.
+
+```java
+import com.mobiscroll.connect.exceptions.WebhookVerificationException;
+import com.mobiscroll.connect.models.WebhookDelivery;
+
+@PostMapping("/webhooks/mobiscroll")
+ResponseEntity<Void> webhook(@RequestBody byte[] body, @RequestHeader Map<String, String> headers) {
+    WebhookDelivery delivery;
+    try {
+        delivery = client.webhooks().verifyWebhook(body, headers);
+    } catch (WebhookVerificationException e) {
+        // 503 lets Connect retry when the keys could not be loaded; 401 is final.
+        boolean noKeys = e.getReason() == WebhookVerificationException.Reason.NO_PUBLIC_KEYS;
+        return ResponseEntity.status(noKeys ? 503 : 401).build();
+    }
+    handleDelivery(delivery);
+    return ResponseEntity.noContent().build();
+}
+```
+
+The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process (shared by every client instance) as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side. `verifyWebhook()` blocks while the keys are fetched.
+
+If your handler cannot make outbound requests, pin the key. `webhookPublicKey` is used only when the keys endpoint cannot be reached; it stops working when Mobiscroll retires that key, so you must replace it on every rotation.
+
+```java
+MobiscrollConnectClient client = new MobiscrollConnectClient(
+    MobiscrollConnectConfig.builder()
+        .clientId(clientId)
+        .clientSecret(clientSecret)
+        .redirectUri(redirectUri)
+        .webhookPublicKey(System.getenv("MOBISCROLL_WEBHOOK_PUBLIC_KEY")) // whpk_...
+        .build());
+```
+
+To check against keys you supply, with no fetching, call `WebhookVerifier.verifyWebhookSignature(rawBody, headers, List.of("whpk_..."))`. It throws `WebhookVerificationException` and returns nothing. See [Verifying deliveries](https://mobiscroll.com/docs/connect/api/webhooks#verifying-deliveries).
+
 ## Configuration
 
 For a custom base URL, HTTP timeout, OkHttp client, or a token-refresh callback for persistence, use the builder:
@@ -109,6 +148,12 @@ MobiscrollConnectClient client = new MobiscrollConnectClient(
         .build());
 ```
 
+## Token refresh
+
+When a request returns `401 Unauthorized` and a refresh token is available, the SDK exchanges it for a new access token and retries the request. Persist the new tokens in the `onTokensRefreshed` callback shown above. If the refresh itself fails, the SDK throws `AuthenticationException` and the user must re-authorize.
+
+**Running more than one instance.** Concurrent calls on the same client share a single refresh attempt. The SDK does not coordinate across processes — separate containers, cluster workers or serverless invocations each refresh from the tokens they hold in memory. Connect accepts concurrent refreshes of the same token, but refreshing with a copy that is two or more refreshes out of date revokes the user's authorization. Persist refreshed tokens to storage every instance reads, and call `client.setCredentials(tokens)` with the current tokens when a process starts a job or handles a request. See [Refreshing from several instances](https://mobiscroll.com/docs/connect/api/oauth#concurrent-refresh).
+
 ## Error handling
 
 The SDK throws typed exceptions, all extending `com.mobiscroll.connect.exceptions.MobiscrollConnectException`:
@@ -121,6 +166,7 @@ The SDK throws typed exceptions, all extending `com.mobiscroll.connect.exception
 | 429 | `RateLimitException` | `getRetryAfter()` (`Integer`, seconds) |
 | 5xx | `ServerException` | `getStatusCode()` |
 | Transport (timeout / DNS / reset) | `NetworkException` | wraps cause |
+| Webhook delivery fails `verifyWebhook()` | `WebhookVerificationException` | `getReason()` |
 
 ## Minimal app
 

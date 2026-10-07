@@ -14,12 +14,13 @@ PHP client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calenda
 - **Event management**: Create, read, update, and delete calendar events
 - **Calendar operations**: List calendars from all connected providers
 - **Connection management**: Check provider connection status and disconnect accounts
+- **Webhook verification**: Check the signature of webhook deliveries and parse them
 - **Typed exceptions**: Distinct error classes for authentication, validation, rate limiting, and more
 - **Type-safe**: PHP 8.1+ with strict typing throughout
 
 ## Requirements
 
-- PHP 8.1 or higher
+- PHP 8.1 or higher, with the bundled `sodium` extension
 - Composer
 
 ## Installation
@@ -62,6 +63,8 @@ $client->onTokensRefreshed(function (\Mobiscroll\Connect\TokenResponse $updatedT
 ```
 
 If the refresh token is invalid or revoked, the SDK throws `AuthenticationError` and the user must re-authorize.
+
+**Running more than one instance.** The SDK does not deduplicate refreshes: under PHP-FPM every request is its own process, so concurrent requests for the same user each refresh on their own. Connect accepts concurrent refreshes of the same token, but refreshing with a copy that is two or more refreshes out of date revokes the user's authorization. Persist refreshed tokens to storage every request reads, such as your database, and call `$client->auth()->setCredentials(...)` with the current tokens at the start of each request. See [Refreshing from several instances](https://mobiscroll.com/docs/connect/api/oauth#concurrent-refresh).
 
 ### OAuth2 Flow
 
@@ -224,6 +227,46 @@ $client->webhooks()->unsubscribeWebhook([
 ]);
 ```
 
+### Verify webhook deliveries
+
+Every delivery to your webhook URL is signed. `verifyWebhook()` checks the signature and the timestamp, then returns the parsed `WebhookDelivery`, or throws `WebhookVerificationError`. Pass the **raw** request body, not a decoded array: re-encoding changes the bytes and every check fails.
+
+```php
+use Mobiscroll\Connect\Exceptions\WebhookVerificationError;
+
+// webhook.php
+try {
+    $delivery = $client->webhooks()->verifyWebhook(file_get_contents('php://input'), getallheaders());
+} catch (WebhookVerificationError $e) {
+    // 503 lets Connect retry when the keys could not be loaded; 401 is final.
+    http_response_code($e->getReason() === WebhookVerificationError::NO_PUBLIC_KEYS ? 503 : 401);
+    exit;
+}
+
+http_response_code(204);
+handleDelivery($delivery); // $delivery->userId, $delivery->calendarId, $delivery->events, ...
+```
+
+Headers can be any array with header names in any casing, or a PSR-7 request. In Laravel or Symfony, pass `$request->getContent()` and `$request->headers->all()`.
+
+The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side.
+
+Under PHP-FPM every request is its own process, so without a shared cache each request fetches the keys on its first verification. Pass any PSR-16 cache (your framework's cache, APCu, Redis) as `webhookKeyCache` to share the keys and the fetch timestamps across requests and workers. Long-running workers (RoadRunner, Swoole, queue workers) keep the keys in memory either way.
+
+```php
+$client = new MobiscrollConnectClient(
+    clientId: 'YOUR_CLIENT_ID',
+    clientSecret: 'YOUR_CLIENT_SECRET',
+    redirectUri: 'YOUR_REDIRECT_URI',
+    webhookKeyCache: $cache, // any Psr\SimpleCache\CacheInterface
+    webhookPublicKey: 'whpk_...', // optional
+);
+```
+
+If your handler cannot make outbound requests, pin the key. `webhookPublicKey` is used only when the keys endpoint cannot be reached; it stops working when Mobiscroll retires that key, so you must replace it on every rotation.
+
+To check against keys you supply, with no fetching, call `WebhookVerifier::verifyWebhookSignature($rawBody, $headers, ['whpk_...'])`. It throws `WebhookVerificationError` and returns nothing. See [Verifying deliveries](https://mobiscroll.com/docs/connect/api/webhooks#verifying-deliveries).
+
 ### Connection Management
 
 ```php
@@ -266,6 +309,7 @@ All SDK methods throw exceptions that extend `MobiscrollConnectException`:
 | `RateLimitError` | 429 | `getRetryAfter(): ?int` |
 | `ServerError` | 5xx | `getStatusCode(): int` |
 | `NetworkError` | — | — |
+| `WebhookVerificationError` | — | `getReason(): string` |
 
 ```php
 use Mobiscroll\Connect\Exceptions\{
@@ -321,7 +365,8 @@ src/
 │   ├── NotFoundError.php
 │   ├── RateLimitError.php
 │   ├── ServerError.php
-│   └── NetworkError.php
+│   ├── NetworkError.php
+│   └── WebhookVerificationError.php
 ├── Resources/
 │   ├── Auth.php
 │   ├── Calendars.php
@@ -338,15 +383,22 @@ src/
 ├── DisconnectResponse.php
 ├── SubscribeWebhookResponse.php
 ├── UnsubscribeWebhookResponse.php
-└── WebhookSubscription.php
+├── WebhookSubscription.php
+├── WebhookDelivery.php
+├── WebhookDeliveryMetadata.php
+├── WebhookEvent.php
+├── WebhookVerifier.php
+└── WebhookKeyStore.php
 tests/
 ├── Unit/
+│   ├── fixtures/webhook-vectors.json
 │   ├── AuthTest.php
 │   ├── CalendarsTest.php
 │   ├── ConnectionStatusResponseTest.php
 │   ├── EventsTest.php
 │   ├── ExceptionsTest.php
-│   └── WebhooksTest.php
+│   ├── WebhooksTest.php
+│   └── WebhookVerificationTest.php
 └── Smoke/
     └── MinimalAppSmokeTest.php
 ```

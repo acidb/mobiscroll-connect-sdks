@@ -78,6 +78,19 @@ module Mobiscroll
       end
     end
 
+    # Raised when a webhook delivery fails verification. Respond with a 4xx and do not process it.
+    #
+    # +reason+ is one of 'missing_headers', 'invalid_timestamp', 'timestamp_out_of_tolerance',
+    # 'no_public_keys', 'no_matching_signature' or 'invalid_payload'.
+    class WebhookVerificationError < Error
+      attr_reader :reason
+
+      def initialize(message = 'Webhook verification failed', reason: nil)
+        super(message, code: 'WEBHOOK_VERIFICATION_ERROR')
+        @reason = reason
+      end
+    end
+
     # Maps an HTTP response (status + body hash + headers) to the matching
     # typed error. Returns nil for 2xx responses.
     def self.map_response_error(status, body, headers)

@@ -257,6 +257,36 @@ type UnsubscribeWebhookParams struct {
 	ResourceID string `json:"resourceId,omitempty"`
 }
 
+// WebhookDelivery is a verified webhook delivery sent by Mobiscroll Connect to
+// the project's webhook URL, as returned by Webhooks.VerifyWebhook.
+type WebhookDelivery struct {
+	Provider   Provider       `json:"provider"`
+	UserID     string         `json:"userId"`
+	CalendarID string         `json:"calendarId"`
+	Events     []WebhookEvent `json:"events"`
+	// ChangeType is "created", "updated", "deleted" or "mixed"; empty when absent.
+	ChangeType string `json:"changeType,omitempty"`
+	// Timestamp is the ISO 8601 time Connect processed the change.
+	Timestamp string                  `json:"timestamp"`
+	Metadata  WebhookDeliveryMetadata `json:"metadata"`
+}
+
+// WebhookEvent is a changed event in a WebhookDelivery: the usual
+// CalendarEvent fields plus the kind of change.
+type WebhookEvent struct {
+	CalendarEvent
+	// ChangeType is "created", "updated" or "deleted".
+	ChangeType string `json:"changeType,omitempty"`
+}
+
+// WebhookDeliveryMetadata describes the subscription channel and batch of a
+// WebhookDelivery.
+type WebhookDeliveryMetadata struct {
+	ChannelID     string `json:"channelId"`
+	EventCount    int    `json:"eventCount"`
+	IsInitialSync bool   `json:"isInitialSync,omitempty"`
+}
+
 // UnsubscribeWebhookResponse is the result of Webhooks.UnsubscribeWebhook.
 // Success is true even when the provider-side subscription had already
 // expired — check Message for details in that case. Treat a 200 response as

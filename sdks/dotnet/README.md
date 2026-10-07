@@ -13,7 +13,7 @@
 - **Automatic token refresh**: Silently refreshes expired access tokens and retries the original request
 - **Event management**: Create, read, update, and delete calendar events
 - **Calendar operations**: List calendars from all connected providers
-- **Webhooks**: Subscribe to and unsubscribe from calendar change notifications
+- **Webhooks**: Subscribe to and unsubscribe from calendar change notifications, and verify deliveries
 - **Connection management**: Check provider connection status and disconnect accounts
 - **Typed exceptions**: Distinct error classes for authentication, validation, rate limiting, and more
 - **ASP.NET Core integration**: First-class dependency injection support via `AddMobiscrollConnect()`
@@ -76,6 +76,8 @@ client.OnTokensRefreshed(updatedTokens =>
 ```
 
 If the refresh token is invalid or revoked, the SDK throws `AuthenticationException` and the user must re-authorize.
+
+**Running more than one instance.** Concurrent calls on the same client wait for one shared refresh. The SDK does not coordinate across processes — separate containers, cluster workers or serverless invocations each refresh from the tokens they hold in memory. Connect accepts concurrent refreshes of the same token, but refreshing with a copy that is two or more refreshes out of date revokes the user's authorization. Persist refreshed tokens to storage every instance reads, and call `client.SetCredentials(...)` with the current tokens when a process starts a job or handles a request. See [Refreshing from several instances](https://mobiscroll.com/docs/connect/api/oauth#concurrent-refresh).
 
 ### OAuth2 Flow
 
@@ -249,6 +251,54 @@ if (result.Success)
     Console.WriteLine("Unsubscribed successfully");
 ```
 
+### Verify webhook deliveries
+
+Every delivery to your webhook URL is signed. `VerifyWebhookAsync()` checks the signature and the timestamp, then returns the parsed `WebhookDelivery`, or throws `WebhookVerificationException`. Pass the **raw** request body: model binding or anything else that deserializes and re-serializes the JSON changes the bytes, and every check fails.
+
+```csharp
+using Mobiscroll.Connect.Exceptions;
+using Mobiscroll.Connect.Models;
+
+app.MapPost("/webhooks/mobiscroll", async (HttpRequest request, MobiscrollConnectClient client) =>
+{
+    using var body = new MemoryStream();
+    await request.Body.CopyToAsync(body);
+
+    WebhookDelivery delivery;
+    try
+    {
+        delivery = await client.Webhooks.VerifyWebhookAsync(body.ToArray(), request.Headers);
+    }
+    catch (WebhookVerificationException e)
+    {
+        return e.Reason == WebhookVerificationReason.NoPublicKeys
+            ? Results.StatusCode(503)
+            : Results.Unauthorized();
+    }
+
+    await HandleDeliveryAsync(delivery);
+    return Results.NoContent();
+});
+```
+
+The body can be a `byte[]`, `ReadOnlyMemory<byte>` or `string`. The headers can be ASP.NET Core's `IHeaderDictionary`, `HttpHeaders`, or any dictionary of header names to values; names are matched in any casing.
+
+The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side.
+
+If your handler cannot make outbound requests, pin the key. `WebhookPublicKey` is used only when the keys endpoint cannot be reached; it stops working when Mobiscroll retires that key, so you must replace it on every rotation.
+
+```csharp
+builder.Services.AddMobiscrollConnect(options =>
+{
+    options.ClientId = builder.Configuration["Mobiscroll:ClientId"]!;
+    options.ClientSecret = builder.Configuration["Mobiscroll:ClientSecret"]!;
+    options.RedirectUri = builder.Configuration["Mobiscroll:RedirectUri"]!;
+    options.WebhookPublicKey = builder.Configuration["Mobiscroll:WebhookPublicKey"]; // whpk_...
+});
+```
+
+To check against keys you supply, with no fetching, call `WebhookVerifier.VerifyWebhookSignature(rawBody, headers, new[] { "whpk_..." })`. It throws `WebhookVerificationException` and returns nothing. See [Verifying deliveries](https://mobiscroll.com/docs/connect/api/webhooks#verifying-deliveries).
+
 ### Connection Management
 
 ```csharp
@@ -291,6 +341,7 @@ All SDK methods throw exceptions that extend `MobiscrollConnectException`:
 | `RateLimitException`      | 429         | `RetryAfter` (`int?`) |
 | `ServerException`         | 5xx         | `StatusCode` (`int`)  |
 | `NetworkException`        | —           | —                     |
+| `WebhookVerificationException` | — (from `VerifyWebhookAsync()`) | `Reason` (`WebhookVerificationReason`) |
 
 ```csharp
 using Mobiscroll.Connect.Exceptions;
@@ -354,7 +405,8 @@ src/
     │   ├── NotFoundException.cs
     │   ├── RateLimitException.cs
     │   ├── ServerException.cs
-    │   └── NetworkException.cs
+    │   ├── NetworkException.cs
+    │   └── WebhookVerificationException.cs
     ├── Models/
     │   ├── TokenResponse.cs
     │   ├── CalendarEvent.cs
@@ -373,7 +425,8 @@ src/
     │   ├── WebhookSubscribeData.cs
     │   ├── WebhookSubscribeResponse.cs
     │   ├── WebhookUnsubscribeData.cs
-    │   └── WebhookUnsubscribeResponse.cs
+    │   ├── WebhookUnsubscribeResponse.cs
+    │   └── WebhookDelivery.cs
     ├── Resources/
     │   ├── Auth.cs
     │   ├── Calendars.cs
@@ -382,7 +435,8 @@ src/
     ├── ApiClient.cs
     ├── MobiscrollConnectClient.cs
     ├── MobiscrollConnectConfig.cs
-    └── Provider.cs
+    ├── Provider.cs
+    └── WebhookVerifier.cs
 tests/
 └── Mobiscroll.Connect.Tests/
     ├── ApiClientTests.cs
@@ -390,6 +444,8 @@ tests/
     ├── CalendarsTests.cs
     ├── EventsTests.cs
     ├── WebhooksTests.cs
+    ├── WebhookVerifierTests.cs
+    ├── WebhookVerificationTests.cs
     ├── ErrorMappingTests.cs
     └── SerializationTests.cs
 samples/
