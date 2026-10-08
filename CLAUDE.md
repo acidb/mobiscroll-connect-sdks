@@ -57,7 +57,7 @@ All seven SDKs implement the **same public surface** against the same backend. W
 
 ## Releases
 
-**⛔ HARD RULE — SDK versions follow the API's `X.Y`.** Every SDK's major.minor is always the Connect API's major.minor (API `1.5.x` → every SDK `1.5.x`). An SDK release bumps **only the patch**, to that SDK's next `1.5.z`. There is no exception: never give an SDK its own major or minor bump — not for new features, and not for breaking changes such as raising a runtime floor (Java 11 → 17 shipped as a `1.5.x` patch). SDKs move to a new `X.Y` only when the API does, and then start at `X.Y.0`. This overrides semver and any "additive = minor, breaking = major" reasoning.
+**⛔ HARD RULE — SDK versions follow the API's `X.Y`.** Every SDK's major.minor is always the Connect API's major.minor (API `1.6.x` → every SDK `1.6.x`). An SDK release bumps **only the patch**, to that SDK's next `X.Y.z`. There is no exception: never give an SDK its own major or minor bump — not for new features, and not for breaking changes such as raising a runtime floor. SDKs move to a new `X.Y` only when the API does, and then start at `X.Y.0` (API 1.6.0 moved every SDK from 1.5.1 to 1.6.0, carrying webhook verification and Java's 11 → 17 floor). This overrides semver and any "additive = minor, breaking = major" reasoning.
 
 **Releases are independent per SDK** within that rule. Each SDK has its own release cadence and its own patch number. Don't force lockstep patch numbers just because the change is cross-SDK, and don't release an SDK that has no changes.
 

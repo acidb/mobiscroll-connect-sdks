@@ -4,7 +4,7 @@ All notable changes to the Mobiscroll Connect Ruby SDK (RubyGems: `mobiscroll-co
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK's major.minor always matches the Connect API's (for example API 1.5.x → SDK 1.5.x): each release bumps only the patch, including releases with breaking changes. Patch numbers are independent per SDK, so this file covers the Ruby SDK only.
 
-## [Unreleased]
+## [1.6.0] — 2026-10-08
 
 ### Added
 
