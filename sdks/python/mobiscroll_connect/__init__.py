@@ -52,7 +52,7 @@ from .models import (
 )
 from .webhook_verification import WEBHOOK_TOLERANCE_SECONDS, verify_webhook_signature
 
-__version__ = "1.5.1"
+__version__ = "1.6.0"
 
 __all__ = [
     "WEBHOOK_TOLERANCE_SECONDS",
