@@ -200,8 +200,23 @@ console.log(status.connections);
 // user reconnects and allows it.
 const needsCalendarAccess = status.connections.google.filter((account) => account.calendarPermissionGranted === false);
 
+// Disconnect one account (its `id` from getConnectionStatus), or every account of a provider.
+// This stops the account's webhook subscriptions and deletes its provider credentials;
+// it does not revoke the user's Connect tokens.
 await client.auth.disconnect({ provider: 'google', account: 'user@gmail.com' });
+await client.auth.disconnect({ provider: 'microsoft' });
 ```
+
+### Revoke tokens
+
+`revoke()` revokes the whole grant: every Connect access and refresh token of the user. It does not disconnect calendar accounts or stop webhooks, so to remove a user entirely, disconnect each provider first (that needs a valid access token), then revoke.
+
+```ts
+await client.auth.revoke(); // stored refresh token, else access token; clears the stored credentials
+await client.auth.revoke(storedRefreshToken); // a token you pass; stored credentials are kept
+```
+
+It resolves to `{ success: true }` for any token, including an unknown or already revoked one. With no argument and no stored credentials it throws `ValidationError` without making a request.
 
 ## Error handling
 

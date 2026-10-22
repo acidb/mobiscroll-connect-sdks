@@ -51,6 +51,11 @@ class ApiClient
         $this->credentials = $tokens->toArray();
     }
 
+    public function clearCredentials(): void
+    {
+        $this->credentials = null;
+    }
+
     /**
      * @return array<string, mixed>|null
      */

@@ -68,6 +68,26 @@ client.events().create(EventCreateData.builder()
     .build());
 ```
 
+## Disconnect and revoke
+
+```java
+// Disconnect one account (its `id` from getConnectionStatus()), or every account of a provider.
+// This stops the account's webhook subscriptions and deletes its provider credentials;
+// it does not revoke the user's Connect tokens.
+client.auth().disconnect(DisconnectParams.builder()
+    .provider(Provider.GOOGLE).account("user@gmail.com").build());
+client.auth().disconnect(DisconnectParams.builder().provider(Provider.MICROSOFT).build());
+```
+
+`revoke()` revokes the whole grant: every Connect access and refresh token of the user. It does not disconnect calendar accounts or stop webhooks, so to remove a user entirely, disconnect each provider first (that needs a valid access token), then revoke.
+
+```java
+client.auth().revoke();                   // stored refresh token, else access token; clears the stored credentials
+client.auth().revoke(storedRefreshToken); // a token you pass; stored credentials are kept
+```
+
+It returns a `RevokeResponse` with `isSuccess() == true` for any token, including an unknown or already revoked one. With no argument and no stored credentials it throws `ValidationException` without making a request.
+
 ## Webhooks
 
 Subscribe to change notifications for a calendar, and unsubscribe when you're done:

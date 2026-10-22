@@ -5,6 +5,8 @@ import {
   ConnectionStatusResponse,
   DisconnectParams,
   DisconnectResponse,
+  RevokeResponse,
+  ValidationError,
 } from '../types';
 
 /**
@@ -130,10 +132,13 @@ export class Auth {
   /**
    * Disconnect a calendar provider account
    *
-   * Removes stored tokens and revokes access for a specific provider account
-   * or all accounts of a provider.
+   * Removes the account (or, without `account`, every account of the provider) from the
+   * user: stops its webhook subscriptions and deletes the stored provider credentials.
+   * It does not revoke the user's Connect access or refresh tokens (see `revoke()`), nor
+   * the grant at Google or Microsoft.
    *
-   * @param params - Disconnect parameters
+   * @param params - `provider`, and optionally `account`: the `id` of an account from
+   *   `getConnectionStatus()` (`connections[provider][].id`)
    * @returns Success confirmation
    *
    * @example
@@ -155,6 +160,48 @@ export class Auth {
       `/oauth/disconnect?${queryParams.toString()}`,
       {}
     );
+
+    return response.data;
+  }
+
+  /**
+   * Revoke the user's Connect access and refresh tokens
+   *
+   * Revokes the whole grant: every access and refresh token issued for this user. It does
+   * not disconnect calendar accounts or stop webhook subscriptions. To remove a user
+   * entirely, call `disconnect()` for each provider first (it needs a valid access token),
+   * then `revoke()`.
+   *
+   * @param token - Access or refresh token to revoke. Defaults to the stored refresh token,
+   *   else the stored access token; the stored credentials are then cleared.
+   * @returns `{ success: true }`, also for an unknown or already revoked token
+   * @throws {ValidationError} When no token is given and none is stored
+   *
+   * @example
+   * ```typescript
+   * await client.auth.disconnect({ provider: 'google' });
+   * await client.auth.revoke();
+   *
+   * // Or revoke a token you stored yourself
+   * await client.auth.revoke(storedRefreshToken);
+   * ```
+   */
+  async revoke(token?: string): Promise<RevokeResponse> {
+    const credentials = this.client.getCredentials();
+    const revokeToken = token ?? credentials?.refresh_token ?? credentials?.access_token;
+    if (!revokeToken) {
+      throw new ValidationError('No token to revoke: pass one or set credentials first');
+    }
+
+    const response = await this.client.post<RevokeResponse>(
+      '/oauth/revoke',
+      { token: revokeToken },
+      { skipAuthRefresh: true }
+    );
+
+    if (token === undefined) {
+      this.client.clearCredentials();
+    }
 
     return response.data;
   }

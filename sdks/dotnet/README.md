@@ -14,7 +14,7 @@
 - **Event management**: Create, read, update, and delete calendar events
 - **Calendar operations**: List calendars from all connected providers
 - **Webhooks**: Subscribe to and unsubscribe from calendar change notifications, and verify deliveries
-- **Connection management**: Check provider connection status and disconnect accounts
+- **Connection management**: Check provider connection status, disconnect accounts and revoke tokens
 - **Typed exceptions**: Distinct error classes for authentication, validation, rate limiting, and more
 - **ASP.NET Core integration**: First-class dependency injection support via `AddMobiscrollConnect()`
 - **Async-first**: All API calls are `async`/`await` with `CancellationToken` support
@@ -319,15 +319,29 @@ if (status.Connections.TryGetValue("google", out var googleAccounts))
 if (status.LimitReached)
     Console.WriteLine("Connection limit reached");
 
-// Disconnect a provider
+// Disconnect one account (its Id from GetConnectionStatusAsync), or every account of a provider
+// when Account is null. This stops the account's webhook subscriptions and deletes its provider
+// credentials; it does not revoke the user's Connect tokens.
 DisconnectResponse result = await client.Auth.DisconnectAsync(new DisconnectParams
 {
     Provider = Provider.Google,
+    Account = "user@gmail.com",
 });
 
 if (result.Success)
     Console.WriteLine("Disconnected successfully");
 ```
+
+### Revoke Tokens
+
+`RevokeAsync()` revokes the whole grant: every Connect access and refresh token of the user. It does not disconnect calendar accounts or stop webhooks, so to remove a user entirely, disconnect each provider first (that needs a valid access token), then revoke.
+
+```csharp
+await client.Auth.RevokeAsync();                   // stored refresh token, else access token; clears the stored credentials
+await client.Auth.RevokeAsync(storedRefreshToken); // a token you pass; stored credentials are kept
+```
+
+It returns `RevokeResponse { Success = true }` for any token, including an unknown or already revoked one. With no argument and no stored credentials it throws `ValidationException` without making a request.
 
 ## Error Handling
 
@@ -414,6 +428,7 @@ src/
     │   ├── Calendar.cs
     │   ├── ConnectionStatusResponse.cs
     │   ├── DisconnectResponse.cs
+    │   ├── RevokeResponse.cs
     │   ├── AuthorizeParams.cs
     │   ├── EventListParams.cs
     │   ├── EventCreateData.cs

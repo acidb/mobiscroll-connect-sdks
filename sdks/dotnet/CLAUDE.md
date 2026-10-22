@@ -38,7 +38,7 @@ Formatting:
 
 ```
 MobiscrollConnectClient        — public entry point; constructs ApiClient + resources; holds credentials
-  ├── Auth: Auth               — GenerateAuthUrl, GetTokenAsync, GetConnectionStatusAsync, DisconnectAsync
+  ├── Auth: Auth               — GenerateAuthUrl, GetTokenAsync, GetConnectionStatusAsync, DisconnectAsync, RevokeAsync
   ├── Calendars: Calendars     — ListAsync()
   ├── Events: Events           — ListAsync(), CreateAsync(), UpdateAsync(), DeleteAsync()
   └── Webhooks: Webhooks       — SubscribeWebhookAsync(), UnsubscribeWebhookAsync(), VerifyWebhookAsync()
@@ -111,7 +111,7 @@ dotnet add package Mobiscroll.Connect          # consume (in another project)
 | `src/Mobiscroll.Connect/ApiClient.cs` | HTTP methods, Bearer auth, 401 retry, token refresh, error mapping |
 | `src/Mobiscroll.Connect/MobiscrollConnectConfig.cs` | Immutable config DTO |
 | `src/Mobiscroll.Connect/Provider.cs` | Provider enum + `ProviderJsonConverter` |
-| `src/Mobiscroll.Connect/Resources/Auth.cs` | OAuth flow: GenerateAuthUrl, GetTokenAsync, GetConnectionStatusAsync, DisconnectAsync |
+| `src/Mobiscroll.Connect/Resources/Auth.cs` | OAuth flow: GenerateAuthUrl, GetTokenAsync, GetConnectionStatusAsync, DisconnectAsync, RevokeAsync |
 | `src/Mobiscroll.Connect/Resources/Calendars.cs` | ListAsync() |
 | `src/Mobiscroll.Connect/Resources/Events.cs` | ListAsync, CreateAsync, UpdateAsync, DeleteAsync; ISO 8601 date formatting |
 | `src/Mobiscroll.Connect/Resources/Webhooks.cs` | SubscribeWebhookAsync, UnsubscribeWebhookAsync, VerifyWebhookAsync |
@@ -165,6 +165,7 @@ dotnet add package Mobiscroll.Connect          # consume (in another project)
 - `_inflightRefresh` is set to `null` in a `finally` block — concurrent refresh calls share one in-flight Task, and the slot is always cleared.
 - Token merge on refresh: new `AccessToken` replaces the old one; `RefreshToken` is preserved if the server does not issue a new one.
 - `postRaw` never triggers the 401 retry — it is the token exchange path itself.
+- `RevokeAsync` posts via `PostJsonNoRefreshAsync` (no Bearer, no 401 refresh) so it can never mint new tokens, and calls `ClearCredentials()` only when it revoked the stored token (no argument). It has no legacy-path fallback.
 - `GetConnectionStatusAsync` and `DisconnectAsync` try `/oauth/*` first, then fall back to the legacy path without the `/oauth` prefix for older server deployments.
 - `GenerateAuthUrl` builds the URL from `ApiClient.BaseAddress` — never a hardcoded string — so changing the base URL propagates automatically.
 - `CLIENT_ID` header is sent alongside `Authorization: Basic` on token exchange requests (`GetTokenAsync` and `RefreshAccessTokenAsync`).

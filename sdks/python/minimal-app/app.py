@@ -17,6 +17,7 @@ Routes (all on the same base URL, action-dispatched like the PHP app):
   POST /?action=update-event      — JSON: update event
   POST /?action=delete-event      — JSON: delete event
   POST /?action=disconnect        — JSON: disconnect provider
+  POST /?action=revoke            — JSON: revoke the session's tokens, then clear them
 """
 
 from __future__ import annotations
@@ -225,7 +226,7 @@ def index():
     # ---- authenticated actions — require stored token --------------------
     AUTHENTICATED_ACTIONS = {
         "calendars", "events", "connection-status",
-        "create-event", "update-event", "delete-event", "disconnect",
+        "create-event", "update-event", "delete-event", "disconnect", "revoke",
     }
     if action in AUTHENTICATED_ACTIONS and not _restore_credentials(client):
         return _err("No stored token. Complete OAuth flow first.",
@@ -307,6 +308,13 @@ def index():
             )
             return jsonify({"success": result.success, "message": result.message})
 
+        # ---- revoke ------------------------------------------------------
+        if action == "revoke":
+            revoked = client.auth.revoke()
+            for key in ("access_token", "token_type", "expires_in", "refresh_token"):
+                session.pop(key, None)
+            return jsonify({"success": revoked.success})
+
     except MobiscrollConnectError as exc:
         return _err(str(exc), 500, action=action, code=exc.code)
     except Exception as exc:
@@ -316,7 +324,7 @@ def index():
     return _err("Unknown action", 400, supportedActions=[
         "config", "ui", "calendars-page", "events-page", "event-edit-page",
         "auth-url", "callback", "calendars", "events", "connection-status",
-        "create-event", "update-event", "delete-event", "disconnect",
+        "create-event", "update-event", "delete-event", "disconnect", "revoke",
         "session", "clear-session",
     ])
 

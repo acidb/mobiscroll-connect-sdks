@@ -80,6 +80,32 @@ _, err = client.Webhooks().UnsubscribeWebhook(ctx, &mobiscroll.UnsubscribeWebhoo
 
 The `mobiscroll.Ptr` helper exists so you can fill in optional `*T` fields inline without declaring a local variable just to take its address.
 
+## Connection management
+
+```go
+status, err := client.Auth().GetConnectionStatus(ctx)
+
+// Disconnect one account (its ID from GetConnectionStatus), or every account of a provider.
+// This stops the account's webhook subscriptions and deletes its provider credentials;
+// it does not revoke the user's Connect tokens.
+_, err = client.Auth().Disconnect(ctx, &mobiscroll.DisconnectParams{
+    Provider: mobiscroll.ProviderGoogle,
+    Account:  status.Connections[mobiscroll.ProviderGoogle][0].ID,
+})
+_, err = client.Auth().Disconnect(ctx, &mobiscroll.DisconnectParams{Provider: mobiscroll.ProviderMicrosoft})
+```
+
+### Revoke tokens
+
+`Revoke` revokes the whole grant: every Connect access and refresh token of the user. It does not disconnect calendar accounts or stop webhooks, so to remove a user entirely, disconnect each provider first (that needs a valid access token), then revoke.
+
+```go
+_, err = client.Auth().Revoke(ctx, "")                 // stored refresh token, else access token; clears the stored credentials
+_, err = client.Auth().Revoke(ctx, storedRefreshToken) // a token you pass; stored credentials are kept
+```
+
+It returns `Success: true` for any token, including an unknown or already revoked one. With an empty token and no stored credentials it returns a `*ValidationError` without making a request. It never refreshes tokens on a 401.
+
 ## Verify webhook deliveries
 
 Every delivery to your webhook URL is signed. `VerifyWebhook` checks the signature and the timestamp, then returns the parsed `*WebhookDelivery`, or a `*WebhookVerificationError`. Pass the **raw** request body: decoding the JSON and re-encoding it changes the bytes and every check fails.

@@ -20,6 +20,14 @@ import {
   TokenResponse,
 } from './types';
 
+/**
+ * Axios request config plus SDK-specific options.
+ */
+export type RequestConfig = AxiosRequestConfig & {
+  /** Do not refresh the access token and retry when the request fails with 401. */
+  skipAuthRefresh?: boolean;
+};
+
 export class ApiClient extends EventEmitter {
   private readonly client: AxiosInstance;
   private readonly config: MobiscrollConnectConfig;
@@ -49,6 +57,10 @@ export class ApiClient extends EventEmitter {
 
   public setCredentials(tokens: TokenResponse): void {
     this.credentials = tokens;
+  }
+
+  public clearCredentials(): void {
+    this.credentials = undefined;
   }
 
   public getCredentials(): TokenResponse | undefined {
@@ -85,13 +97,17 @@ export class ApiClient extends EventEmitter {
         return response;
       },
       async (error: AxiosError<ApiErrorResponse>) => {
-        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+        const originalRequest = error.config as InternalAxiosRequestConfig & {
+          _retry?: boolean;
+          skipAuthRefresh?: boolean;
+        };
 
         if (
           error.response?.status === 401 &&
           this.credentials?.refresh_token &&
           originalRequest &&
-          !originalRequest._retry
+          !originalRequest._retry &&
+          !originalRequest.skipAuthRefresh
         ) {
           originalRequest._retry = true;
 
@@ -203,7 +219,7 @@ export class ApiClient extends EventEmitter {
   public async post<T>(
     path: string,
     data?: unknown,
-    config?: AxiosRequestConfig
+    config?: RequestConfig
   ): Promise<ApiResponse<T>> {
     const response = await this.client.post<T>(path, data, config);
     return {

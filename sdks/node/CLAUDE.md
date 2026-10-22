@@ -37,7 +37,7 @@ TypeScript SDK for the Mobiscroll Connect API. Published to npm as `@mobiscroll/
 
 ```
 MobiscrollConnectClient        — public entry point; constructs ApiClient + resources
-  ├── auth: Auth               — generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect
+  ├── auth: Auth               — generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect, revoke
   ├── calendars: Calendars     — list()
   ├── events: Events           — list(), create(), update(), delete()
   └── webhooks: Webhooks       — subscribeWebhook(), unsubscribeWebhook(), verifyWebhook()
@@ -95,7 +95,7 @@ npm run prerelease        # bash pre-release.sh (version bump + build)
 | `src/index.ts`               | `MobiscrollConnectClient` class + re-exports from `./types` and `./client`                      |
 | `src/client.ts`              | `ApiClient` — Axios setup, interceptors, token refresh, HTTP methods                            |
 | `src/types.ts`               | All types, interfaces, enums, and error classes                                                 |
-| `src/resources/auth.ts`      | `Auth` — OAuth flow: generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect |
+| `src/resources/auth.ts`      | `Auth` — OAuth flow: generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect, revoke |
 | `src/resources/calendars.ts` | `Calendars` — list()                                                                            |
 | `src/resources/events.ts`    | `Events` — list(), create(), update(), delete()                                                 |
 | `src/resources/webhooks.ts`  | `Webhooks` — subscribeWebhook(), unsubscribeWebhook(), verifyWebhook()                          |
@@ -134,6 +134,7 @@ npm run prerelease        # bash pre-release.sh (version bump + build)
 - `getToken` in `Auth` calls `this.setCredentials(response.data)` immediately after exchange — credentials are always set before returning.
 - `generateAuthUrl` builds the URL from `this.client.baseURL` (Axios default), not a hardcoded string — changing `baseURL` on the Axios instance propagates correctly.
 - `CLIENT_ID` header is sent alongside `Authorization: Basic` on token exchange requests (`getToken` and `refreshAccessToken`).
+- `revoke` posts with `skipAuthRefresh: true` so it can never mint new tokens via the 401 interceptor, and calls `clearCredentials()` only when it revoked the stored token (no argument).
 - The `on()` method on `MobiscrollConnectClient` delegates to `ApiClient` (which extends `EventEmitter`) and returns `this` for chaining.
 - `dist/` is the published output. `src/` is the source of truth. Never edit `dist/` directly.
 - Webhook verification: the key cache is **per keys URL, process-wide** (customers often create a client per request), fetched lazily, refreshed per `Cache-Control`, re-fetched at most once a minute after a failed match, and keeps the last good keys when a fetch fails. The pinned `webhookPublicKey` is used **only when no fetched keys exist** — merging it in would keep a retired (possibly compromised) key valid. The key fetch uses plain `axios.get`, never the authenticated instance. Test vectors in `src/__tests__/fixtures/webhook-vectors.json` come from the Connect server's signer and are shared by all seven SDKs.

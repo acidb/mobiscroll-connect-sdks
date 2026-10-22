@@ -34,13 +34,14 @@ Coding standards:
 ```
 Client                           public facade
   ├── Auth() -> *authService     GenerateAuthURL, GetToken, SetCredentials,
-  │                              GetConnectionStatus, Disconnect
+  │                              GetConnectionStatus, Disconnect, Revoke
   ├── Calendars() -> *calendarsService   List
   ├── Events() -> *eventsService          List, Create, Update, Delete
   └── Webhooks() -> *webhooksService      SubscribeWebhook, UnsubscribeWebhook, VerifyWebhook
 
 apiClient                        internal HTTP layer
   ├── execute()                  Bearer header, 401 -> refresh + retry-once
+  ├── doNoRefresh()              same as do() without the 401 retry (Auth.Revoke)
   ├── postForm()                 OAuth token-exchange / refresh (no retry loop)
   └── singleflight.Group         dedup of concurrent refreshes
 
@@ -99,7 +100,7 @@ cd minimal-app && go run .                         # run the demo (needs env var
 | `errors.go` | Typed errors + `MobiscrollError` interface + `mapResponseError` |
 | `models.go` | All request/response DTOs; `Ptr[T]` helper |
 | `transport.go` | `apiClient`: Bearer injection, 401 retry, singleflight refresh, request marshalling |
-| `auth.go` | `authService`: OAuth flow + connection status + disconnect |
+| `auth.go` | `authService`: OAuth flow + connection status + disconnect + revoke |
 | `calendars.go` | `calendarsService.List` |
 | `events.go` | `eventsService.List/Create/Update/Delete`; JSON-encoded `calendarIds` |
 | `webhooks.go` | `webhooksService.SubscribeWebhook/UnsubscribeWebhook/VerifyWebhook` |
@@ -128,6 +129,7 @@ cd minimal-app && go run .                         # run the demo (needs env var
 - `GenerateAuthURL` builds the URL from `config.baseURL` — never a hardcoded host.
 - Token-exchange and refresh send both `Authorization: Basic` AND a `CLIENT_ID` header.
 - `Auth.Disconnect` uses `POST` (matches Node/Python/PHP/.NET/Java).
+- `Auth.Revoke` goes through `doNoRefresh` so revoking can never mint new tokens, and clears the stored credentials only when it revoked them (empty `token` argument).
 - `Events.List`'s `calendarIds` is a `map[Provider][]string` JSON-encoded into a single query parameter — matches the cross-SDK wire format.
 - Webhook verification: the key cache is **per keys URL, process-wide** (customers often create a client per request), fetched lazily, refreshed per `Cache-Control`, re-fetched at most once a minute after a failed match, and keeps the last good keys when a fetch fails. Concurrent callers wait on one in-flight fetch, which is detached from any single caller's ctx. The pinned `WithWebhookPublicKey` key is used **only when no fetched keys exist** — merging it in would keep a retired (possibly compromised) key valid. The fetch uses `apiClient.keysHTTP` (no Bearer, 10 s timeout), never the authenticated path.
 - Version is sourced from `version.go` (`const Version = "X.Y.Z"`). `scripts/bump-version.sh go X.Y.Z` updates it.

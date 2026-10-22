@@ -1,8 +1,10 @@
+import json
+
 import httpx
 import pytest
 import respx
 
-from mobiscroll_connect import TokenResponse
+from mobiscroll_connect import AuthenticationError, TokenResponse, ValidationError
 from mobiscroll_connect.aio import AsyncMobiscrollConnectClient
 
 
@@ -113,3 +115,54 @@ async def test_async_context_manager_closes():
     ) as client:
         url = client.auth.generate_auth_url(user_id="u")
         assert "oauth/authorize" in url
+
+
+REVOKE_URL = "https://connect.mobiscroll.com/api/oauth/revoke"
+
+
+@respx.mock
+async def test_async_revoke_explicit_token_keeps_credentials(async_client):
+    route = respx.post(REVOKE_URL).mock(return_value=httpx.Response(200, json={"success": True}))
+    result = await async_client.auth.revoke("explicit-token")
+    assert result.success is True
+    assert json.loads(route.calls.last.request.content) == {"token": "explicit-token"}
+    assert async_client._api.get_credentials() == TokenResponse(access_token="t", refresh_token="r")
+
+
+@respx.mock
+async def test_async_revoke_defaults_to_stored_refresh_token_and_clears(async_client):
+    route = respx.post(REVOKE_URL).mock(return_value=httpx.Response(200, json={"success": True}))
+    await async_client.auth.revoke()
+    assert json.loads(route.calls.last.request.content) == {"token": "r"}
+    assert async_client._api.get_credentials() is None
+
+
+@respx.mock
+async def test_async_revoke_falls_back_to_stored_access_token(async_client):
+    async_client.auth.set_credentials(TokenResponse(access_token="only-access"))
+    route = respx.post(REVOKE_URL).mock(return_value=httpx.Response(200, json={"success": True}))
+    await async_client.auth.revoke()
+    assert json.loads(route.calls.last.request.content) == {"token": "only-access"}
+    assert async_client._api.get_credentials() is None
+
+
+@respx.mock
+async def test_async_revoke_without_token_raises_without_request():
+    async with AsyncMobiscrollConnectClient(
+        client_id="cid", client_secret="csecret", redirect_uri="https://app/cb"
+    ) as c:
+        with pytest.raises(ValidationError):
+            await c.auth.revoke()
+    assert respx.calls.call_count == 0
+
+
+@respx.mock
+async def test_async_revoke_never_refreshes_on_401(async_client):
+    respx.post(REVOKE_URL).mock(return_value=httpx.Response(401, json={}))
+    refresh_route = respx.post("https://connect.mobiscroll.com/api/oauth/token").mock(
+        return_value=httpx.Response(200, json={"access_token": "new"})
+    )
+    with pytest.raises(AuthenticationError):
+        await async_client.auth.revoke()
+    assert not refresh_route.called
+    assert async_client._api.get_credentials() is not None

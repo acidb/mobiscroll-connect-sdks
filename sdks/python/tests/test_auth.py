@@ -1,3 +1,4 @@
+import json
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -7,7 +8,10 @@ import respx
 from mobiscroll_connect import (
     AuthenticationError,
     MobiscrollConnectClient,
+    MobiscrollConnectError,
+    RevokeResponse,
     TokenResponse,
+    ValidationError,
 )
 
 
@@ -225,3 +229,78 @@ def test_no_refresh_token_propagates_auth_error(client):
     )
     with pytest.raises(AuthenticationError):
         client.events.list()
+
+
+REVOKE_URL = "https://connect.mobiscroll.com/api/oauth/revoke"
+
+
+@respx.mock
+def test_revoke_explicit_token_keeps_credentials(client):
+    stored = TokenResponse(access_token="stored-access", refresh_token="stored-refresh")
+    client.auth.set_credentials(stored)
+    route = respx.post(REVOKE_URL).mock(return_value=httpx.Response(200, json={"success": True}))
+
+    result = client.auth.revoke("explicit-token")
+
+    assert result == RevokeResponse(success=True)
+    assert json.loads(route.calls.last.request.content) == {"token": "explicit-token"}
+    assert client._api.get_credentials() == stored
+
+
+@respx.mock
+def test_revoke_defaults_to_stored_refresh_token_and_clears(client):
+    client.auth.set_credentials(
+        TokenResponse(access_token="stored-access", refresh_token="stored-refresh")
+    )
+    route = respx.post(REVOKE_URL).mock(return_value=httpx.Response(200, json={"success": True}))
+
+    result = client.auth.revoke()
+
+    assert result.success is True
+    assert json.loads(route.calls.last.request.content) == {"token": "stored-refresh"}
+    assert client._api.get_credentials() is None
+
+
+@respx.mock
+def test_revoke_falls_back_to_stored_access_token(client):
+    client.auth.set_credentials(TokenResponse(access_token="stored-access"))
+    route = respx.post(REVOKE_URL).mock(return_value=httpx.Response(200, json={"success": True}))
+
+    client.auth.revoke()
+
+    assert json.loads(route.calls.last.request.content) == {"token": "stored-access"}
+    assert client._api.get_credentials() is None
+
+
+@respx.mock
+def test_revoke_without_token_raises_without_request(client):
+    with pytest.raises(ValidationError):
+        client.auth.revoke()
+    assert respx.calls.call_count == 0
+
+
+@respx.mock
+def test_revoke_failure_keeps_credentials(client):
+    stored = TokenResponse(access_token="stored-access", refresh_token="stored-refresh")
+    client.auth.set_credentials(stored)
+    respx.post(REVOKE_URL).mock(return_value=httpx.Response(500, json={"message": "boom"}))
+
+    with pytest.raises(MobiscrollConnectError):
+        client.auth.revoke()
+    assert client._api.get_credentials() == stored
+
+
+@respx.mock
+def test_revoke_never_refreshes_on_401(client):
+    stored = TokenResponse(access_token="stored-access", refresh_token="stored-refresh")
+    client.auth.set_credentials(stored)
+    revoke_route = respx.post(REVOKE_URL).mock(return_value=httpx.Response(401, json={}))
+    refresh_route = respx.post("https://connect.mobiscroll.com/api/oauth/token").mock(
+        return_value=httpx.Response(200, json={"access_token": "new"})
+    )
+
+    with pytest.raises(AuthenticationError):
+        client.auth.revoke()
+    assert revoke_route.call_count == 1
+    assert not refresh_route.called
+    assert client._api.get_credentials() == stored

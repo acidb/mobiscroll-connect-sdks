@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Mobiscroll\Connect\Resources;
 
-use Mobiscroll\Connect\Exceptions\MobiscrollConnectException;
-use Mobiscroll\Connect\{ApiClient, DisconnectResponse, TokenResponse, ConnectionStatusResponse};
+use Mobiscroll\Connect\Exceptions\{MobiscrollConnectException, ValidationError};
+use Mobiscroll\Connect\{ApiClient, DisconnectResponse, RevokeResponse, TokenResponse, ConnectionStatusResponse};
 
 class Auth
 {
@@ -108,6 +108,23 @@ class Auth
         return ConnectionStatusResponse::fromArray($data);
     }
 
+    /**
+     * Disconnect a calendar provider account
+     *
+     * Removes the account (or, without $account, every account of the provider) from the
+     * user: stops its webhook subscriptions and deletes the stored provider credentials.
+     * It does not revoke the user's Connect access or refresh tokens (see revoke()), nor
+     * the grant at Google or Microsoft.
+     *
+     * Example:
+     *   $client->auth()->disconnect('google', 'user@gmail.com'); // one account
+     *   $client->auth()->disconnect('microsoft');                // every Microsoft account
+     *
+     * @param string $provider 'google', 'microsoft', 'apple' or 'caldav'
+     * @param string|null $account The `id` of an account from getConnectionStatus()
+     *                             (`connections[provider][].id`); null disconnects every account of the provider
+     * @return DisconnectResponse Success confirmation
+     */
     public function disconnect(string $provider, ?string $account = null): DisconnectResponse
     {
         $query = ['provider' => $provider];
@@ -127,5 +144,55 @@ class Auth
         /** @var array<string, mixed> $data */
         $data = is_array($response) ? $response : [];
         return DisconnectResponse::fromArray($data);
+    }
+
+    /**
+     * Revoke the user's Connect access and refresh tokens
+     *
+     * Revokes the whole grant: every access and refresh token issued for this user. It does
+     * not disconnect calendar accounts or stop webhook subscriptions. To remove a user
+     * entirely, call disconnect() for each provider first (it needs a valid access token),
+     * then revoke().
+     *
+     * Example:
+     *   $client->auth()->disconnect('google');
+     *   $client->auth()->revoke();
+     *
+     *   // Or revoke a token you stored yourself
+     *   $client->auth()->revoke($storedRefreshToken);
+     *
+     * @param string|null $token Access or refresh token to revoke. Defaults to the stored refresh
+     *                           token, else the stored access token; the stored credentials are then cleared.
+     * @return RevokeResponse success is true also for an unknown or already revoked token
+     * @throws ValidationError When no token is given and none is stored
+     */
+    public function revoke(?string $token = null): RevokeResponse
+    {
+        $revokeToken = $token;
+        if ($revokeToken === null) {
+            $credentials = $this->apiClient->getCredentials() ?? [];
+            $revokeToken = !empty($credentials['refresh_token'])
+                ? $credentials['refresh_token']
+                : ($credentials['access_token'] ?? null);
+        }
+
+        if (!is_string($revokeToken) || $revokeToken === '') {
+            throw new ValidationError('No token to revoke: pass one or set credentials first');
+        }
+
+        // postRaw never refreshes on 401, so revoking can never mint new tokens.
+        $response = $this->apiClient->postRaw(
+            '/oauth/revoke',
+            (string)json_encode(['token' => $revokeToken]),
+            ['Content-Type' => 'application/json'],
+        );
+
+        if ($token === null) {
+            $this->apiClient->clearCredentials();
+        }
+
+        /** @var array<string, mixed> $data */
+        $data = is_array($response) ? $response : [];
+        return RevokeResponse::fromArray($data);
     }
 }

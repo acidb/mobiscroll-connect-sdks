@@ -22,7 +22,7 @@
 ```
 Client                              public facade
   ├── auth     → Resources::Auth   generate_auth_url, get_token, set_credentials,
-  │                                get_connection_status, disconnect
+  │                                get_connection_status, disconnect, revoke
   ├── calendars → Resources::Calendars   list
   ├── events   → Resources::Events      list, create, update, delete
   └── webhooks → Resources::Webhooks    subscribe_webhook, unsubscribe_webhook, verify_webhook
@@ -97,7 +97,7 @@ cd minimal-app && bundle exec rackup -p 8080  # demo (needs .env)
 | `lib/mobiscroll/connect/errors.rb` | Typed errors + `Connect.map_response_error` |
 | `lib/mobiscroll/connect/models.rb` | Value structs with `from_h`/`to_h`/`to_wire` |
 | `lib/mobiscroll/connect/api_client.rb` | Faraday HTTP layer; 401 retry; Monitor-based refresh dedup |
-| `lib/mobiscroll/connect/resources/auth.rb` | OAuth flow + connection status + disconnect |
+| `lib/mobiscroll/connect/resources/auth.rb` | OAuth flow + connection status + disconnect + revoke |
 | `lib/mobiscroll/connect/resources/calendars.rb` | `Calendars#list` |
 | `lib/mobiscroll/connect/resources/events.rb` | `Events#list/create/update/delete`; JSON `calendarIds` encoding |
 | `lib/mobiscroll/connect/resources/webhooks.rb` | `Webhooks#subscribe_webhook/unsubscribe_webhook/verify_webhook` |
@@ -125,6 +125,7 @@ cd minimal-app && bundle exec rackup -p 8080  # demo (needs .env)
 - `Monitor` + `@refresh_in_flight` flag ensures at most one in-flight refresh per `ApiClient`.
 - `TokenResponse#merged_with` preserves the old `refresh_token` when the server omits one.
 - `Auth#get_connection_status` and `Auth#disconnect` try `/oauth/*` first, fall back to legacy path on `NotFoundError`.
+- `Auth#revoke` posts with `skip_refresh: true` so a 401 can never mint new tokens, and clears the stored credentials only when it revoked them (no argument). No legacy-path fallback.
 - `generate_auth_url` builds the URL from `config.base_url` — never a hardcoded host.
 - Token exchange sends both `Authorization: Basic` and `CLIENT_ID` headers.
 - `Events#list`'s `calendar_ids` is a `Hash` JSON-encoded into a single `calendarIds` query param.

@@ -32,7 +32,7 @@ Coding standards:
 ```
 MobiscrollConnectClient            facade; wires ApiClient + resources
   ├── Auth                          generateAuthUrl, getToken, setCredentials,
-  │                                 getConnectionStatus, disconnect
+  │                                 getConnectionStatus, disconnect, revoke
   ├── Calendars                     list()
   ├── Events                        list, create, update, delete
   └── Webhooks                      subscribeWebhook, unsubscribeWebhook, verifyWebhook
@@ -40,6 +40,7 @@ MobiscrollConnectClient            facade; wires ApiClient + resources
 ApiClient                          OkHttp wrapper
   ├── execute()                     Bearer header, 401 → refresh → retry-once
   ├── postRaw()                     OAuth token exchange (no retry loop)
+  ├── postWithoutRefresh()          JSON POST, no retry loop (Auth.revoke)
   └── AtomicReference<CompletableFuture<TokenResponse>> inflight
                                     CAS-based dedup of concurrent refreshes
 
@@ -139,7 +140,7 @@ cd minimal-app && mvn spring-boot:run          # run the Spring Boot demo
 
 - `inflight` is reset to `null` in the `finally` of the winning path — losers always see either an active future or `null` (in which case they CAS again).
 - Token merge preserves the existing `refresh_token` if the server omits one.
-- `postRaw` is the only path that bypasses the 401 retry loop. It is used by token exchange and refresh.
+- `postRaw` and `postWithoutRefresh` are the only paths that bypass the 401 retry loop. `postRaw` is used by token exchange and refresh; `postWithoutRefresh` by `Auth.revoke`, which must never mint new tokens. `revoke()` (no argument) clears the stored credentials on success; `revoke(token)` leaves them untouched.
 - `Auth.getConnectionStatus()` and `Auth.disconnect()` try `/oauth/*` first and fall back to the legacy path (e.g. `/connections`, `/disconnect`) on 404 to support older server deployments.
 - `Auth.generateAuthUrl` derives the host from `ApiClient.getBaseUrl()` — never a hardcoded string.
 - Token-exchange and refresh send both `Authorization: Basic` *and* a `CLIENT_ID` header (parity with .NET / Node / PHP / Python).

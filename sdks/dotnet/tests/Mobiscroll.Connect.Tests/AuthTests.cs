@@ -169,4 +169,78 @@ public class AuthTests
         Assert.Contains("account=u%40example.com", req.Uri.Query);
         Assert.Equal("{}", req.Body);
     }
+
+    [Fact]
+    public async Task RevokeAsync_ExplicitToken_PostsTokenAndKeepsCredentials()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Enqueue(HttpStatusCode.OK, """{"success":true}""");
+
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at", RefreshToken = "rt" });
+
+        var result = await client.Auth.RevokeAsync("explicit-token");
+
+        Assert.True(result.Success);
+        var req = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Post, req.Method);
+        Assert.Equal("https://connect.mobiscroll.com/api/oauth/revoke", req.Uri.ToString());
+        Assert.Equal("""{"token":"explicit-token"}""", req.Body);
+        Assert.Equal("rt", client.ApiClient.Credentials?.RefreshToken);
+    }
+
+    [Fact]
+    public async Task RevokeAsync_NoArgument_RevokesStoredRefreshTokenAndClearsCredentials()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Enqueue(HttpStatusCode.OK, """{"success":true}""");
+
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at", RefreshToken = "rt" });
+
+        var result = await client.Auth.RevokeAsync();
+
+        Assert.True(result.Success);
+        Assert.Equal("""{"token":"rt"}""", Assert.Single(handler.Requests).Body);
+        Assert.Null(client.ApiClient.Credentials);
+    }
+
+    [Fact]
+    public async Task RevokeAsync_NoArgument_FallsBackToStoredAccessToken()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Enqueue(HttpStatusCode.OK, """{"success":true}""");
+
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        await client.Auth.RevokeAsync();
+
+        Assert.Equal("""{"token":"at"}""", Assert.Single(handler.Requests).Body);
+        Assert.Null(client.ApiClient.Credentials);
+    }
+
+    [Fact]
+    public async Task RevokeAsync_NoTokenAvailable_ThrowsValidationExceptionWithoutRequest()
+    {
+        var handler = new FakeHttpMessageHandler();
+        using var client = ClientFactory.Create(handler);
+
+        await Assert.ThrowsAsync<ValidationException>(() => client.Auth.RevokeAsync());
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task RevokeAsync_On401_DoesNotRefreshAndKeepsCredentials()
+    {
+        var handler = new FakeHttpMessageHandler()
+            .Enqueue(HttpStatusCode.Unauthorized, """{"message":"nope"}""");
+
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at", RefreshToken = "rt" });
+
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Auth.RevokeAsync());
+        Assert.Single(handler.Requests);
+        Assert.Equal("rt", client.ApiClient.Credentials?.RefreshToken);
+    }
 }

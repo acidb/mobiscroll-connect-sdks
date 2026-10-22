@@ -1,6 +1,12 @@
 import { Auth } from '../resources/auth';
 import { ApiClient } from '../client';
-import { TokenResponse, ConnectionStatusResponse, DisconnectResponse } from '../types';
+import {
+  TokenResponse,
+  ConnectionStatusResponse,
+  DisconnectResponse,
+  RevokeResponse,
+  ValidationError,
+} from '../types';
 
 jest.mock('../client');
 
@@ -208,6 +214,85 @@ describe('Auth Resource', () => {
       await auth.disconnect({ provider: 'microsoft' });
 
       expect(mockApiClient.post).toHaveBeenCalledWith('/oauth/disconnect?provider=microsoft', {});
+    });
+  });
+
+  describe('revoke', () => {
+    const mockResponse: RevokeResponse = { success: true };
+
+    beforeEach(() => {
+      mockApiClient.post.mockResolvedValue({ data: mockResponse, status: 200, headers: {} });
+    });
+
+    it('should revoke an explicit token and keep stored credentials', async () => {
+      mockApiClient.getCredentials.mockReturnValue({
+        access_token: 'stored-access',
+        refresh_token: 'stored-refresh',
+        token_type: 'Bearer',
+      });
+
+      const result = await auth.revoke('explicit-token');
+
+      expect(mockApiClient.post).toHaveBeenCalledWith(
+        '/oauth/revoke',
+        { token: 'explicit-token' },
+        { skipAuthRefresh: true }
+      );
+      expect(result).toEqual({ success: true });
+      expect(mockApiClient.clearCredentials).not.toHaveBeenCalled();
+    });
+
+    it('should default to the stored refresh token and clear credentials', async () => {
+      mockApiClient.getCredentials.mockReturnValue({
+        access_token: 'stored-access',
+        refresh_token: 'stored-refresh',
+        token_type: 'Bearer',
+      });
+
+      await auth.revoke();
+
+      expect(mockApiClient.post).toHaveBeenCalledWith(
+        '/oauth/revoke',
+        { token: 'stored-refresh' },
+        { skipAuthRefresh: true }
+      );
+      expect(mockApiClient.clearCredentials).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fall back to the stored access token', async () => {
+      mockApiClient.getCredentials.mockReturnValue({
+        access_token: 'stored-access',
+        token_type: 'Bearer',
+      });
+
+      await auth.revoke();
+
+      expect(mockApiClient.post).toHaveBeenCalledWith(
+        '/oauth/revoke',
+        { token: 'stored-access' },
+        { skipAuthRefresh: true }
+      );
+      expect(mockApiClient.clearCredentials).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw ValidationError without a request when no token is available', async () => {
+      mockApiClient.getCredentials.mockReturnValue(undefined);
+
+      await expect(auth.revoke()).rejects.toBeInstanceOf(ValidationError);
+      expect(mockApiClient.post).not.toHaveBeenCalled();
+      expect(mockApiClient.clearCredentials).not.toHaveBeenCalled();
+    });
+
+    it('should keep stored credentials when the request fails', async () => {
+      mockApiClient.getCredentials.mockReturnValue({
+        access_token: 'stored-access',
+        refresh_token: 'stored-refresh',
+        token_type: 'Bearer',
+      });
+      mockApiClient.post.mockRejectedValue(new Error('network down'));
+
+      await expect(auth.revoke()).rejects.toThrow('network down');
+      expect(mockApiClient.clearCredentials).not.toHaveBeenCalled();
     });
   });
 });

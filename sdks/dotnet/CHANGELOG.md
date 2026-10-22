@@ -4,6 +4,12 @@ All notable changes to the Mobiscroll Connect .NET SDK (NuGet: `Mobiscroll.Conne
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK's major.minor always matches the Connect API's (for example API 1.5.x → SDK 1.5.x): each release bumps only the patch, including releases with breaking changes. Patch numbers are independent per SDK, so this file covers the .NET SDK only.
 
+## [1.6.1] — 2026-10-22
+
+### Added
+
+- New: `Auth.RevokeAsync(token?)` revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `DisconnectAsync()` first to remove a user entirely.
+
 ## [1.6.0] — 2026-10-08
 
 ### Added

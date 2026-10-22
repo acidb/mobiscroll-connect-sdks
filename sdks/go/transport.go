@@ -50,6 +50,8 @@ func (a *apiClient) setCredentials(t *TokenResponse) { a.creds.Store(t) }
 
 func (a *apiClient) getCredentials() *TokenResponse { return a.creds.Load() }
 
+func (a *apiClient) clearCredentials() { a.creds.Store(nil) }
+
 func (a *apiClient) setOnTokensRefreshed(cb func(*TokenResponse)) {
 	if cb == nil {
 		a.onRefresh.Store(nil)
@@ -62,7 +64,17 @@ func (a *apiClient) setOnTokensRefreshed(cb func(*TokenResponse)) {
 // after a deduplicated token refresh, and maps non-2xx responses to typed
 // errors. out, if non-nil, receives the JSON-decoded response body.
 func (a *apiClient) do(ctx context.Context, method, path, query string, body any, out any) error {
-	resp, err := a.execute(ctx, method, path, query, body, true)
+	return a.doWithRetry(ctx, method, path, query, body, out, true)
+}
+
+// doNoRefresh is do without the 401 refresh + retry. Used by Auth.Revoke so
+// revoking tokens can never mint new ones.
+func (a *apiClient) doNoRefresh(ctx context.Context, method, path, query string, body any, out any) error {
+	return a.doWithRetry(ctx, method, path, query, body, out, false)
+}
+
+func (a *apiClient) doWithRetry(ctx context.Context, method, path, query string, body any, out any, allowRetry bool) error {
+	resp, err := a.execute(ctx, method, path, query, body, allowRetry)
 	if err != nil {
 		return err
 	}

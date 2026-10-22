@@ -37,7 +37,7 @@ Python 3.9+ client library for the Mobiscroll Connect API. Enables calendar and 
 ```
 MobiscrollConnectClient        — public sync entry point; constructs and wires all internals
   └── ApiClient                — sync HTTP layer (httpx); auth headers; token refresh; error mapping
-        ├── resources/Auth     — generate_auth_url, get_token, set_credentials, get_connection_status, disconnect
+        ├── resources/Auth     — generate_auth_url, get_token, set_credentials, get_connection_status, disconnect, revoke
         ├── resources/Calendars — list()
         ├── resources/Events   — list(), iter_all(), create(), update(), delete()
         └── resources/Webhooks — subscribe_webhook(), unsubscribe_webhook(), verify_webhook()
@@ -54,6 +54,7 @@ EventsListResponse             — frozen dataclass wrapping list[CalendarEvent]
 Calendar                       — frozen dataclass for calendar list entries
 ConnectionStatusResponse       — frozen dataclass for /oauth/connection-status
 DisconnectResponse             — frozen dataclass for /oauth/disconnect
+RevokeResponse                 — frozen dataclass for /oauth/revoke
 WebhookDelivery                — frozen dataclass for a verified delivery; events are WebhookEvent (CalendarEvent + change_type)
 
 Exceptions:
@@ -161,6 +162,7 @@ python app.py
 ## Key Invariants
 
 - `post_form` never retries on 401 — it is the token exchange path itself.
+- `auth.revoke` posts with `refresh_on_401=False` so it can never mint new tokens, has no legacy-route fallback, and calls `clear_credentials()` only when it revoked the stored token (no argument).
 - Token merge on refresh: `refresh_token = new_tokens.refresh_token or current.refresh_token`.
 - `build_list_events_query` caps `page_size` at 1000 and serialises `single_events` as `"true"`/`"false"` strings (not booleans) — it goes into a URL query string.
 - `CalendarEvent.from_dict` raises `ValueError` for missing required fields (`provider`, `id`, `calendarId`).

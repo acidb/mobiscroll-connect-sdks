@@ -1,12 +1,16 @@
 package com.mobiscroll.connect;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Arrays;
 
+import com.mobiscroll.connect.exceptions.AuthenticationException;
+import com.mobiscroll.connect.exceptions.ValidationException;
 import com.mobiscroll.connect.models.AuthUrlParams;
 import com.mobiscroll.connect.models.DisconnectParams;
 import com.mobiscroll.connect.models.DisconnectResponse;
+import com.mobiscroll.connect.models.RevokeResponse;
 import com.mobiscroll.connect.models.TokenResponse;
 import com.mobiscroll.connect.support.ClientFactory;
 import okhttp3.mockwebserver.MockResponse;
@@ -88,5 +92,61 @@ class AuthTest {
         assertThat(second.getPath()).startsWith("/api/disconnect?");
         assertThat(second.getPath()).contains("provider=google");
         assertThat(second.getPath()).contains("account=alice%40example.com");
+    }
+
+    @Test void revokeWithExplicitTokenKeepsStoredCredentials() throws Exception {
+        server.enqueue(new MockResponse().setBody("{\"success\":true}"));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+        TokenResponse stored = client.getCredentials();
+
+        RevokeResponse r = client.auth().revoke("explicit-token");
+
+        assertThat(r.isSuccess()).isTrue();
+        assertThat(client.getCredentials()).isSameAs(stored);
+        RecordedRequest req = server.takeRequest();
+        assertThat(req.getMethod()).isEqualTo("POST");
+        assertThat(req.getPath()).isEqualTo("/api/oauth/revoke");
+        assertThat(req.getBody().readUtf8()).isEqualTo("{\"token\":\"explicit-token\"}");
+    }
+
+    @Test void revokeDefaultsToStoredRefreshTokenAndClearsCredentials() throws Exception {
+        server.enqueue(new MockResponse().setBody("{\"success\":true}"));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+
+        RevokeResponse r = client.auth().revoke();
+
+        assertThat(r.isSuccess()).isTrue();
+        assertThat(client.getCredentials()).isNull();
+        RecordedRequest req = server.takeRequest();
+        assertThat(req.getPath()).isEqualTo("/api/oauth/revoke");
+        assertThat(req.getBody().readUtf8()).isEqualTo("{\"token\":\"refresh-1\"}");
+    }
+
+    @Test void revokeFallsBackToStoredAccessToken() throws Exception {
+        server.enqueue(new MockResponse().setBody("{\"success\":true}"));
+        MobiscrollConnectClient client = ClientFactory.withMock(server);
+        client.setCredentials(new TokenResponse("access-only", "Bearer", 3600, null, null));
+
+        client.auth().revoke();
+
+        assertThat(client.getCredentials()).isNull();
+        assertThat(server.takeRequest().getBody().readUtf8()).isEqualTo("{\"token\":\"access-only\"}");
+    }
+
+    @Test void revokeWithoutAnyTokenThrowsWithoutRequest() {
+        MobiscrollConnectClient client = ClientFactory.withMock(server);
+
+        assertThatThrownBy(() -> client.auth().revoke()).isInstanceOf(ValidationException.class);
+        assertThat(server.getRequestCount()).isZero();
+    }
+
+    @Test void revokeKeepsCredentialsAndNeverRefreshesOn401() {
+        server.enqueue(new MockResponse().setResponseCode(401).setBody("{\"message\":\"unauthorized\"}"));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+        TokenResponse stored = client.getCredentials();
+
+        assertThatThrownBy(() -> client.auth().revoke()).isInstanceOf(AuthenticationException.class);
+        assertThat(server.getRequestCount()).isEqualTo(1);
+        assertThat(client.getCredentials()).isSameAs(stored);
     }
 }

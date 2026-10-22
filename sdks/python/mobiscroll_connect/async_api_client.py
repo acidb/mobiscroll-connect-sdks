@@ -59,6 +59,9 @@ class AsyncApiClient:
     def get_credentials(self) -> TokenResponse | None:
         return self._credentials
 
+    def clear_credentials(self) -> None:
+        self._credentials = None
+
     def on_tokens_refreshed(self, callback: AsyncTokensRefreshedCallback) -> None:
         self._on_tokens_refreshed = callback
 
@@ -78,9 +81,16 @@ class AsyncApiClient:
         return await self._request_with_refresh("GET", path, params=params)
 
     async def post(
-        self, path: str, json: Any = None, params: Mapping[str, Any] | None = None
+        self,
+        path: str,
+        json: Any = None,
+        params: Mapping[str, Any] | None = None,
+        *,
+        refresh_on_401: bool = True,
     ) -> Any:
-        return await self._request_with_refresh("POST", path, json=json, params=params)
+        return await self._request_with_refresh(
+            "POST", path, json=json, params=params, refresh_on_401=refresh_on_401
+        )
 
     async def put(self, path: str, json: Any = None) -> Any:
         return await self._request_with_refresh("PUT", path, json=json)
@@ -112,6 +122,7 @@ class AsyncApiClient:
         *,
         json: Any = None,
         params: Mapping[str, Any] | None = None,
+        refresh_on_401: bool = True,
     ) -> Any:
         url = self._normalize_path(path)
 
@@ -122,7 +133,7 @@ class AsyncApiClient:
         except httpx.HTTPError as e:
             raise map_transport_error(e) from e
 
-        if response.status_code == 401 and self._can_refresh():
+        if response.status_code == 401 and refresh_on_401 and self._can_refresh():
             await self._refresh_access_token()
             try:
                 response = await self._http.request(

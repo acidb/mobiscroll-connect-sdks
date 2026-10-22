@@ -37,7 +37,7 @@ PHP 8.1+ client library for the Mobiscroll Connect API. Enables calendar and eve
 ```
 MobiscrollConnectClient        — public entry point; constructs and wires all internals
   └── ApiClient                — HTTP layer (Guzzle); auth headers; token refresh; error mapping
-        ├── Resources/Auth     — generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect
+        ├── Resources/Auth     — generateAuthUrl, getToken, setCredentials, getConnectionStatus, disconnect, revoke
         ├── Resources/Calendars — list()
         ├── Resources/Events   — list(), create(), update(), delete()
         └── Resources/Webhooks — subscribeWebhook(), unsubscribeWebhook(), verifyWebhook()
@@ -52,6 +52,7 @@ EventsListResponse             — readonly DTO wrapping []CalendarEvent + pagin
 Calendar                       — readonly DTO for calendar list entries
 ConnectionStatusResponse       — readonly DTO for /oauth/connection-status
 DisconnectResponse             — readonly DTO for /oauth/disconnect
+RevokeResponse                 — readonly DTO for /oauth/revoke
 
 Exceptions/
   MobiscrollConnectException   — base; adds getCodeString()
@@ -74,7 +75,7 @@ All request paths are `ltrim`-ed to strip leading slashes. Guzzle `base_uri` is 
 
 ### Route fallbacks in Auth
 
-`getConnectionStatus` and `disconnect` attempt `/oauth/*` first, then fall back to the legacy path without the `/oauth` prefix. This handles older server deployments.
+`getConnectionStatus` and `disconnect` attempt `/oauth/*` first (`revoke` has no legacy route), then fall back to the legacy path without the `/oauth` prefix. This handles older server deployments.
 
 ---
 
@@ -103,6 +104,7 @@ vendor/bin/phpunit tests/Unit/AuthTest.php   # single test file
 | `src/Calendar.php`                 | Calendar response DTO                                                         |
 | `src/ConnectionStatusResponse.php` | Connection status DTO                                                         |
 | `src/DisconnectResponse.php`       | Disconnect result DTO                                                         |
+| `src/RevokeResponse.php`           | Revoke result DTO                                                             |
 | `src/Resources/Auth.php`           | OAuth flow methods                                                            |
 | `src/Resources/Calendars.php`      | Calendar listing                                                              |
 | `src/Resources/Events.php`         | Event CRUD + query building                                                   |
@@ -144,7 +146,7 @@ vendor/bin/phpunit tests/Unit/AuthTest.php   # single test file
 
 ## Key Invariants
 
-- `postRaw` never retries on 401 — it is the token exchange path itself.
+- `postRaw` never retries on 401 — it is the token exchange path itself. `revoke` uses it too, so revoking can never mint new tokens; it calls `clearCredentials()` only when it revoked the stored token (no argument).
 - Token merge on refresh: `array_merge($existing, $new, $new->refresh_token !== null ? [] : ['refresh_token' => $oldRefreshToken])`.
 - `buildListQuery` converts `pageSize` to string and caps it at 1000. `singleEvents` is serialised as `'true'`/`'false'` strings (not booleans) because it goes into a URL query string.
 - `CalendarEvent::fromArray` throws `\InvalidArgumentException` for missing required fields (`provider`, `id`, `calendarId`).

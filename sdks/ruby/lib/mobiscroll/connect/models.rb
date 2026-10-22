@@ -104,6 +104,14 @@ module Mobiscroll
       end
     end
 
+    RevokeResponse = Struct.new(:success, keyword_init: true) do
+      def self.from_h(hash)
+        return nil if hash.nil?
+
+        new(success: hash['success'] || hash[:success])
+      end
+    end
+
     # A calendar exposed by one of the supported providers.
     Calendar = Struct.new(:provider, :id, :title, :time_zone, :color, :description, :original, keyword_init: true) do
       def self.from_h(hash)

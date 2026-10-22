@@ -442,12 +442,20 @@ export interface ConnectionStatusResponse {
 
 export type DisconnectParams = {
   provider: 'google' | 'microsoft' | 'apple' | 'caldav';
+  /**
+   * `id` of the account to disconnect, from `getConnectionStatus()` (`connections[provider][].id`).
+   * Omit to disconnect every account of the provider.
+   */
   account?: string;
 };
 
 export interface DisconnectResponse {
   success: boolean;
   message?: string;
+}
+
+export interface RevokeResponse {
+  success: boolean;
 }
 
 /**

@@ -1,5 +1,7 @@
-import { MobiscrollConnectClient } from '../index';
-import { MobiscrollConnectError } from '../types';
+import { MobiscrollConnectClient, ApiClient } from '../index';
+import { Auth } from '../resources/auth';
+import axios, { AxiosError } from 'axios';
+import { AuthenticationError, MobiscrollConnectError } from '../types';
 
 describe('MobiscrollConnectClient', () => {
   const validConfig = {
@@ -40,6 +42,49 @@ describe('MobiscrollConnectClient', () => {
       };
 
       client.setCredentials(tokens);
+    });
+  });
+
+  describe('auth.revoke', () => {
+    const tokens = {
+      access_token: 'stored-access',
+      refresh_token: 'stored-refresh',
+      token_type: 'Bearer',
+    };
+
+    it('should clear stored credentials after revoking them', async () => {
+      const apiClient = new ApiClient(validConfig);
+      apiClient.setCredentials(tokens);
+      const requests: { url?: string; data?: unknown }[] = [];
+      apiClient.axiosInstance.defaults.adapter = async (config) => {
+        requests.push({ url: config.url, data: config.data });
+        return { data: { success: true }, status: 200, statusText: 'OK', headers: {}, config };
+      };
+
+      await expect(new Auth(apiClient).revoke()).resolves.toEqual({ success: true });
+
+      expect(requests).toEqual([{ url: '/oauth/revoke', data: '{"token":"stored-refresh"}' }]);
+      expect(apiClient.getCredentials()).toBeUndefined();
+    });
+
+    it('should not refresh tokens when the revoke request returns 401', async () => {
+      const apiClient = new ApiClient(validConfig);
+      apiClient.setCredentials(tokens);
+      const urls: (string | undefined)[] = [];
+      apiClient.axiosInstance.defaults.adapter = async (config) => {
+        urls.push(config.url);
+        const response = { data: {}, status: 401, statusText: 'Unauthorized', headers: {}, config };
+        throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, null, response);
+      };
+
+      const refresh = jest.spyOn(axios, 'post');
+
+      await expect(new Auth(apiClient).revoke()).rejects.toBeInstanceOf(AuthenticationError);
+
+      expect(refresh).not.toHaveBeenCalled();
+      expect(urls).toEqual(['/oauth/revoke']);
+      refresh.mockRestore();
+      expect(apiClient.getCredentials()).toEqual(tokens);
     });
   });
 

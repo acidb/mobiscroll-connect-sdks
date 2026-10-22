@@ -40,6 +40,10 @@ module Mobiscroll
         @monitor.synchronize { @credentials }
       end
 
+      def clear_credentials
+        @monitor.synchronize { @credentials = nil }
+      end
+
       def on_tokens_refreshed(&block)
         @on_tokens_refreshed = block
       end
@@ -48,8 +52,9 @@ module Mobiscroll
         execute(:get, path, query: query, body: nil, headers: headers)
       end
 
-      def post(path, body: nil, query: nil, headers: nil)
-        execute(:post, path, query: query, body: body, headers: headers)
+      # `skip_refresh: true` surfaces a 401 as-is instead of refreshing and retrying.
+      def post(path, body: nil, query: nil, headers: nil, skip_refresh: false)
+        execute(:post, path, query: query, body: body, headers: headers, retried: skip_refresh)
       end
 
       def put(path, body: nil, query: nil, headers: nil)

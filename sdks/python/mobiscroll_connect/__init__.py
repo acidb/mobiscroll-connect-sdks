@@ -42,6 +42,7 @@ from .models import (
     EventAttendee,
     EventsListResponse,
     Provider,
+    RevokeResponse,
     SubscribeWebhookResponse,
     TokenResponse,
     UnsubscribeWebhookResponse,
@@ -52,7 +53,7 @@ from .models import (
 )
 from .webhook_verification import WEBHOOK_TOLERANCE_SECONDS, verify_webhook_signature
 
-__version__ = "1.6.0"
+__version__ = "1.6.1"
 
 __all__ = [
     "WEBHOOK_TOLERANCE_SECONDS",
@@ -75,6 +76,7 @@ __all__ = [
     # Models
     "Provider",
     "RateLimitError",
+    "RevokeResponse",
     "ServerError",
     "SubscribeWebhookResponse",
     "TokenResponse",

@@ -7,14 +7,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.mobiscroll.connect.ApiClient;
 import com.mobiscroll.connect.Provider;
 import com.mobiscroll.connect.exceptions.NotFoundException;
+import com.mobiscroll.connect.exceptions.ValidationException;
 import com.mobiscroll.connect.internal.QueryStringBuilder;
 import com.mobiscroll.connect.models.AuthUrlParams;
 import com.mobiscroll.connect.models.ConnectionStatus;
 import com.mobiscroll.connect.models.DisconnectParams;
 import com.mobiscroll.connect.models.DisconnectResponse;
+import com.mobiscroll.connect.models.RevokeResponse;
 import com.mobiscroll.connect.models.TokenResponse;
 
-/** OAuth resource: authorize URL, token exchange, connection status, disconnect. */
+/** OAuth resource: authorize URL, token exchange, connection status, disconnect, revoke. */
 public final class Auth {
 
     private final ApiClient api;
@@ -66,7 +68,21 @@ public final class Auth {
         }
     }
 
-    /** Disconnect a provider (and optionally a specific account). */
+    /**
+     * Disconnect a calendar provider account.
+     *
+     * <p>Removes the account (or, without {@code account}, every account of the provider) from
+     * the user: stops its webhook subscriptions and deletes the stored provider credentials. It
+     * does not revoke the user's Connect access or refresh tokens (see {@link #revoke()}), nor
+     * the grant at Google or Microsoft. The {@code account} value is the {@code id} of an account
+     * from {@link #getConnectionStatus()}. Falls back to {@code /disconnect} on 404.
+     *
+     * <pre>{@code
+     * client.auth().disconnect(DisconnectParams.builder()
+     *     .provider(Provider.GOOGLE).account("user@gmail.com").build());
+     * client.auth().disconnect(DisconnectParams.builder().provider(Provider.MICROSOFT).build());
+     * }</pre>
+     */
     public DisconnectResponse disconnect(DisconnectParams params) {
         QueryStringBuilder qs = new QueryStringBuilder()
                 .add("provider", params.getProvider().wireValue())
@@ -77,5 +93,60 @@ public final class Auth {
         } catch (NotFoundException e) {
             return api.post("/disconnect", qs.build(), empty, new TypeReference<DisconnectResponse>() {});
         }
+    }
+
+    /**
+     * Revoke the stored Connect tokens: the refresh token if present, else the access token.
+     * On success the stored credentials are cleared.
+     *
+     * @see #revoke(String)
+     * @throws ValidationException when no credentials are stored (no request is made)
+     */
+    public RevokeResponse revoke() {
+        TokenResponse stored = api.getCredentials();
+        String token = null;
+        if (stored != null) {
+            token = stored.getRefreshToken() != null ? stored.getRefreshToken() : stored.getAccessToken();
+        }
+        if (token == null || token.isEmpty()) {
+            throw new ValidationException("No token to revoke: pass one or set credentials first", null);
+        }
+        RevokeResponse response = send(token);
+        api.clearCredentials();
+        return response;
+    }
+
+    /**
+     * Revoke the user's Connect access and refresh tokens.
+     *
+     * <p>Revokes the whole grant: every access and refresh token issued for this user. It does not
+     * disconnect calendar accounts or stop webhook subscriptions. To remove a user entirely, call
+     * {@link #disconnect(DisconnectParams)} for each provider first (it needs a valid access
+     * token), then revoke. Succeeds for any token, including an unknown or already revoked one.
+     * Passing a token leaves the stored credentials untouched; use {@link #revoke()} to revoke
+     * and clear the stored ones.
+     *
+     * <pre>{@code
+     * client.auth().disconnect(DisconnectParams.builder().provider(Provider.GOOGLE).build());
+     * client.auth().revoke();
+     *
+     * // Or revoke a token you stored yourself
+     * client.auth().revoke(storedRefreshToken);
+     * }</pre>
+     *
+     * @param token an access or refresh token
+     * @throws ValidationException when {@code token} is null or empty (no request is made)
+     */
+    public RevokeResponse revoke(String token) {
+        if (token == null || token.isEmpty()) {
+            throw new ValidationException("token is required", null);
+        }
+        return send(token);
+    }
+
+    private RevokeResponse send(String token) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("token", token);
+        return api.postWithoutRefresh("/oauth/revoke", body, new TypeReference<RevokeResponse>() {});
     }
 }

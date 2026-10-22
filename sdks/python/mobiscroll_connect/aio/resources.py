@@ -18,7 +18,12 @@ from .._internal.webhook_keys import (
     webhook_keys_url,
 )
 from ..async_api_client import AsyncApiClient
-from ..exceptions import MobiscrollConnectError, ServerError, WebhookVerificationError
+from ..exceptions import (
+    MobiscrollConnectError,
+    ServerError,
+    ValidationError,
+    WebhookVerificationError,
+)
 from ..models import (
     Calendar,
     CalendarEvent,
@@ -26,6 +31,7 @@ from ..models import (
     DisconnectResponse,
     EventsListResponse,
     Provider,
+    RevokeResponse,
     SubscribeWebhookResponse,
     TokenResponse,
     UnsubscribeWebhookResponse,
@@ -107,6 +113,24 @@ class AsyncAuth:
         *,
         account: str | None = None,
     ) -> DisconnectResponse:
+        """Disconnect a calendar provider account.
+
+        Removes the account (or, without ``account``, every account of the
+        provider) from the user: stops its webhook subscriptions and deletes
+        the stored provider credentials. It does not revoke the user's Connect
+        access or refresh tokens (see :meth:`revoke`), nor the grant at Google
+        or Microsoft.
+
+        :param provider: The provider to disconnect.
+        :param account: The ``id`` of an account from :meth:`get_connection_status`
+            (``connections[provider][].id``). Omit to disconnect every account
+            of the provider.
+
+        Example::
+
+            await client.auth.disconnect("google", account="user@gmail.com")
+            await client.auth.disconnect(Provider.MICROSOFT)
+        """
         params = {"provider": str(provider.value if isinstance(provider, Provider) else provider)}
         if account:
             params["account"] = account
@@ -115,6 +139,44 @@ class AsyncAuth:
         except MobiscrollConnectError:
             data = await self._api.post("disconnect", json={}, params=params)
         return DisconnectResponse.from_dict(data or {})
+
+    async def revoke(self, token: str | None = None) -> RevokeResponse:
+        """Revoke the user's Connect access and refresh tokens.
+
+        Revokes the whole grant: every access and refresh token issued for this
+        user. It does not disconnect calendar accounts or stop webhook
+        subscriptions. To remove a user entirely, call :meth:`disconnect` for
+        each provider first (it needs a valid access token), then ``revoke``.
+
+        :param token: Access or refresh token to revoke. Defaults to the stored
+            refresh token, else the stored access token; the stored credentials
+            are then cleared. An explicit token leaves them untouched.
+        :returns: ``success=True``, also for an unknown or already revoked token.
+        :raises ValidationError: When no token is given and none is stored
+            (no request is made).
+
+        Example::
+
+            await client.auth.disconnect("google")
+            await client.auth.revoke()
+
+            # Or revoke a token you stored yourself
+            await client.auth.revoke(stored_refresh_token)
+        """
+        revoke_token = token
+        if revoke_token is None:
+            credentials = self._api.get_credentials()
+            if credentials is not None:
+                revoke_token = credentials.refresh_token or credentials.access_token
+        if not revoke_token:
+            raise ValidationError("No token to revoke: pass one or set credentials first")
+
+        data = await self._api.post(
+            "oauth/revoke", json={"token": revoke_token}, refresh_on_401=False
+        )
+        if token is None:
+            self._api.clear_credentials()
+        return RevokeResponse.from_dict(data or {})
 
 
 class AsyncCalendars:

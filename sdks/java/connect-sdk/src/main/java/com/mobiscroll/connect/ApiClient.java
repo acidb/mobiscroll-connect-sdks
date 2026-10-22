@@ -83,6 +83,11 @@ public final class ApiClient {
         return credentials;
     }
 
+    /** Forget the stored token set. */
+    public void clearCredentials() {
+        this.credentials = null;
+    }
+
     /**
      * Override the token-refresh callback for this client instance (e.g.
      * per-request in web apps).
@@ -101,6 +106,14 @@ public final class ApiClient {
 
     public <T> T post(String path, String query, Object body, TypeReference<T> type) {
         return execute(buildRequest("POST", path, query, jsonBody(body)), type, true);
+    }
+
+    /**
+     * POST a JSON body without the 401 refresh-and-retry. Used where refreshing would be
+     * wrong, such as revoking the very tokens a refresh would mint.
+     */
+    public <T> T postWithoutRefresh(String path, Object body, TypeReference<T> type) {
+        return execute(buildRequest("POST", path, null, jsonBody(body)), type, false);
     }
 
     public <T> T put(String path, Object body, TypeReference<T> type) {

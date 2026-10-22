@@ -53,7 +53,8 @@ All seven SDKs implement the **same public surface** against the same backend. W
 1. Make the change in one SDK first (whichever you're most comfortable with), get the tests passing.
 2. Replicate the change in the other six. Per-SDK CLAUDE.md files dictate idiomatic style — don't fight them.
 3. Update each SDK's README/CHANGELOG separately if user-visible.
-4. Single PR is preferred for a synchronized cross-SDK change. The path-filtered CI runs all seven jobs in parallel.
+4. **⛔ Mandatory web changelog.** Whenever an SDK `CHANGELOG.md` gets a new version entry (or the SDK change is otherwise done), add one `ChangeLogModelConnect` entry per changed SDK plus its `SummaryDictionary` entry (`{Artifact}:{Version}`, e.g. `NodeSdk:1.6.1`) to `../mobiscroll-web/BusinessLayer/Util/ChangeLogData.cs`, then run `cd ../mobiscroll-web/MobiscrollFront && node scripts/sync-releases-from-csharp.mjs --dry-run` and, if the dry run looks right, again without `--dry-run`. Same change set, not deferred to release. Style and summary rules: `mobiscroll-connect/CLAUDE.md` → _Changelog style_ and `mobiscroll-web/CLAUDE.md` → _Connect release summaries_.
+5. Single PR is preferred for a synchronized cross-SDK change. The path-filtered CI runs all seven jobs in parallel.
 
 ## Releases
 

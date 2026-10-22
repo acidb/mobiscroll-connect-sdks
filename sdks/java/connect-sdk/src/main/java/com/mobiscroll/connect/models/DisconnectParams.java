@@ -25,6 +25,7 @@ public final class DisconnectParams {
         private String account;
 
         public Builder provider(Provider v) { this.provider = v; return this; }
+        /** {@code id} of the account to disconnect, from {@code Auth.getConnectionStatus()}. Omit for every account of the provider. */
         public Builder account(String v) { this.account = v; return this; }
 
         public DisconnectParams build() { return new DisconnectParams(this); }

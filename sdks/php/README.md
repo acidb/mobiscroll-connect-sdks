@@ -13,7 +13,7 @@ PHP client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calenda
 - **Automatic token refresh**: Silently refreshes expired access tokens and retries the original request
 - **Event management**: Create, read, update, and delete calendar events
 - **Calendar operations**: List calendars from all connected providers
-- **Connection management**: Check provider connection status and disconnect accounts
+- **Connection management**: Check provider connection status, disconnect accounts and revoke tokens
 - **Webhook verification**: Check the signature of webhook deliveries and parse them
 - **Typed exceptions**: Distinct error classes for authentication, validation, rate limiting, and more
 - **Type-safe**: PHP 8.1+ with strict typing throughout
@@ -289,13 +289,27 @@ if ($status->limitReached) {
     echo "Connection limit of {$status->limit} reached\n";
 }
 
-// Disconnect a provider
-$result = $client->auth()->disconnect(provider: 'google');
+// Disconnect one account (its `id` from getConnectionStatus), or every account of a provider.
+// This stops the account's webhook subscriptions and deletes its provider credentials;
+// it does not revoke the user's Connect tokens.
+$client->auth()->disconnect(provider: 'google', account: 'user@gmail.com');
+$result = $client->auth()->disconnect(provider: 'microsoft');
 
 if ($result->success) {
     echo "Disconnected successfully\n";
 }
 ```
+
+### Revoke Tokens
+
+`revoke()` revokes the whole grant: every Connect access and refresh token of the user. It does not disconnect calendar accounts or stop webhooks, so to remove a user entirely, disconnect each provider first (that needs a valid access token), then revoke.
+
+```php
+$client->auth()->revoke();                    // stored refresh token, else access token; clears the stored credentials
+$client->auth()->revoke($storedRefreshToken); // a token you pass; stored credentials are kept
+```
+
+It returns a `RevokeResponse` with `success: true` for any token, including an unknown or already revoked one. With no argument and no stored credentials it throws `ValidationError` without making a request.
 
 ## Error Handling
 
@@ -381,6 +395,7 @@ src/
 ├── EventsListResponse.php
 ├── ConnectionStatusResponse.php
 ├── DisconnectResponse.php
+├── RevokeResponse.php
 ├── SubscribeWebhookResponse.php
 ├── UnsubscribeWebhookResponse.php
 ├── WebhookSubscription.php
@@ -397,6 +412,7 @@ tests/
 │   ├── ConnectionStatusResponseTest.php
 │   ├── EventsTest.php
 │   ├── ExceptionsTest.php
+│   ├── RevokeTest.php
 │   ├── WebhooksTest.php
 │   └── WebhookVerificationTest.php
 └── Smoke/

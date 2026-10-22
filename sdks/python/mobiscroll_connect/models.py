@@ -278,6 +278,15 @@ class DisconnectResponse:
 
 
 @dataclass(frozen=True)
+class RevokeResponse:
+    success: bool
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> RevokeResponse:
+        return cls(success=bool(data.get("success", False)))
+
+
+@dataclass(frozen=True)
 class WebhookSubscription:
     """The provider-side subscription created by ``POST /subscribe-webhook``."""
 

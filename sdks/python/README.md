@@ -263,12 +263,23 @@ for provider, accounts in status.connections.items():
 if status.limit_reached:
     print(f"Connection limit of {status.limit} reached")
 
-# Disconnect a single account
+# Disconnect one account (its `id` from get_connection_status), or every account of a provider.
+# This stops the account's webhook subscriptions and deletes its provider credentials;
+# it does not revoke the user's Connect tokens.
 client.auth.disconnect("google", account="user@gmail.com")
-
-# Or all accounts of a provider
 client.auth.disconnect("microsoft")
 ```
+
+### Revoke tokens
+
+`revoke()` revokes the whole grant: every Connect access and refresh token of the user. It does not disconnect calendar accounts or stop webhooks, so to remove a user entirely, disconnect each provider first (that needs a valid access token), then revoke.
+
+```python
+client.auth.revoke()  # stored refresh token, else access token; clears the stored credentials
+client.auth.revoke(stored_refresh_token)  # a token you pass; stored credentials are kept
+```
+
+It returns `RevokeResponse(success=True)` for any token, including an unknown or already revoked one. With no argument and no stored credentials it raises `ValidationError` without making a request. The async client's `await client.auth.revoke()` behaves the same.
 
 ## Async usage
 

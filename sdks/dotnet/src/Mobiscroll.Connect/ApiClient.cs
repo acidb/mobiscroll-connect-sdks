@@ -88,6 +88,11 @@ public sealed class ApiClient : IDisposable
         _credentials = tokens ?? throw new ArgumentNullException(nameof(tokens));
     }
 
+    internal void ClearCredentials()
+    {
+        _credentials = null;
+    }
+
     public void OnTokensRefreshed(Action<TokenResponse> callback)
     {
         _onTokensRefreshed = callback;
@@ -123,6 +128,13 @@ public sealed class ApiClient : IDisposable
         var content = new FormUrlEncodedContent(formValues);
         return SendAsync<T>(HttpMethod.Post, path, content, extraHeaders, allowRefresh: false, ct);
     }
+
+    /// <summary>
+    /// JSON POST that bypasses the 401-refresh interceptor and sends no Bearer token.
+    /// Used for token revocation, which must never mint new tokens.
+    /// </summary>
+    internal Task<T?> PostJsonNoRefreshAsync<T>(string path, object? body, CancellationToken ct = default)
+        => SendAsync<T>(HttpMethod.Post, path, content: SerializeJson(body), extraHeaders: null, allowRefresh: false, ct);
 
     // ---- Core send -----------------------------------------------------------
 

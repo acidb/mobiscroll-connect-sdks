@@ -2,6 +2,8 @@ package mobiscroll_test
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -194,5 +196,126 @@ func TestGetConnectionStatus_DefaultsWhenScopeFieldsAbsent(t *testing.T) {
 	acct := status.Connections[mobiscroll.ProviderGoogle][0]
 	if len(acct.GrantedScopes) != 0 || acct.CalendarPermissionGranted != nil {
 		t.Errorf("expected zero values, got %+v", acct)
+	}
+}
+
+func newRevokeClient(t *testing.T, creds *mobiscroll.TokenResponse) (*mobiscroll.Client, *testsupport.MockServer) {
+	t.Helper()
+	srv := testsupport.NewMockServer(t)
+	c := mobiscroll.NewClient("id", "secret", "https://app/cb",
+		mobiscroll.WithBaseURL(srv.URL+"/api"),
+	)
+	if creds != nil {
+		c.SetCredentials(creds)
+	}
+	return c, srv
+}
+
+func assertRevokeRequest(t *testing.T, srv *testsupport.MockServer, wantToken string) {
+	t.Helper()
+	reqs := srv.Requests()
+	if len(reqs) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(reqs))
+	}
+	if reqs[0].Method != "POST" || reqs[0].Path != "/api/oauth/revoke" {
+		t.Fatalf("unexpected request: %s %s", reqs[0].Method, reqs[0].Path)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(reqs[0].Body, &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if len(body) != 1 || body["token"] != wantToken {
+		t.Fatalf("unexpected body: %s", reqs[0].Body)
+	}
+}
+
+func TestRevoke_ExplicitTokenKeepsCredentials(t *testing.T) {
+	stored := &mobiscroll.TokenResponse{AccessToken: "at", RefreshToken: "rt"}
+	c, srv := newRevokeClient(t, stored)
+	srv.EnqueueJSON(`{"success":true}`)
+
+	resp, err := c.Auth().Revoke(context.Background(), "explicit")
+	if err != nil {
+		t.Fatalf("Revoke: %v", err)
+	}
+	if !resp.Success {
+		t.Fatalf("expected success=true")
+	}
+	assertRevokeRequest(t, srv, "explicit")
+	if got := c.Credentials(); got != stored {
+		t.Fatalf("credentials changed: %+v", got)
+	}
+}
+
+func TestRevoke_DefaultsToStoredRefreshTokenAndClearsCredentials(t *testing.T) {
+	c, srv := newRevokeClient(t, &mobiscroll.TokenResponse{AccessToken: "at", RefreshToken: "rt"})
+	srv.EnqueueJSON(`{"success":true}`)
+
+	if _, err := c.Auth().Revoke(context.Background(), ""); err != nil {
+		t.Fatalf("Revoke: %v", err)
+	}
+	assertRevokeRequest(t, srv, "rt")
+	if got := c.Credentials(); got != nil {
+		t.Fatalf("expected credentials cleared, got %+v", got)
+	}
+}
+
+func TestRevoke_FallsBackToStoredAccessToken(t *testing.T) {
+	c, srv := newRevokeClient(t, &mobiscroll.TokenResponse{AccessToken: "at"})
+	srv.EnqueueJSON(`{"success":true}`)
+
+	if _, err := c.Auth().Revoke(context.Background(), ""); err != nil {
+		t.Fatalf("Revoke: %v", err)
+	}
+	assertRevokeRequest(t, srv, "at")
+	if got := c.Credentials(); got != nil {
+		t.Fatalf("expected credentials cleared, got %+v", got)
+	}
+}
+
+func TestRevoke_NoTokenReturnsValidationErrorWithoutRequest(t *testing.T) {
+	c, srv := newRevokeClient(t, nil)
+
+	_, err := c.Auth().Revoke(context.Background(), "")
+	var ve *mobiscroll.ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected *ValidationError, got %T: %v", err, err)
+	}
+	if n := srv.RequestCount(); n != 0 {
+		t.Fatalf("expected no requests, got %d", n)
+	}
+}
+
+func TestRevoke_FailureKeepsCredentials(t *testing.T) {
+	stored := &mobiscroll.TokenResponse{AccessToken: "at", RefreshToken: "rt"}
+	c, srv := newRevokeClient(t, stored)
+	srv.Enqueue(testsupport.MockResponse{Status: 400,
+		Body:    `{"error":"invalid_request","error_description":"token is required"}`,
+		Headers: map[string]string{"Content-Type": "application/json"}})
+
+	_, err := c.Auth().Revoke(context.Background(), "")
+	var ve *mobiscroll.ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected *ValidationError, got %T: %v", err, err)
+	}
+	if got := c.Credentials(); got != stored {
+		t.Fatalf("credentials changed: %+v", got)
+	}
+}
+
+func TestRevoke_DoesNotRefreshOn401(t *testing.T) {
+	stored := &mobiscroll.TokenResponse{AccessToken: "at", RefreshToken: "rt"}
+	c, srv := newRevokeClient(t, stored)
+	srv.EnqueueStatus(401)
+	srv.EnqueueJSON(`{"access_token":"new","refresh_token":"new-rt"}`)
+
+	_, err := c.Auth().Revoke(context.Background(), "")
+	var ae *mobiscroll.AuthenticationError
+	if !errors.As(err, &ae) {
+		t.Fatalf("expected *AuthenticationError, got %T: %v", err, err)
+	}
+	assertRevokeRequest(t, srv, "rt")
+	if got := c.Credentials(); got != stored {
+		t.Fatalf("credentials changed: %+v", got)
 	}
 }

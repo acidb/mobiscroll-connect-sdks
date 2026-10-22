@@ -167,4 +167,65 @@ RSpec.describe Mobiscroll::Connect::Resources::Auth do
       expect(result.success).to be true
     end
   end
+
+  describe '#revoke' do
+    let(:revoke_url) { "#{MockServer::BASE_URL}/oauth/revoke" }
+
+    before do
+      WebMock.stub_request(:post, revoke_url)
+             .to_return(status: 200, body: '{"success":true}', headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'revokes an explicit token and keeps the stored credentials' do
+      client = MockServer.client_with_tokens
+
+      result = client.auth.revoke('explicit-token')
+
+      expect(result).to be_a(Mobiscroll::Connect::RevokeResponse)
+      expect(result.success).to be true
+      expect(WebMock).to have_requested(:post, revoke_url).with(body: { 'token' => 'explicit-token' })
+      expect(client.credentials.refresh_token).to eq('test-refresh-token')
+    end
+
+    it 'defaults to the stored refresh token and clears the credentials' do
+      client = MockServer.client_with_tokens
+
+      client.auth.revoke
+
+      expect(WebMock).to have_requested(:post, revoke_url).with(body: { 'token' => 'test-refresh-token' })
+      expect(client.credentials).to be_nil
+    end
+
+    it 'falls back to the stored access token' do
+      client = MockServer.client_with_access_token_only
+
+      client.auth.revoke
+
+      expect(WebMock).to have_requested(:post, revoke_url).with(body: { 'token' => 'test-access-token' })
+      expect(client.credentials).to be_nil
+    end
+
+    it 'raises ValidationError without a request when no token is available' do
+      expect { client.auth.revoke }.to raise_error(Mobiscroll::Connect::ValidationError)
+      expect(WebMock).not_to have_requested(:post, revoke_url)
+    end
+
+    it 'keeps the stored credentials when the request fails' do
+      WebMock.stub_request(:post, revoke_url).to_return(status: 500, body: '')
+      client = MockServer.client_with_tokens
+
+      expect { client.auth.revoke }.to raise_error(Mobiscroll::Connect::ServerError)
+      expect(client.credentials.refresh_token).to eq('test-refresh-token')
+    end
+
+    it 'does not refresh tokens when the revoke request returns 401' do
+      WebMock.stub_request(:post, revoke_url).to_return(status: 401, body: '')
+      token_stub = MockServer.stub_form('/oauth/token', { 'access_token' => 'new', 'token_type' => 'Bearer' })
+      client = MockServer.client_with_tokens
+
+      expect { client.auth.revoke }.to raise_error(Mobiscroll::Connect::AuthenticationError)
+      expect(token_stub).not_to have_been_requested
+      expect(WebMock).to have_requested(:post, revoke_url).once
+    end
+  end
 end

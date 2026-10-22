@@ -84,9 +84,23 @@ end
 
 ### 5. Disconnect a provider
 
+Disconnect one account (its `id` from `get_connection_status`), or every account of a provider. This stops the account's webhook subscriptions and deletes its provider credentials; it does not revoke the user's Connect tokens.
+
 ```ruby
-client.auth.disconnect(provider: Mobiscroll::Connect::Provider::GOOGLE)
+client.auth.disconnect(provider: Mobiscroll::Connect::Provider::GOOGLE, account: 'user@gmail.com')
+client.auth.disconnect(provider: Mobiscroll::Connect::Provider::MICROSOFT)
 ```
+
+### 6. Revoke tokens
+
+`revoke` revokes the whole grant: every Connect access and refresh token of the user. It does not disconnect calendar accounts or stop webhooks, so to remove a user entirely, disconnect each provider first (that needs a valid access token), then revoke.
+
+```ruby
+client.auth.revoke                       # stored refresh token, else access token; clears the stored credentials
+client.auth.revoke(stored_refresh_token) # a token you pass; stored credentials are kept
+```
+
+It returns a `RevokeResponse` with `success: true` for any token, including an unknown or already revoked one. With no argument and no stored credentials it raises `ValidationError` without making a request.
 
 ## Token refresh
 

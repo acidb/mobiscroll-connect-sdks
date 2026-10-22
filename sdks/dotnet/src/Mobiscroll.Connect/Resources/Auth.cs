@@ -122,7 +122,22 @@ public sealed class Auth
         }
     }
 
-    /// <summary>Disconnect a provider account (or all accounts of a provider when <c>Account</c> is null).</summary>
+    /// <summary>
+    /// Disconnect a calendar provider account.
+    /// </summary>
+    /// <remarks>
+    /// Removes the account (or, when <c>Account</c> is null, every account of the provider) from the
+    /// user: stops its webhook subscriptions and deletes the stored provider credentials. It does not
+    /// revoke the user's Connect access or refresh tokens (see <see cref="RevokeAsync"/>), nor the
+    /// grant at Google or Microsoft. <c>Account</c> is the <c>Id</c> of an account from
+    /// <see cref="GetConnectionStatusAsync"/>.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// await client.Auth.DisconnectAsync(new DisconnectParams { Provider = Provider.Google, Account = "user@gmail.com" });
+    /// await client.Auth.DisconnectAsync(new DisconnectParams { Provider = Provider.Microsoft });
+    /// </code>
+    /// </example>
     public async Task<DisconnectResponse> DisconnectAsync(DisconnectParams disconnectParams, CancellationToken ct = default)
     {
         if (disconnectParams is null)
@@ -146,5 +161,51 @@ public sealed class Auth
                 .ConfigureAwait(false);
             return resp ?? new DisconnectResponse { Success = true };
         }
+    }
+
+    /// <summary>
+    /// Revoke the user's Connect access and refresh tokens.
+    /// </summary>
+    /// <remarks>
+    /// Revokes the whole grant: every access and refresh token issued for this user. It does not
+    /// disconnect calendar accounts or stop webhook subscriptions. To remove a user entirely, call
+    /// <see cref="DisconnectAsync"/> for each provider first (it needs a valid access token), then
+    /// <see cref="RevokeAsync"/>.
+    /// </remarks>
+    /// <param name="token">
+    /// Access or refresh token to revoke. When null, the stored refresh token (else the stored access
+    /// token) is revoked and the stored credentials are cleared.
+    /// </param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns><c>Success = true</c>, also for an unknown or already revoked token.</returns>
+    /// <exception cref="ValidationException">No token was given and none is stored.</exception>
+    /// <example>
+    /// <code>
+    /// await client.Auth.DisconnectAsync(new DisconnectParams { Provider = Provider.Google });
+    /// await client.Auth.RevokeAsync();
+    ///
+    /// // Or revoke a token you stored yourself
+    /// await client.Auth.RevokeAsync(storedRefreshToken);
+    /// </code>
+    /// </example>
+    public async Task<RevokeResponse> RevokeAsync(string? token = null, CancellationToken ct = default)
+    {
+        var credentials = _client.Credentials;
+        var revokeToken = token
+            ?? (string.IsNullOrEmpty(credentials?.RefreshToken) ? credentials?.AccessToken : credentials.RefreshToken);
+        if (string.IsNullOrEmpty(revokeToken))
+        {
+            throw new ValidationException("No token to revoke: pass one or set credentials first");
+        }
+
+        var resp = await _client.PostJsonNoRefreshAsync<RevokeResponse>("/oauth/revoke", new { token = revokeToken }, ct)
+            .ConfigureAwait(false);
+
+        if (token is null)
+        {
+            _client.ClearCredentials();
+        }
+
+        return resp ?? new RevokeResponse { Success = true };
     }
 }

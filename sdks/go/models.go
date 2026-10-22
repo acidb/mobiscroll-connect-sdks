@@ -83,13 +83,20 @@ type ConnectionStatus struct {
 // DisconnectParams is the input to Auth.Disconnect.
 type DisconnectParams struct {
 	Provider Provider // required
-	Account  string   // optional; disconnect this account only
+	// Account is optional: the ID of one account from GetConnectionStatus
+	// (Connections[provider][].ID). Empty disconnects every account of the provider.
+	Account string
 }
 
 // DisconnectResponse is the result of Auth.Disconnect.
 type DisconnectResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`
+}
+
+// RevokeResponse is the result of Auth.Revoke.
+type RevokeResponse struct {
+	Success bool `json:"success"`
 }
 
 // Calendar is a calendar exposed by one of the supported providers.
