@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- New: `auth.revoke(token?)` revokes the user's Connect access and refresh tokens (the whole grant). Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
-- New: `Calendar` has `account` (the connected account the calendar belongs to) and `readOnly` (`true` when the connection cannot write to it).
-- New: `EventCreateData` and `EventUpdateData` take `conference` (a meeting URL) and `conferenceData` (`{ autoGenerate: true }` creates a provider meeting link).
-- New: `generateAuthUrl()` takes `theme` (`'light'`, `'dark'` or `'auto'`) for the Connect pages.
+- `auth.revoke(token?)` revokes the user's Connect access and refresh tokens (the whole grant). Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
+- `Calendar` has `account` (the connected account the calendar belongs to) and `readOnly` (`true` when the connection cannot write to it).
+- `EventCreateData` and `EventUpdateData` take `conference` (a meeting URL) and `conferenceData` (`{ autoGenerate: true }` creates a provider meeting link).
+- `generateAuthUrl()` takes `theme` (`'light'`, `'dark'` or `'auto'`) for the Connect pages.
 
 ### Fixed
 

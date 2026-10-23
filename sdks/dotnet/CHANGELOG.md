@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- New: `Auth.RevokeAsync(token?)` revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `DisconnectAsync()` first to remove a user entirely.
-- New: `Calendar` has `Account` (the connected account the calendar belongs to) and `ReadOnly` (`true` when the connection cannot write to it).
-- New: `EventCreateData` and `EventUpdateData` take `Conference` (a meeting URL) and `ConferenceData` (an `EventConferenceData`; `AutoGenerate = true` creates a provider meeting link).
-- New: `AuthorizeParams.Theme` (`"light"`, `"dark"` or `"auto"`) sets the color scheme of the Connect pages.
+- `Auth.RevokeAsync(token?)` revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `DisconnectAsync()` first to remove a user entirely.
+- `Calendar` has `Account` (the connected account the calendar belongs to) and `ReadOnly` (`true` when the connection cannot write to it).
+- `EventCreateData` and `EventUpdateData` take `Conference` (a meeting URL) and `ConferenceData` (an `EventConferenceData`; `AutoGenerate = true` creates a provider meeting link).
+- `AuthorizeParams.Theme` (`"light"`, `"dark"` or `"auto"`) sets the color scheme of the Connect pages.
 
 ### Fixed
 

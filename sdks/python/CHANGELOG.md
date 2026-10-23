@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- New: `auth.revoke(token=None)` on the sync and async clients revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
-- New: `Calendar` has `account` (the connected account the calendar belongs to) and `read_only` (`True` when the connection cannot write to it).
-- New: `events.create()` and `events.update()` map the `conference_data` key to the API's `conferenceData`, so `{"autoGenerate": True}` creates a provider meeting link; `conference` takes a meeting URL.
-- New: `generate_auth_url()` takes `theme` (`"light"`, `"dark"` or `"auto"`) for the Connect pages, on the sync and async clients.
+- `auth.revoke(token=None)` on the sync and async clients revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
+- `Calendar` has `account` (the connected account the calendar belongs to) and `read_only` (`True` when the connection cannot write to it).
+- `events.create()` and `events.update()` map the `conference_data` key to the API's `conferenceData`, so `{"autoGenerate": True}` creates a provider meeting link; `conference` takes a meeting URL.
+- `generate_auth_url()` takes `theme` (`"light"`, `"dark"` or `"auto"`) for the Connect pages, on the sync and async clients.
 
 ### Fixed
 
