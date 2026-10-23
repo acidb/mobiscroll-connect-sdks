@@ -335,4 +335,67 @@ public sealed class WebhookVerificationTests : IDisposable
         Assert.Equal(1, delivery.Metadata.EventCount);
         Assert.False(delivery.Metadata.IsInitialSync);
     }
+
+    [Fact]
+    public async Task VerifyWebhookAsync_ParsesADeliveryWithAConferenceObject()
+    {
+        var vector = WebhookVectors.ByName("delivery: Google events with and without a conference");
+        using var client = ClientFactory.Create(EnqueueKeys(new FakeHttpMessageHandler(), WebhookVectors.Key("active")));
+
+        var delivery = await client.Webhooks.VerifyWebhookAsync(vector.Body, vector.Headers);
+
+        var meeting = delivery.Events[0];
+        Assert.NotNull(meeting.Conference);
+        Assert.Equal("https://meet.google.com/abc-defg-hij", meeting.Conference!.Url);
+        Assert.Equal("hangoutsMeet", meeting.Conference.Provider);
+        Assert.Equal("hangoutsMeet", meeting.Conference.MeetingProvider);
+        Assert.Equal("abc-defg-hij", meeting.Conference.Data!["conferenceId"].GetString());
+        Assert.Equal(new DateTime(2026, 9, 22, 9, 0, 0, DateTimeKind.Utc), meeting.Start.ToUniversalTime());
+        Assert.Equal("2026-09-21T09:58:12.000Z", meeting.LastModified);
+        Assert.Equal("updated", meeting.ChangeType);
+        Assert.True(meeting.Attendees![0].Organizer);
+        Assert.Null(delivery.Events[1].Conference);
+        Assert.True(delivery.Events[1].AllDay);
+        Assert.Equal("chan_google_1", delivery.Metadata.ChannelId);
+    }
+
+    [Fact]
+    public async Task VerifyWebhookAsync_ParsesADeletedPlaceholderWithoutCalendarId()
+    {
+        var vector = WebhookVectors.ByName("delivery: Microsoft Teams event and a deleted placeholder");
+        using var client = ClientFactory.Create(EnqueueKeys(new FakeHttpMessageHandler(), WebhookVectors.Key("active")));
+
+        var delivery = await client.Webhooks.VerifyWebhookAsync(vector.Body, vector.Headers);
+
+        Assert.Equal("teams", delivery.Events[0].Conference!.Provider);
+        var deleted = delivery.Events[1];
+        Assert.Equal("deleted", deleted.ChangeType);
+        Assert.Equal(string.Empty, deleted.CalendarId);
+        Assert.Null(deleted.Original);
+    }
+
+    [Fact]
+    public async Task VerifyWebhookAsync_AcceptsANullConference()
+    {
+        using var key = Key.Create(SignatureAlgorithm.Ed25519);
+        var publicKey = "whpk_" + Convert.ToBase64String(key.PublicKey.Export(KeyBlobFormat.RawPublicKey));
+        const string body = """
+        {"provider":"google","userId":"u1","calendarId":"c1","timestamp":"2026-09-21T10:00:00.000Z",
+         "events":[{"id":"e1","provider":"google","calendarId":"c1","title":"A","start":"2026-09-21T10:00:00.000Z","end":"2026-09-21T11:00:00.000Z","allDay":false,"lastModified":"2026-09-21T09:00:00.000Z","conference":null,"changeType":"updated"}],
+         "metadata":{"channelId":"ch1","eventCount":1,"isInitialSync":false}}
+        """;
+        var timestamp = _valid.Now.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var signature = SignatureAlgorithm.Ed25519.Sign(key, Encoding.UTF8.GetBytes($"msg_1.{timestamp}.{body}"));
+        var headers = new Dictionary<string, string>
+        {
+            ["webhook-id"] = "msg_1",
+            ["webhook-timestamp"] = timestamp,
+            ["webhook-signature"] = "v1a," + Convert.ToBase64String(signature),
+        };
+        using var client = ClientFactory.Create(EnqueueKeys(new FakeHttpMessageHandler(), publicKey));
+
+        var delivery = await client.Webhooks.VerifyWebhookAsync(body, headers);
+
+        Assert.Null(delivery.Events[0].Conference);
+    }
 }

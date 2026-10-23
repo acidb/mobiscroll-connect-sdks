@@ -27,15 +27,16 @@ class Auth:
         self,
         user_id: str,
         *,
-        scope: str = "calendar",
+        scope: str = "read-write",
         state: str | None = None,
         providers: str | None = None,
         lng: str | None = None,
+        theme: str | None = None,
     ) -> str:
         """Build the OAuth2 authorization URL to redirect the user to.
 
         :param user_id: External app user identifier (required).
-        :param scope: OAuth scope (default ``"calendar"``).
+        :param scope: Connect scope: ``"read-write"`` (default), ``"read"`` or ``"free-busy"``.
         :param state: Opaque CSRF protection value.
         :param providers: Comma-separated list (e.g. ``"google,microsoft"``)
             to restrict the provider picker.
@@ -44,6 +45,9 @@ class Auth:
             https://mobiscroll.com/docs/connect/localization#supported-languages
             When omitted, the Connect UI falls back to the browser
             ``Accept-Language`` header, then English.
+        :param theme: Color scheme of the Connect authorization pages: ``"light"``,
+            ``"dark"`` or ``"auto"`` (follows the device setting). When omitted, the
+            project's default theme applies.
         """
         cfg = self._api.config
         params = {
@@ -59,6 +63,8 @@ class Auth:
             params["providers"] = providers
         if lng is not None:
             params["lng"] = lng
+        if theme is not None:
+            params["theme"] = theme
 
         return f"{self._api.base_url}/oauth/authorize?{urlencode(params)}"
 

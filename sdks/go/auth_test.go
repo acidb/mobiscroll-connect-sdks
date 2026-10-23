@@ -21,6 +21,7 @@ func TestGenerateAuthURL_IncludesAllParams(t *testing.T) {
 		Scope:     "calendars events",
 		Providers: []mobiscroll.Provider{mobiscroll.ProviderGoogle, mobiscroll.ProviderMicrosoft},
 		Lng:       "es",
+		Theme:     "dark",
 	})
 	if !strings.HasPrefix(url, "https://example.test/api/oauth/authorize?") {
 		t.Fatalf("unexpected URL prefix: %s", url)
@@ -35,6 +36,7 @@ func TestGenerateAuthURL_IncludesAllParams(t *testing.T) {
 		"providers=google",
 		"providers=microsoft",
 		"lng=es",
+		"theme=dark",
 	} {
 		if !strings.Contains(url, want) {
 			t.Errorf("URL missing %q: %s", want, url)

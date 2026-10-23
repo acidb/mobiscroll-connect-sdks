@@ -1,8 +1,9 @@
 package com.mobiscroll.connect.exceptions;
 
 /**
- * Thrown when a webhook delivery fails verification. Respond with a 4xx and do not process it.
- * {@link #getReason()} says why.
+ * Thrown when a webhook delivery fails verification. Do not process it. {@link #getReason()} says why:
+ * respond with 503 when it is {@link Reason#NO_PUBLIC_KEYS} (the keys could not be fetched, so Connect
+ * retries) and with 401 otherwise.
  */
 public class WebhookVerificationException extends MobiscrollConnectException {
 

@@ -21,6 +21,7 @@ public class AuthTests
             Scope = "read-write",
             Providers = "google,microsoft",
             Lng = "es",
+            Theme = "dark",
         });
 
         Assert.StartsWith("https://connect.mobiscroll.com/api/oauth/authorize?", url);
@@ -32,6 +33,7 @@ public class AuthTests
         Assert.Contains("scope=read-write", url);
         Assert.Contains("providers=google%2Cmicrosoft", url);
         Assert.Contains("lng=es", url);
+        Assert.Contains("theme=dark", url);
     }
 
     [Fact]
@@ -45,6 +47,7 @@ public class AuthTests
         Assert.DoesNotContain("scope=", url);
         Assert.DoesNotContain("providers=", url);
         Assert.DoesNotContain("lng=", url);
+        Assert.DoesNotContain("theme=", url);
     }
 
     [Fact]

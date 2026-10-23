@@ -9,6 +9,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - New: `auth.revoke(token=None)` on the sync and async clients revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
+- New: `Calendar` has `account` (the connected account the calendar belongs to) and `read_only` (`True` when the connection cannot write to it).
+- New: `events.create()` and `events.update()` map the `conference_data` key to the API's `conferenceData`, so `{"autoGenerate": True}` creates a provider meeting link; `conference` takes a meeting URL.
+- New: `generate_auth_url()` takes `theme` (`"light"`, `"dark"` or `"auto"`) for the Connect pages, on the sync and async clients.
+
+### Fixed
+
+- `WebhookEvent.conference` is now a `WebhookConference` (`url`, `provider`, `meeting_provider`, `data`), matching the object deliveries contain; it was typed as a string and held the raw dictionary. `CalendarEvent.conference` from `events.list()` stays the join-URL string.
+- Corrected the guidance for a failed `verify_webhook()`: respond `503` when `reason` is `"no_public_keys"` so Connect retries the delivery, and `401` otherwise.
+- `events.create()` and `events.update()` on the sync and async clients now return the written event; they raised `ServerError` on every successful write because they expected the event inside an `event` field.
+- The default `scope` of `generate_auth_url()` is now `"read-write"` on the sync and async clients. It was `"calendar"`, which is not a Connect scope; Connect treated it as `read-write`, so the authorization behaves the same.
 
 ## [1.6.0] — 2026-10-08
 

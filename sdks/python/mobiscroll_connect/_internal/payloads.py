@@ -70,6 +70,7 @@ def build_event_payload(event: Mapping[str, Any]) -> dict[str, Any]:
         "update_mode": "updateMode",
         "delete_mode": "deleteMode",
         "all_day": "allDay",
+        "conference_data": "conferenceData",
     }
 
     payload: dict[str, Any] = {}

@@ -75,6 +75,37 @@ describe('Events Resource', () => {
       expect(result).toEqual({ events: mockEvents });
     });
 
+    it('should convert ISO start/end strings from the wire to Date', async () => {
+      mockApiClient.get.mockResolvedValue({
+        data: {
+          events: [
+            {
+              id: '1',
+              title: 'Event 1',
+              start: '2023-01-01T10:00:00.000Z',
+              end: '2023-01-01T11:00:00.000Z',
+              allDay: false,
+              provider: 'google',
+              calendarId: 'cal1',
+              conference: 'https://meet.google.com/abc-defg-hij',
+              original: {},
+            },
+          ],
+          nextPageToken: 'next',
+        },
+        status: 200,
+        headers: {},
+      });
+
+      const result = await events.list();
+
+      expect(result.nextPageToken).toBe('next');
+      expect(result.events[0].start).toBeInstanceOf(Date);
+      expect(result.events[0].start.toISOString()).toBe('2023-01-01T10:00:00.000Z');
+      expect(result.events[0].end.getTime()).toBe(Date.parse('2023-01-01T11:00:00.000Z'));
+      expect(result.events[0].conference).toBe('https://meet.google.com/abc-defg-hij');
+    });
+
     it('should surface description, conferenceData and lastModified', async () => {
       const mockEvents: CalendarEvent[] = [
         {
@@ -159,6 +190,56 @@ describe('Events Resource', () => {
       mockApiClient.post.mockRejectedValue(error);
 
       await expect(events.create(newEvent)).rejects.toThrow('Creation failed');
+    });
+
+    it('should send conference and conferenceData', async () => {
+      mockApiClient.post.mockResolvedValue({ data: {}, status: 201, headers: {} });
+      const newEvent: CreateEventData = {
+        provider: ProviderEnum.Google,
+        calendarId: 'cal1',
+        title: 'Sync',
+        start: '2023-01-01T10:00:00Z',
+        end: '2023-01-01T11:00:00Z',
+        conference: 'https://meet.example.com/x',
+        conferenceData: { autoGenerate: true },
+      };
+
+      await events.create(newEvent);
+
+      expect(mockApiClient.post).toHaveBeenCalledWith(
+        '/event',
+        expect.objectContaining({
+          conference: 'https://meet.example.com/x',
+          conferenceData: { autoGenerate: true },
+        })
+      );
+    });
+
+    it('should convert ISO start/end strings in the response to Date', async () => {
+      mockApiClient.post.mockResolvedValue({
+        data: {
+          id: 'new-id',
+          title: 'New Event',
+          start: '2023-01-01T10:00:00.000Z',
+          end: '2023-01-01T11:00:00.000Z',
+          allDay: false,
+          provider: 'google',
+          calendarId: 'cal1',
+        },
+        status: 201,
+        headers: {},
+      });
+
+      const result = await events.create({
+        title: 'New Event',
+        start: '2023-01-01T10:00:00Z',
+        end: '2023-01-01T11:00:00Z',
+        calendarId: 'cal1',
+        provider: ProviderEnum.Google,
+      });
+
+      expect(result.start).toBeInstanceOf(Date);
+      expect(result.end.toISOString()).toBe('2023-01-01T11:00:00.000Z');
     });
   });
 

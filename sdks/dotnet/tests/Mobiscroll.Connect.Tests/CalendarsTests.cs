@@ -12,7 +12,7 @@ public class CalendarsTests
     {
         var json = """
         [
-          {"provider":"google","id":"cal-1","title":"Work","timeZone":"UTC","color":"#fff","description":""},
+          {"provider":"google","id":"cal-1","title":"Work","timeZone":"UTC","color":"#fff","description":"","account":"ana@company.com","readOnly":true},
           {"provider":"microsoft","id":"cal-2","title":"Personal","timeZone":"Europe/Budapest","color":"#000","description":"pers"},
           {"provider":"caldav","id":"cal-3","title":"Shared","timeZone":"UTC","color":"","description":""}
         ]
@@ -30,6 +30,9 @@ public class CalendarsTests
         Assert.Equal(Provider.CalDav, calendars[2].Provider);
         Assert.Equal("Work", calendars[0].Title);
         Assert.Equal("Europe/Budapest", calendars[1].TimeZone);
+        Assert.Equal("ana@company.com", calendars[0].Account);
+        Assert.True(calendars[0].ReadOnly);
+        Assert.False(calendars[1].ReadOnly);
 
         var req = handler.Requests[0];
         Assert.Equal(HttpMethod.Get, req.Method);

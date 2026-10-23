@@ -115,8 +115,9 @@ const (
 )
 
 // WebhookVerificationError is returned when a webhook delivery fails
-// verification. Respond with a 4xx and do not process the delivery. Reason
-// says why it failed.
+// verification. Do not process the delivery. Reason says why it failed:
+// respond with 503 when it is WebhookNoPublicKeys (the keys could not be
+// fetched, so Connect retries) and with 401 otherwise.
 type WebhookVerificationError struct {
 	Message string
 	Reason  WebhookVerificationReason

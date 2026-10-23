@@ -9,6 +9,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - New: `auth().revoke()` and `auth().revoke(String token)` revoke the user's Connect access and refresh tokens (the whole grant) and return a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
+- New: `Calendar` has `getAccount()` (the connected account the calendar belongs to) and `getReadOnly()` (`true` when the connection cannot write to it).
+- New: `EventCreateData` and `EventUpdateData` builders take `conference(String)` (a meeting URL) and `conferenceData(EventConferenceData)` (`autoGenerate(true)` creates a provider meeting link).
+- New: `AuthUrlParams.builder().theme(...)` (`"light"`, `"dark"` or `"auto"`) sets the color scheme of the Connect pages.
+
+### Fixed
+
+- `verifyWebhook()` now accepts deliveries whose events include a conference; they were rejected with reason `INVALID_PAYLOAD`. `WebhookEvent.getConference()` returns a `WebhookConference` (`getUrl()`, `getProvider()`, `getMeetingProvider()`, `getData()`), matching the object deliveries contain. `WebhookEvent` no longer extends `CalendarEvent`, whose `getConference()` stays the join-URL string the events endpoints return; it keeps the same getters.
+- Corrected the guidance for a failed `verifyWebhook()`: respond `503` when the reason is `NO_PUBLIC_KEYS` so Connect retries the delivery, and `401` otherwise.
 
 ## [1.6.0] — 2026-10-08
 

@@ -16,8 +16,11 @@ module Mobiscroll
 
         # Subscribes to push notifications for changes on a calendar.
         #
-        # `channel_id` is auto-generated server-side when omitted. `expiration` is a
-        # provider-specific timestamp (ms epoch) the caller can suggest.
+        # Pass the calendar's real ID from Calendars#list as `calendar_id`; an alias such as
+        # 'primary' creates a duplicate subscription. `channel_id` is auto-generated
+        # server-side when omitted; one that another user already holds is rejected with
+        # Mobiscroll::Connect::Error (HTTP 409). `expiration` is a provider-specific timestamp
+        # (ms epoch) the caller can suggest.
         def subscribe_webhook(provider:, calendar_id:, channel_id: nil, expiration: nil)
           body = { 'provider' => provider, 'calendarId' => calendar_id }
           body['channelId'] = channel_id if channel_id
@@ -33,6 +36,9 @@ module Mobiscroll
         # The backend treats a 200 response as final even when the provider-side
         # unsubscribe itself failed (e.g. an already-expired subscription) — the local
         # mapping is removed either way, and `message` explains what happened.
+        #
+        # Use the current channel ID: Connect replaces it when it renews a subscription, so
+        # take it from the latest delivery's `metadata.channel_id`.
         def unsubscribe_webhook(provider:, channel_id:, resource_id: nil)
           body = { 'provider' => provider, 'channelId' => channel_id }
           body['resourceId'] = resource_id if resource_id
@@ -53,14 +59,15 @@ module Mobiscroll
         # `headers` is a Hash (any key casing) or a Rack env / Rails `request.headers`.
         #
         # Returns a WebhookDelivery. Raises WebhookVerificationError when the delivery is not
-        # genuine; respond with a 4xx.
+        # verified: respond with 503 when its `reason` is 'no_public_keys' (Connect retries)
+        # and with 401 otherwise (Connect does not retry).
         #
         #   post '/webhooks/mobiscroll' do
         #     delivery = client.webhooks.verify_webhook(request.body.read, request.env)
         #     handle_delivery(delivery)
         #     status 204
-        #   rescue Mobiscroll::Connect::WebhookVerificationError
-        #     halt 401
+        #   rescue Mobiscroll::Connect::WebhookVerificationError => e
+        #     halt(e.reason == 'no_public_keys' ? 503 : 401)
         #   end
         def verify_webhook(payload, headers)
           store = WebhookKeyStore.for_url(URI.join(@config.base_url, WEBHOOK_KEYS_PATH).to_s)

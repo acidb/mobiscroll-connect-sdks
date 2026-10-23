@@ -16,7 +16,7 @@ class AuthTest extends BaseTestCase
         $this->assertStringContainsString('client_id=test-client-id', $url);
         $this->assertStringContainsString('response_type=code', $url);
         $this->assertStringContainsString('user_id=user-123', $url);
-        $this->assertStringContainsString('scope=calendar', $url);
+        $this->assertStringContainsString('scope=read-write', $url);
         $this->assertStringContainsString('redirect_uri=', $url);
     }
 
@@ -27,7 +27,8 @@ class AuthTest extends BaseTestCase
             scope: 'read-write',
             state: 'test-state',
             providers: 'google,microsoft',
-            lng: 'es'
+            lng: 'es',
+            theme: 'dark',
         );
 
         $this->assertStringContainsString('user_id=user-123', $url);
@@ -35,12 +36,19 @@ class AuthTest extends BaseTestCase
         $this->assertStringContainsString('state=test-state', $url);
         $this->assertStringContainsString('providers=google%2Cmicrosoft', $url);
         $this->assertStringContainsString('lng=es', $url);
+        $this->assertStringContainsString('theme=dark', $url);
     }
 
-    public function testGenerateAuthUrlDefaultScopeIsCalendar(): void
+    public function testGenerateAuthUrlOmitsThemeWhenNull(): void
     {
         $url = $this->client->auth()->generateAuthUrl(userId: 'user-123');
-        $this->assertStringContainsString('scope=calendar', $url);
+        $this->assertStringNotContainsString('theme=', $url);
+    }
+
+    public function testGenerateAuthUrlDefaultScopeIsReadWrite(): void
+    {
+        $url = $this->client->auth()->generateAuthUrl(userId: 'user-123');
+        $this->assertStringContainsString('scope=read-write', $url);
     }
 
     public function testSetCredentialsRegistersTokenForSubsequentCalls(): void

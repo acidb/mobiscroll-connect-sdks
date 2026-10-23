@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.mobiscroll.connect.models.CalendarEvent;
+import com.mobiscroll.connect.models.EventConferenceData;
 import com.mobiscroll.connect.models.EventCreateData;
 import com.mobiscroll.connect.models.EventDeleteParams;
 import com.mobiscroll.connect.models.EventListParams;
@@ -74,6 +75,8 @@ class EventsTest {
                 .title("Meet")
                 .start(OffsetDateTime.of(2026, 5, 1, 9, 0, 0, 0, ZoneOffset.UTC))
                 .end(OffsetDateTime.of(2026, 5, 1, 10, 0, 0, 0, ZoneOffset.UTC))
+                .conference("https://meet.example.com/x")
+                .conferenceData(EventConferenceData.builder().autoGenerate(true).build())
                 .build());
 
         assertThat(ev.getId()).isEqualTo("e1");
@@ -87,6 +90,8 @@ class EventsTest {
         assertThat(body).contains("\"provider\":\"google\"");
         assertThat(body).contains("\"title\":\"Meet\"");
         assertThat(body).contains("\"start\":\"2026-05-01T09:00:00Z\"");
+        assertThat(body).contains("\"conference\":\"https://meet.example.com/x\"");
+        assertThat(body).contains("\"conferenceData\":{\"autoGenerate\":true}");
     }
 
     @Test void updatePutsToEventPath() throws Exception {

@@ -28,7 +28,8 @@ class CalendarsTest {
 
     @Test void listParsesCalendars() throws Exception {
         server.enqueue(new MockResponse().setBody(
-                "[{\"id\":\"cal1\",\"provider\":\"google\",\"title\":\"Work\",\"timeZone\":\"UTC\",\"color\":\"#4285F4\"}]"));
+                "[{\"id\":\"cal1\",\"provider\":\"google\",\"title\":\"Work\",\"timeZone\":\"UTC\",\"color\":\"#4285F4\","
+                        + "\"account\":\"ana@company.com\",\"readOnly\":true}]"));
         MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
 
         List<Calendar> calendars = client.calendars().list();
@@ -40,6 +41,8 @@ class CalendarsTest {
         assertThat(c.getTitle()).isEqualTo("Work");
         assertThat(c.getTimeZone()).isEqualTo("UTC");
         assertThat(c.getColor()).isEqualTo("#4285F4");
+        assertThat(c.getAccount()).isEqualTo("ana@company.com");
+        assertThat(c.getReadOnly()).isTrue();
 
         RecordedRequest req = server.takeRequest();
         assertThat(req.getMethod()).isEqualTo("GET");

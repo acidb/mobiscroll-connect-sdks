@@ -78,7 +78,9 @@ module Mobiscroll
       end
     end
 
-    # Raised when a webhook delivery fails verification. Respond with a 4xx and do not process it.
+    # Raised when a webhook delivery fails verification. Do not process it. Respond with 503
+    # when +reason+ is 'no_public_keys' (the keys could not be fetched, so Connect retries) and
+    # with 401 otherwise.
     #
     # +reason+ is one of 'missing_headers', 'invalid_timestamp', 'timestamp_out_of_tolerance',
     # 'no_public_keys', 'no_matching_signature' or 'invalid_payload'.

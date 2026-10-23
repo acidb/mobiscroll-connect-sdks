@@ -34,7 +34,8 @@ public final class Auth {
                 .add("user_id", params.getUserId())
                 .add("state", params.getState())
                 .add("scope", params.getScope())
-                .add("lng", params.getLng());
+                .add("lng", params.getLng())
+                .add("theme", params.getTheme());
         if (params.getProviders() != null) {
             for (Provider p : params.getProviders()) {
                 qs.add("providers", p.wireValue());

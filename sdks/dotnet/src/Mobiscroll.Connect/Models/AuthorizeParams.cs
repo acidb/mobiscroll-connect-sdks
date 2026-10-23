@@ -18,4 +18,10 @@ public sealed class AuthorizeParams
     /// Supported languages: <see href="https://mobiscroll.com/docs/connect/localization#supported-languages"/>
     /// </summary>
     public string? Lng { get; set; }
+
+    /// <summary>
+    /// Color scheme of the Connect authorization pages: "light" | "dark" | "auto" (follows the device setting).
+    /// When null, the project's default theme applies.
+    /// </summary>
+    public string? Theme { get; set; }
 }

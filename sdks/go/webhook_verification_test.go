@@ -469,3 +469,72 @@ func TestVerifyWebhook_ParsesTheFullDelivery(t *testing.T) {
 		t.Fatalf("unexpected event: %+v", ev)
 	}
 }
+
+func TestVerifyWebhook_ParsesADeliveryWithAConferenceObject(t *testing.T) {
+	f := newWebhookFixture(t)
+	f.srv.Enqueue(keysResponse("max-age=3600", f.vectors.Keys.Active))
+	v := f.vectors.byName(t, "delivery: Google events with and without a conference")
+
+	delivery, err := f.client().Webhooks().VerifyWebhook(context.Background(), []byte(v.Body), v.header())
+	if err != nil {
+		t.Fatalf("VerifyWebhook: %v", err)
+	}
+	meeting := delivery.Events[0]
+	c := meeting.Conference
+	if c == nil || c.URL != "https://meet.google.com/abc-defg-hij" || c.Provider != "hangoutsMeet" || c.MeetingProvider != "hangoutsMeet" {
+		t.Fatalf("unexpected conference: %+v", c)
+	}
+	if c.Data["conferenceId"] != "abc-defg-hij" {
+		t.Fatalf("unexpected conference data: %+v", c.Data)
+	}
+	if meeting.Start == nil || !meeting.Start.Equal(time.Date(2026, 9, 22, 9, 0, 0, 0, time.UTC)) {
+		t.Fatalf("unexpected start: %v", meeting.Start)
+	}
+	if meeting.LastModified != "2026-09-21T09:58:12.000Z" || meeting.ChangeType != "updated" {
+		t.Fatalf("unexpected event: %+v", meeting)
+	}
+	if len(meeting.Attendees) != 2 {
+		t.Fatalf("unexpected attendees: %+v", meeting.Attendees)
+	}
+	if lunch := delivery.Events[1]; lunch.Conference != nil || !lunch.AllDay {
+		t.Fatalf("unexpected second event: %+v", lunch)
+	}
+	if delivery.Metadata.ChannelID != "chan_google_1" || delivery.Metadata.EventCount != 2 {
+		t.Fatalf("unexpected metadata: %+v", delivery.Metadata)
+	}
+}
+
+func TestVerifyWebhook_ParsesADeletedPlaceholderWithoutCalendarID(t *testing.T) {
+	f := newWebhookFixture(t)
+	f.srv.Enqueue(keysResponse("max-age=3600", f.vectors.Keys.Active))
+	v := f.vectors.byName(t, "delivery: Microsoft Teams event and a deleted placeholder")
+
+	delivery, err := f.client().Webhooks().VerifyWebhook(context.Background(), []byte(v.Body), v.header())
+	if err != nil {
+		t.Fatalf("VerifyWebhook: %v", err)
+	}
+	if c := delivery.Events[0].Conference; c == nil || c.Provider != "teams" {
+		t.Fatalf("unexpected conference: %+v", c)
+	}
+	deleted := delivery.Events[1]
+	if deleted.ChangeType != "deleted" || deleted.CalendarID != "" || deleted.Original != nil {
+		t.Fatalf("unexpected placeholder: %+v", deleted)
+	}
+}
+
+func TestVerifyWebhook_AcceptsANullConference(t *testing.T) {
+	f := newWebhookFixture(t)
+	signer := newTestSigner(t)
+	f.srv.Enqueue(keysResponse("max-age=3600", signer.key))
+
+	body := `{"provider":"google","userId":"u1","calendarId":"cal","events":[{"provider":"google","id":"e1",` +
+		`"calendarId":"cal","title":"T","start":"2026-10-07T09:00:00.000Z","end":"2026-10-07T09:30:00.000Z",` +
+		`"conference":null,"changeType":"updated"}],"metadata":{"channelId":"ch","eventCount":1}}`
+	delivery, err := f.client().Webhooks().VerifyWebhook(context.Background(), []byte(body), signer.sign("msg_1", f.clock.Load(), body))
+	if err != nil {
+		t.Fatalf("VerifyWebhook: %v", err)
+	}
+	if delivery.Events[0].Conference != nil {
+		t.Fatalf("expected nil conference, got %+v", delivery.Events[0].Conference)
+	}
+}

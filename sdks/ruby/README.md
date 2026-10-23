@@ -40,6 +40,7 @@ client = Mobiscroll::Connect::Client.new(
 url = client.auth.generate_auth_url(
   user_id:   'user-123',
   lng:       'es', # optional: Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
+  theme:     'dark', # optional: Connect page color scheme, 'light' | 'dark' | 'auto'
   providers: [
     Mobiscroll::Connect::Provider::GOOGLE,
     Mobiscroll::Connect::Provider::MICROSOFT
@@ -194,16 +195,20 @@ client.events.delete(
 
 ### Subscribe to calendar change notifications
 
+Pass the calendar's real ID from `calendars.list`; an alias such as `primary` creates a duplicate subscription. A `channel_id` you supply that another user already holds is rejected with `Mobiscroll::Connect::Error` (HTTP 409).
+
 ```ruby
 result = client.webhooks.subscribe_webhook(
   provider:    Mobiscroll::Connect::Provider::GOOGLE,
-  calendar_id: 'primary'
+  calendar_id: 'work@company.com'
 )
 puts result.channel_id
 puts result.server_webhook_url
 ```
 
 ### Unsubscribe
+
+Connect replaces the channel ID when it renews a subscription, so use the current one from the latest delivery's `metadata.channel_id`.
 
 ```ruby
 client.webhooks.unsubscribe_webhook(
@@ -229,6 +234,8 @@ post '/webhooks/mobiscroll' do
   status 204
 end
 ```
+
+Each event's `conference` is a `WebhookConference` (`url`, `provider`, `meeting_provider`, `data`), nil when absent, rather than the join-URL string `events.list` returns.
 
 `headers` can be a Hash with any key casing, a Rack env (`HTTP_WEBHOOK_ID` keys), or Rails' `request.headers` (pass `request.raw_post` as the body in Rails).
 

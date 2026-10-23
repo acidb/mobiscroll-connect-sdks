@@ -11,7 +11,10 @@ module Mobiscroll
           @api_client = api_client
         end
 
-        def generate_auth_url(user_id:, scope: nil, state: nil, providers: nil, lng: nil)
+        # Builds the consent URL to redirect the user to. `lng` is the Connect page language
+        # (e.g. 'es'); `theme` is the Connect page color scheme: 'light', 'dark' or 'auto'
+        # (follows the device setting), the project's default theme when nil.
+        def generate_auth_url(user_id:, scope: nil, state: nil, providers: nil, lng: nil, theme: nil)
           params = {
             'response_type' => 'code',
             'client_id' => @config.client_id,
@@ -21,6 +24,7 @@ module Mobiscroll
           params['scope'] = scope if scope
           params['state'] = state if state
           params['lng'] = lng if lng
+          params['theme'] = theme if theme
 
           query = URI.encode_www_form(params)
 

@@ -14,7 +14,10 @@ type webhooksService struct{ api *apiClient }
 // SubscribeWebhook subscribes to change notifications for a calendar.
 // Provider and CalendarID are required; ChannelID is auto-generated
 // server-side when omitted, and Expiration is a provider-specific timestamp
-// (ms epoch).
+// (ms epoch). Pass the calendar's real ID from Calendars().List; an alias such
+// as "primary" creates a duplicate subscription. A ChannelID you supply that
+// another user already holds is rejected with an HTTP 409 error (a
+// MobiscrollError with code "MOBISCROLL_ERROR").
 func (s *webhooksService) SubscribeWebhook(ctx context.Context, params *SubscribeWebhookParams) (*SubscribeWebhookResponse, error) {
 	if params == nil {
 		return nil, errors.New("mobiscroll: SubscribeWebhookParams must not be nil")
@@ -30,7 +33,9 @@ func (s *webhooksService) SubscribeWebhook(ctx context.Context, params *Subscrib
 // are required; ResourceID is required by some providers (e.g. Google) to
 // fully unsubscribe. The response reports success even if the provider-side
 // subscription had already expired — check Message for details in that case,
-// and treat the response as final regardless of Message.
+// and treat the response as final regardless of Message. Use the current
+// channel ID: Connect replaces it when it renews a subscription, so take it
+// from the latest delivery's Metadata.ChannelID.
 func (s *webhooksService) UnsubscribeWebhook(ctx context.Context, params *UnsubscribeWebhookParams) (*UnsubscribeWebhookResponse, error) {
 	if params == nil {
 		return nil, errors.New("mobiscroll: UnsubscribeWebhookParams must not be nil")
@@ -44,7 +49,9 @@ func (s *webhooksService) UnsubscribeWebhook(ctx context.Context, params *Unsubs
 
 // VerifyWebhook verifies that a webhook delivery came from Mobiscroll Connect
 // and returns it parsed. It returns a *WebhookVerificationError when the
-// delivery is not genuine; respond with a 4xx and do not process it.
+// delivery is not verified; do not process it. Respond with 503 when Reason is
+// WebhookNoPublicKeys (Connect retries) and with 401 otherwise (Connect does
+// not retry).
 //
 // payload is the raw request body, exactly as received. headers are the
 // request headers; names are matched case-insensitively.
@@ -66,7 +73,11 @@ func (s *webhooksService) UnsubscribeWebhook(ctx context.Context, params *Unsubs
 //	    delivery, err := client.Webhooks().VerifyWebhook(r.Context(), body, r.Header)
 //	    var ve *mobiscroll.WebhookVerificationError
 //	    if errors.As(err, &ve) {
-//	        http.Error(w, "invalid signature", http.StatusUnauthorized)
+//	        status := http.StatusUnauthorized
+//	        if ve.Reason == mobiscroll.WebhookNoPublicKeys {
+//	            status = http.StatusServiceUnavailable // Connect retries
+//	        }
+//	        http.Error(w, "unverified delivery", status)
 //	        return
 //	    }
 //	    ...

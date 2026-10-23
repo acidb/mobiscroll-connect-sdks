@@ -9,6 +9,7 @@ import {
   WebhookVerificationError,
 } from '../types';
 import { WEBHOOK_KEYS_PATH, WebhookKeyStore, verifyWebhookSignature } from '../webhookVerification';
+import { reviveEventDates } from '../eventDates';
 
 /**
  * Webhooks resource for calendar change notifications: subscribe, unsubscribe, and verify deliveries
@@ -19,14 +20,19 @@ export class Webhooks {
   /**
    * Subscribe to webhook notifications for a calendar
    *
+   * Pass the calendar's real id from `calendars.list()`, not an alias such as `primary`: an alias
+   * creates a separate, duplicate subscription.
+   *
    * @param params - Subscription parameters including provider and calendar
    * @returns Subscription details, including the channel id needed to unsubscribe later
+   * @throws {MobiscrollConnectError} When a `channelId` you supplied is already in use by another
+   * user (HTTP 409)
    *
    * @example
    * ```typescript
    * const subscription = await client.webhooks.subscribeWebhook({
    *   provider: 'google',
-   *   calendarId: 'primary',
+   *   calendarId: 'work@company.com',
    * });
    *
    * console.log(subscription.channelId);
@@ -39,6 +45,9 @@ export class Webhooks {
 
   /**
    * Unsubscribe from webhook notifications for a calendar
+   *
+   * Use the current channel id: Connect replaces it when it renews a subscription, so take it from
+   * the latest delivery's `metadata.channelId` rather than from the original subscribe response.
    *
    * @param params - Unsubscription parameters including provider and channel id
    * @returns Success confirmation. Returns `success: true` even if the provider-side
@@ -72,8 +81,9 @@ export class Webhooks {
    *
    * @param payload - The raw request body, exactly as received; not a parsed object
    * @param headers - The request headers
-   * @returns The parsed delivery
-   * @throws {WebhookVerificationError} When the delivery is not genuine; respond with a 4xx
+   * @returns The parsed delivery, with each event's `start` and `end` converted to `Date`
+   * @throws {WebhookVerificationError} When the delivery is not verified. Respond with `503` when
+   * `reason` is `no_public_keys` (Connect retries) and with `401` otherwise (Connect does not retry)
    *
    * @example
    * ```typescript
@@ -123,6 +133,9 @@ export class Webhooks {
     if (typeof delivery !== 'object' || delivery === null || Array.isArray(delivery)) {
       throw new WebhookVerificationError('Webhook payload is not a JSON object', 'invalid_payload');
     }
-    return delivery as WebhookDelivery;
+    const parsed = delivery as WebhookDelivery;
+    return Array.isArray(parsed.events)
+      ? { ...parsed, events: parsed.events.map(reviveEventDates) }
+      : parsed;
   }
 }

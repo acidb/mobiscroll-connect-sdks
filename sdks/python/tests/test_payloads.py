@@ -66,10 +66,14 @@ class TestBuildEventPayload:
             "event_id": "evt-1",
             "all_day": True,
             "title": "x",
+            "conference": "https://meet.example.com/x",
+            "conference_data": {"autoGenerate": True},
         })
         assert p["calendarId"] == "primary"
         assert p["eventId"] == "evt-1"
         assert p["allDay"] is True
+        assert p["conference"] == "https://meet.example.com/x"
+        assert p["conferenceData"] == {"autoGenerate": True}
         assert "calendar_id" not in p
 
     def test_camel_passthrough(self):

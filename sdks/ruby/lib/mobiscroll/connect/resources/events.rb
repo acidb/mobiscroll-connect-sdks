@@ -77,25 +77,33 @@ module Mobiscroll
           body['end'] = params[:end] if params.key?(:end)
           body['allDay'] = params[:all_day] if params.key?(:all_day)
           body['description'] = params[:description] if params.key?(:description)
-          body['color'] = params[:color] if params.key?(:color)
           body['location'] = params[:location] if params.key?(:location)
           body['recurringEventId'] = params[:recurring_event_id] if params.key?(:recurring_event_id)
           body['updateMode'] = params[:update_mode] if params.key?(:update_mode)
           body['availability'] = params[:availability] if params.key?(:availability)
           body['privacy'] = params[:privacy] if params.key?(:privacy)
+          body['status'] = params[:status] if params.key?(:status)
 
           if params.key?(:recurrence)
             body['recurrence'] =
               params[:recurrence].is_a?(RecurrenceRule) ? params[:recurrence].to_wire : params[:recurrence]
           end
 
-          if params.key?(:attendees)
-            body['attendees'] = params[:attendees].map { |a| a.is_a?(Attendee) ? a.to_h : a }
-          end
+          body['attendees'] = Array(params[:attendees]).map { |a| attendee_email(a) } if params.key?(:attendees)
 
           body['conference'] = params[:conference] if params.key?(:conference)
+          body['conferenceData'] = params[:conference_data] if params.key?(:conference_data)
           body['custom'] = params[:custom] if params.key?(:custom)
           body
+        end
+
+        # The API takes attendees as email strings; an Attendee or a Hash is reduced to its email.
+        def attendee_email(attendee)
+          case attendee
+          when Attendee then attendee.email
+          when Hash then attendee['email'] || attendee[:email]
+          else attendee
+          end
         end
       end
     end

@@ -14,7 +14,9 @@ RSpec.describe Mobiscroll::Connect::Resources::Calendars do
                                'id' => 'primary',
                                'title' => 'My Calendar',
                                'timeZone' => 'America/New_York',
-                               'color' => '#4285F4'
+                               'color' => '#4285F4',
+                               'account' => 'ana@company.com',
+                               'readOnly' => true
                              },
                              {
                                'provider' => 'microsoft',
@@ -34,6 +36,9 @@ RSpec.describe Mobiscroll::Connect::Resources::Calendars do
       expect(calendars.first.id).to eq('primary')
       expect(calendars.first.title).to eq('My Calendar')
       expect(calendars.first.time_zone).to eq('America/New_York')
+      expect(calendars.first.account).to eq('ana@company.com')
+      expect(calendars.first.read_only).to be(true)
+      expect(calendars.last.read_only).to be(false)
     end
 
     it 'returns empty array when API returns empty' do

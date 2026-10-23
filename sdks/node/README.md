@@ -53,6 +53,7 @@ const url = client.auth.generateAuthUrl({
 	scope: 'read-write',
 	providers: 'google,microsoft,apple,caldav',
 	lng: 'es', // optional: Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
+	theme: 'dark', // optional: Connect page color scheme, 'light' | 'dark' | 'auto'
 });
 
 // Redirect the user to `url`
@@ -131,16 +132,20 @@ await client.events.delete({
 
 ### Subscribe to webhook notifications
 
+Pass the calendar's real id from `calendars.list()`; an alias such as `primary` creates a duplicate subscription. A `channelId` you supply that another user already holds is rejected with a `MobiscrollConnectError` (HTTP 409).
+
 ```ts
 const subscription = await client.webhooks.subscribeWebhook({
 	provider: 'google',
-	calendarId: 'primary',
+	calendarId: 'work@company.com',
 });
 
 console.log(subscription.channelId);
 ```
 
 ### Unsubscribe from webhook notifications
+
+Connect replaces the channel id when it renews a subscription, so use the current one from the latest delivery's `metadata.channelId`.
 
 ```ts
 await client.webhooks.unsubscribeWebhook({
@@ -173,6 +178,8 @@ app.post('/webhooks/mobiscroll', express.raw({ type: 'application/json' }), asyn
 	handleDelivery(delivery);
 });
 ```
+
+Each event's `start` and `end` are `Date` objects, and `conference` is an object (`url`, `provider`, `meetingProvider`, `data`) rather than the join-URL string `events.list()` returns.
 
 The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side.
 

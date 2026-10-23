@@ -131,8 +131,9 @@ WebhookVerificationFailure = Literal[
 
 
 class WebhookVerificationError(MobiscrollConnectError):
-    """Raised when a webhook delivery fails verification. Respond with a 4xx and
-    do not process it. ``reason`` says which check failed."""
+    """Raised when a webhook delivery fails verification. Do not process it. ``reason``
+    says which check failed: respond with ``503`` when it is ``"no_public_keys"`` (the
+    keys could not be fetched, so Connect retries) and with ``401`` otherwise."""
 
     code = "WEBHOOK_VERIFICATION_ERROR"
 

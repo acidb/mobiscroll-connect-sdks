@@ -81,6 +81,8 @@ public class EventsTests
             End = new DateTime(2026, 5, 1, 11, 0, 0, DateTimeKind.Utc),
             AllDay = false,
             Attendees = new() { "a@example.com" },
+            Conference = "https://meet.example.com/x",
+            ConferenceData = new EventConferenceData { AutoGenerate = true },
         });
 
         Assert.Equal(Provider.Google, created.Provider);
@@ -92,6 +94,10 @@ public class EventsTests
         Assert.Equal("Meeting", body.RootElement.GetProperty("title").GetString());
         Assert.Equal(JsonValueKind.False, body.RootElement.GetProperty("allDay").ValueKind);
         Assert.Equal("a@example.com", body.RootElement.GetProperty("attendees")[0].GetString());
+        Assert.Equal("https://meet.example.com/x", body.RootElement.GetProperty("conference").GetString());
+        var conferenceData = body.RootElement.GetProperty("conferenceData");
+        Assert.True(conferenceData.GetProperty("autoGenerate").GetBoolean());
+        Assert.False(conferenceData.TryGetProperty("provider", out _));
     }
 
     [Fact]

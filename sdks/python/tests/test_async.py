@@ -166,3 +166,24 @@ async def test_async_revoke_never_refreshes_on_401(async_client):
         await async_client.auth.revoke()
     assert not refresh_route.called
     assert async_client._api.get_credentials() is not None
+
+
+@respx.mock
+async def test_async_create_and_update_return_the_bare_event(async_client):
+    event = {
+        "provider": "google", "id": "evt-1", "calendarId": "primary", "title": "x",
+        "start": "2024-06-15T10:00:00.000Z", "end": "2024-06-15T11:00:00.000Z",
+    }
+    respx.post("https://connect.mobiscroll.com/api/event").mock(return_value=httpx.Response(201, json=event))
+    respx.put("https://connect.mobiscroll.com/api/event").mock(
+        return_value=httpx.Response(200, json={**event, "title": "y"})
+    )
+    created = await async_client.events.create({
+        "provider": "google", "calendar_id": "primary", "title": "x",
+        "start": "2024-06-15T10:00:00Z", "end": "2024-06-15T11:00:00Z",
+    })
+    updated = await async_client.events.update({
+        "provider": "google", "calendar_id": "primary", "event_id": "evt-1", "title": "y",
+    })
+    assert created.id == "evt-1"
+    assert updated.title == "y"

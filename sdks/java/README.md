@@ -51,6 +51,7 @@ String authUrl = client.auth().generateAuthUrl(AuthUrlParams.builder()
     .userId("user-123")
     .providers(List.of(Provider.GOOGLE))
     .lng("es") // optional: Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
+    .theme("dark") // optional: Connect page color scheme, "light" | "dark" | "auto"
     .build());
 
 // 2. On the callback, exchange the code.
@@ -90,7 +91,7 @@ It returns a `RevokeResponse` with `isSuccess() == true` for any token, includin
 
 ## Webhooks
 
-Subscribe to change notifications for a calendar, and unsubscribe when you're done:
+Subscribe to change notifications for a calendar, and unsubscribe when you're done. Pass the calendar's real ID from `calendars().list()`; an alias such as `primary` creates a duplicate subscription. A `channelId` you supply that another user already holds is rejected with a `MobiscrollConnectException` (HTTP 409).
 
 ```java
 import com.mobiscroll.connect.models.WebhookSubscribeParams;
@@ -102,7 +103,8 @@ WebhookSubscribeResponse subscription = client.webhooks().subscribeWebhook(Webho
     .calendarId(calendars.get(0).getId())
     .build());
 // persist subscription.getChannelId() / subscription.getSubscription().getResourceId()
-// so you can unsubscribe later.
+// so you can unsubscribe later. Connect replaces the channel ID when it renews a subscription,
+// so use the current one from the latest delivery's getMetadata().getChannelId().
 
 client.webhooks().unsubscribeWebhook(WebhookUnsubscribeParams.builder()
     .provider(Provider.GOOGLE)
@@ -133,6 +135,8 @@ ResponseEntity<Void> webhook(@RequestBody byte[] body, @RequestHeader Map<String
     return ResponseEntity.noContent().build();
 }
 ```
+
+Each event is a `WebhookEvent` whose `getConference()` is a `WebhookConference` (`getUrl()`, `getProvider()`, `getMeetingProvider()`, `getData()`) rather than the join-URL string the events endpoints return.
 
 The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process (shared by every client instance) as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side. `verifyWebhook()` blocks while the keys are fetched.
 

@@ -17,19 +17,22 @@ class Auth
      * Generate an OAuth2 authorization URL
      *
      * @param string $userId Required: User ID to associate with this authorization
-     * @param string $scope Optional: Requested OAuth scopes (default: 'calendar')
+     * @param string $scope Optional: Connect scope: 'read-write' (default), 'read' or 'free-busy'
      * @param string|null $state Optional: CSRF protection state value
      * @param string|null $providers Optional: Comma-separated list of providers to authorize
      * @param string|null $lng Optional: Language code for the Connect pages, e.g. 'es'.
      *                         Supported languages: https://mobiscroll.com/docs/connect/localization#supported-languages
+     * @param string|null $theme Optional: Color scheme of the Connect pages: 'light', 'dark' or 'auto' (follows the
+     *                           device setting). When null, the project's default theme applies.
      * @return string The complete OAuth2 authorization URL
      */
     public function generateAuthUrl(
         string $userId,
-        string $scope = 'calendar',
+        string $scope = 'read-write',
         ?string $state = null,
         ?string $providers = null,
-        ?string $lng = null
+        ?string $lng = null,
+        ?string $theme = null,
     ): string {
         $config = $this->apiClient->getConfig();
 
@@ -51,6 +54,10 @@ class Auth
 
         if ($lng !== null) {
             $params['lng'] = $lng;
+        }
+
+        if ($theme !== null) {
+            $params['theme'] = $theme;
         }
 
         return 'https://connect.mobiscroll.com/api/oauth/authorize?' . http_build_query($params);

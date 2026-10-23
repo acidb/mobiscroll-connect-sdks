@@ -92,6 +92,7 @@ string authUrl = client.Auth.GenerateAuthUrl(new AuthorizeParams
     // State     = "csrf-protection-value",
     // Providers = "google,microsoft",
     // Lng       = "es", // Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
+    // Theme     = "dark", // Connect page color scheme: "light", "dark" or "auto"
 });
 
 // Redirect the user to authUrl
@@ -227,17 +228,21 @@ await client.Events.DeleteAsync(new EventDeleteParams
 
 ### Webhooks
 
+Pass the calendar's real ID from `Calendars.ListAsync()`; an alias such as `primary` creates a duplicate subscription. A `ChannelId` you supply that another user already holds is rejected with a `MobiscrollConnectException` (HTTP 409).
+
 ```csharp
 // Subscribe to change notifications for a calendar
 WebhookSubscribeResponse subscription = await client.Webhooks.SubscribeWebhookAsync(new WebhookSubscribeData
 {
     Provider   = Provider.Google,
-    CalendarId = "primary",
+    CalendarId = "work@company.com",
 });
 
 Console.WriteLine($"Subscribed: {subscription.Subscription.ChannelId}");
 
-// Unsubscribe later — resourceId is required by some providers (e.g. Google) to fully unsubscribe
+// Unsubscribe later — resourceId is required by some providers (e.g. Google) to fully unsubscribe.
+// Connect replaces the channel ID when it renews a subscription, so use the current one from the
+// latest delivery's Metadata.ChannelId.
 WebhookUnsubscribeResponse result = await client.Webhooks.UnsubscribeWebhookAsync(new WebhookUnsubscribeData
 {
     Provider   = Provider.Google,
@@ -280,6 +285,8 @@ app.MapPost("/webhooks/mobiscroll", async (HttpRequest request, MobiscrollConnec
     return Results.NoContent();
 });
 ```
+
+Each event is a `WebhookEvent` whose `Conference` is a `WebhookConference` (`Url`, `Provider`, `MeetingProvider`, `Data`) rather than the join-URL string `Events.ListAsync()` returns.
 
 The body can be a `byte[]`, `ReadOnlyMemory<byte>` or `string`. The headers can be ASP.NET Core's `IHeaderDictionary`, `HttpHeaders`, or any dictionary of header names to values; names are matched in any casing.
 

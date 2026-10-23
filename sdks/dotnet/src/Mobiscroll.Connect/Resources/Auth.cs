@@ -43,7 +43,8 @@ public sealed class Auth
             .Add("state", authParams.State)
             .Add("scope", authParams.Scope)
             .Add("providers", authParams.Providers)
-            .Add("lng", authParams.Lng);
+            .Add("lng", authParams.Lng)
+            .Add("theme", authParams.Theme);
 
         // BaseUrl ends with a slash — keep the resulting URL clean.
         return $"{_client.BaseUrl}oauth/authorize?{qs}";

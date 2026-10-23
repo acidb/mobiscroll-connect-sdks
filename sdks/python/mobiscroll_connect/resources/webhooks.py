@@ -44,10 +44,14 @@ class Webhooks:
 
         :param provider: Calendar provider (``"google"``, ``"microsoft"``, ``"apple"``,
             or ``"caldav"``).
-        :param calendar_id: Calendar to watch.
+        :param calendar_id: Calendar to watch: its real id from ``calendars.list()``
+            (e.g. ``"work@company.com"``). An alias such as ``"primary"`` creates a
+            duplicate subscription.
         :param channel_id: Client-supplied channel identifier. Auto-generated
             server-side when omitted.
         :param expiration: Provider-specific expiration timestamp (ms epoch).
+        :raises MobiscrollConnectError: When a ``channel_id`` you supplied is already in
+            use by another user (HTTP 409).
         """
         payload: dict[str, object] = {
             "provider": str(provider.value if isinstance(provider, Provider) else provider),
@@ -71,7 +75,10 @@ class Webhooks:
         """Unsubscribe from webhook notifications for a channel.
 
         :param provider: Calendar provider the channel was subscribed with.
-        :param channel_id: Channel identifier returned by ``subscribe_webhook``.
+        :param channel_id: The current channel identifier. Connect replaces it when it
+            renews a subscription, so take it from the latest delivery's
+            ``metadata.channel_id`` rather than from the original ``subscribe_webhook``
+            response.
         :param resource_id: Required by some providers (e.g. Google) to fully
             unsubscribe.
 
@@ -106,8 +113,9 @@ class Webhooks:
             not a parsed object.
         :param headers: The request headers — any mapping, e.g. Flask's
             ``request.headers``; lookup is case-insensitive.
-        :raises WebhookVerificationError: When the delivery is not genuine; respond
-            with a 4xx.
+        :raises WebhookVerificationError: When the delivery is not verified. Respond with
+            ``503`` when ``reason`` is ``"no_public_keys"`` (Connect retries) and with
+            ``401`` otherwise (Connect does not retry).
 
         Example::
 
@@ -115,8 +123,8 @@ class Webhooks:
             def mobiscroll_webhook():
                 try:
                     delivery = client.webhooks.verify_webhook(request.get_data(), request.headers)
-                except WebhookVerificationError:
-                    return "", 401
+                except WebhookVerificationError as error:
+                    return "", 503 if error.reason == "no_public_keys" else 401
                 handle_delivery(delivery)
                 return "", 204
         """

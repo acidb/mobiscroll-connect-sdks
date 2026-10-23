@@ -6,6 +6,7 @@ import json
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -17,6 +18,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from mobiscroll_connect import (
     MobiscrollConnectClient,
     MobiscrollConnectError,
+    WebhookConference,
     WebhookEvent,
     WebhookVerificationError,
     verify_webhook_signature,
@@ -183,6 +185,57 @@ def test_fetches_keys_lazily_from_the_api_origin_and_parses_the_delivery(clock):
     assert delivery.events[0].title == "Café meeting ☕ — Zoë"
     assert delivery.events[0].provider == "google"
     assert delivery.events[0].calendar_id == "primary"
+
+
+@respx.mock
+def test_parses_a_delivery_with_a_conference_object(clock):
+    respx.get(KEYS_URL).mock(return_value=keys_response([KEYS["active"]]))
+    case = by_name("delivery: Google events with and without a conference")
+
+    delivery = make_client().webhooks.verify_webhook(case["body"], case["headers"])
+
+    meeting, lunch = delivery.events
+    assert isinstance(meeting.conference, WebhookConference)
+    assert meeting.conference.url == "https://meet.google.com/abc-defg-hij"
+    assert meeting.conference.provider == "hangoutsMeet"
+    assert meeting.conference.meeting_provider == "hangoutsMeet"
+    assert meeting.conference.data is not None
+    assert meeting.conference.data["conferenceId"] == "abc-defg-hij"
+    assert meeting.start == datetime(2026, 9, 22, 9, 0, tzinfo=timezone.utc)
+    assert meeting.end == datetime(2026, 9, 22, 10, 0, tzinfo=timezone.utc)
+    assert meeting.last_modified == "2026-09-21T09:58:12.000Z"
+    assert meeting.change_type == "updated"
+    assert meeting.attendees is not None and meeting.attendees[0].organizer is True
+    assert lunch.conference is None
+    assert lunch.all_day is True
+    assert delivery.metadata.channel_id == "chan_google_1"
+    assert delivery.metadata.event_count == 2
+
+
+@respx.mock
+def test_parses_a_deleted_placeholder_without_calendar_id(clock):
+    respx.get(KEYS_URL).mock(return_value=keys_response([KEYS["active"]]))
+    case = by_name("delivery: Microsoft Teams event and a deleted placeholder")
+
+    delivery = make_client().webhooks.verify_webhook(case["body"], case["headers"])
+
+    teams, deleted = delivery.events
+    assert teams.conference is not None and teams.conference.provider == "teams"
+    assert deleted.change_type == "deleted"
+    assert deleted.calendar_id == delivery.calendar_id
+    assert deleted.original == {}
+
+
+def test_webhook_event_conference_present_absent_and_null():
+    base = {"id": "e1", "provider": "google", "calendarId": "c", "changeType": "updated"}
+    present = WebhookEvent.from_dict(
+        {**base, "conference": {"url": "https://x", "provider": "teams", "meetingProvider": "teams"}}
+    )
+    assert present.conference == WebhookConference(
+        url="https://x", provider="teams", meeting_provider="teams"
+    )
+    assert WebhookEvent.from_dict(base).conference is None
+    assert WebhookEvent.from_dict({**base, "conference": None}).conference is None
 
 
 @respx.mock

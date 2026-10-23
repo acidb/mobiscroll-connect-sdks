@@ -32,10 +32,19 @@ class Events
      * @param string $operation Operation name for error message
      * @return CalendarEvent
      */
+    /**
+     * The API returns the written event itself; an `{ event: ... }` envelope is accepted too.
+     */
     private function extractEventFromResponse(mixed $response, string $operation): CalendarEvent
     {
-        if (is_array($response) && isset($response['event'])) {
-            return CalendarEvent::fromArray($response['event']);
+        if (is_array($response) && is_array($response['event'] ?? null)) {
+            /** @var array<string, mixed> $event */
+            $event = $response['event'];
+            return CalendarEvent::fromArray($event);
+        }
+        if (is_array($response) && isset($response['id'], $response['provider'])) {
+            /** @var array<string, mixed> $response */
+            return CalendarEvent::fromArray($response);
         }
 
         throw new \Mobiscroll\Connect\Exceptions\ServerError(
@@ -131,9 +140,16 @@ class Events
      *   - end: \DateTime|string End time REQUIRED
      *   - description?: string
      *   - location?: string
-     *   - attendees?: array<{email: string, name?: string}>
-     *   - timezone?: string
      *   - allDay?: bool
+     *   - attendees?: string[] Attendee email addresses
+     *   - recurrence?: array{frequency: string, interval?: int, count?: int, until?: string, byDay?: string[], byMonthDay?: int[], byMonth?: int[]}
+     *   - custom?: array<string, mixed>
+     *   - conference?: string Conference meeting URL
+     *   - conferenceData?: array{autoGenerate?: bool, provider?: string} Conference options; `autoGenerate: true`
+     *     creates a provider meeting link where supported
+     *   - availability?: string 'busy'|'free'
+     *   - privacy?: string 'public'|'private'|'confidential'
+     *   - status?: string 'confirmed'|'tentative'|'cancelled'
      * @return CalendarEvent
      */
     public function create(array $event): CalendarEvent
@@ -162,6 +178,10 @@ class Events
      *   - end?: \DateTime|string
      *   - description?: string
      *   - location?: string
+     *   - recurringEventId?: string
+     *   - updateMode?: string 'this'|'following'|'all'
+     *   - plus any create field: allDay, attendees (email strings), recurrence, custom, conference, conferenceData,
+     *     availability, privacy, status
      * @return CalendarEvent
      */
     public function update(array $event): CalendarEvent
@@ -223,8 +243,7 @@ class Events
 
         $response = $this->apiClient->delete('/event', null, $query);
 
-        // Response contains { success: bool, message?: string }
-        // If not successful, throw detailed error
+        // The API answers 204 with no body; failures arrive as 400 and are thrown by ApiClient.
         if (is_array($response) && isset($response['success']) && !$response['success']) {
             throw new \Mobiscroll\Connect\Exceptions\ServerError(
                 $response['message'] ?? 'Failed to delete event',

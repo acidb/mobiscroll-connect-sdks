@@ -34,6 +34,7 @@ authURL := client.Auth().GenerateAuthURL(&mobiscroll.AuthURLParams{
     UserID:    "user-1",
     Providers: []mobiscroll.Provider{mobiscroll.ProviderGoogle},
     Lng:       "es", // optional: Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
+    Theme:     "dark", // optional: Connect page color scheme, "light" | "dark" | "auto"
 })
 // http.Redirect(w, r, authURL, http.StatusFound)
 
@@ -64,13 +65,17 @@ created, err := client.Events().Create(ctx, &mobiscroll.EventCreateData{
     End:        start.Add(time.Hour),
 })
 
-// 6. Subscribe to change notifications for a calendar.
+// 6. Subscribe to change notifications for a calendar. Pass its real ID from
+//    Calendars().List; an alias such as "primary" creates a duplicate subscription.
+//    A ChannelID you supply that another user already holds fails with HTTP 409.
 sub, err := client.Webhooks().SubscribeWebhook(ctx, &mobiscroll.SubscribeWebhookParams{
     Provider:   mobiscroll.ProviderGoogle,
-    CalendarID: "primary",
+    CalendarID: "work@company.com",
 })
 
-// 7. Unsubscribe when you no longer need notifications.
+// 7. Unsubscribe when you no longer need notifications. Connect replaces the channel
+//    ID when it renews a subscription, so use the current one from the latest
+//    delivery's Metadata.ChannelID.
 _, err = client.Webhooks().UnsubscribeWebhook(ctx, &mobiscroll.UnsubscribeWebhookParams{
     Provider:   mobiscroll.ProviderGoogle,
     ChannelID:  sub.ChannelID,
@@ -134,6 +139,8 @@ http.HandleFunc("/webhooks/mobiscroll", func(w http.ResponseWriter, r *http.Requ
     go handleDelivery(delivery)
 })
 ```
+
+Each event's `Conference` is a `*WebhookConference` (`URL`, `Provider`, `MeetingProvider`, `Data`), nil when absent, rather than the join-URL string the events endpoints return.
 
 The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process, shared by every `Client`, as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side.
 

@@ -55,7 +55,7 @@ Calendar                       — frozen dataclass for calendar list entries
 ConnectionStatusResponse       — frozen dataclass for /oauth/connection-status
 DisconnectResponse             — frozen dataclass for /oauth/disconnect
 RevokeResponse                 — frozen dataclass for /oauth/revoke
-WebhookDelivery                — frozen dataclass for a verified delivery; events are WebhookEvent (CalendarEvent + change_type)
+WebhookDelivery                — frozen dataclass for a verified delivery; events are WebhookEvent (CalendarEvent + change_type; conference is a WebhookConference object, not the GET /events string)
 
 Exceptions:
   MobiscrollConnectError       — base; .message and .code

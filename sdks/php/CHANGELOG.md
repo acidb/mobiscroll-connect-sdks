@@ -9,6 +9,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - New: `auth()->revoke(?string $token = null)` revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
+- New: `Calendar` has `account` (the connected account the calendar belongs to) and `readOnly` (`true` when the connection cannot write to it).
+- New: `generateAuthUrl()` takes `theme` (`'light'`, `'dark'` or `'auto'`) for the Connect pages.
+
+### Fixed
+
+- `verifyWebhook()` now accepts deliveries whose events include a conference; they were rejected with reason `invalid_payload`. `WebhookEvent::$conference` is a `WebhookConference` (`url`, `provider`, `meetingProvider`, `data`), matching the object deliveries contain. `WebhookEvent` no longer extends `CalendarEvent`, whose `$conference` stays the join-URL string `events()->list()` returns; it keeps the same properties.
+- Corrected the guidance for a failed `verifyWebhook()`: respond `503` when the reason is `no_public_keys` so Connect retries the delivery, and `401` otherwise.
+- `events()->create()` and `events()->update()` now return the written event; they threw `ServerError` on every successful write because they expected the event inside an `event` field.
+- The `create()`/`update()` docs now list the fields the API accepts: `attendees` as email strings, `conference`, `conferenceData` (`autoGenerate`), `recurrence`, `custom`, `availability`, `privacy` and `status`.
+- The default `scope` of `generateAuthUrl()` is now `'read-write'`. It was `'calendar'`, which is not a Connect scope; Connect treated it as `read-write`, so the authorization behaves the same.
 
 ## [1.6.0] — 2026-10-08
 

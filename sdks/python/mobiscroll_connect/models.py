@@ -83,6 +83,10 @@ class Calendar:
     color: str = ""
     description: str = ""
     original: Mapping[str, Any] = field(default_factory=dict)
+    account: str = ""
+    """The connected account this calendar belongs to."""
+    read_only: bool = False
+    """``True`` when the authenticated connection cannot write to this calendar."""
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Calendar:
@@ -94,6 +98,8 @@ class Calendar:
             color=data.get("color", ""),
             description=data.get("description", ""),
             original=data.get("original", {}) or {},
+            account=data.get("account") or "",
+            read_only=bool(data.get("readOnly", False)),
         )
 
 
@@ -347,13 +353,46 @@ class UnsubscribeWebhookResponse:
 
 
 @dataclass(frozen=True)
+class WebhookConference:
+    """Conference details on a :class:`WebhookEvent`.
+
+    Deliveries carry an object here, while ``events.list()`` returns the join URL as a
+    string in :attr:`CalendarEvent.conference`. ``provider`` is the conference provider as
+    the calendar provider reports it (e.g. ``"hangoutsMeet"``, ``"teams"``);
+    ``meeting_provider`` is the same value. ``data`` is the provider-specific payload.
+    """
+
+    url: str = ""
+    provider: str | None = None
+    meeting_provider: str | None = None
+    data: Mapping[str, Any] | None = None
+
+    @classmethod
+    def from_wire(cls, value: Any) -> WebhookConference | None:
+        if isinstance(value, Mapping):
+            data = value.get("data")
+            return cls(
+                url=value.get("url") or "",
+                provider=value.get("provider"),
+                meeting_provider=value.get("meetingProvider"),
+                data=data if isinstance(data, Mapping) else None,
+            )
+        if isinstance(value, str) and value:
+            return cls(url=value)
+        return None
+
+
+@dataclass(frozen=True)
 class WebhookEvent(CalendarEvent):
     """A changed event inside a :class:`WebhookDelivery`.
 
     ``change_type`` is ``"created"``, ``"updated"`` or ``"deleted"``. ``provider`` and
-    ``calendar_id`` fall back to the delivery's own when the event omits them.
+    ``calendar_id`` fall back to the delivery's own when the event omits them, as deleted
+    Microsoft, Apple and CalDAV events do; rely only on ``id``, ``provider`` and
+    ``change_type`` for a deleted event. ``conference`` is a :class:`WebhookConference`.
     """
 
+    conference: WebhookConference | None = None  # type: ignore[assignment]
     change_type: str | None = None
 
     @classmethod
@@ -368,11 +407,11 @@ class WebhookEvent(CalendarEvent):
         for key, fallback in (("provider", provider), ("calendarId", calendar_id), ("id", "")):
             if merged.get(key) is None:
                 merged[key] = fallback
+        merged["conference"] = None
         event = CalendarEvent.from_dict(merged)
-        return cls(
-            **{f.name: getattr(event, f.name) for f in fields(CalendarEvent)},
-            change_type=data.get("changeType"),
-        )
+        values = {f.name: getattr(event, f.name) for f in fields(CalendarEvent)}
+        values["conference"] = WebhookConference.from_wire(data.get("conference"))
+        return cls(**values, change_type=data.get("changeType"))
 
 
 @dataclass(frozen=True)

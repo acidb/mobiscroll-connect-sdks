@@ -10,7 +10,7 @@ import (
 
 func TestCalendars_ListParses(t *testing.T) {
 	srv := testsupport.NewMockServer(t)
-	srv.EnqueueJSON(`[{"id":"cal1","provider":"google","title":"Work","timeZone":"UTC","color":"#4285F4","description":""}]`)
+	srv.EnqueueJSON(`[{"id":"cal1","provider":"google","title":"Work","timeZone":"UTC","color":"#4285F4","description":"","account":"ana@company.com","readOnly":true}]`)
 
 	c := mobiscroll.NewClient("id", "secret", "https://app/cb",
 		mobiscroll.WithBaseURL(srv.URL+"/api"),
@@ -27,6 +27,9 @@ func TestCalendars_ListParses(t *testing.T) {
 	got := cals[0]
 	if got.ID != "cal1" || got.Provider != mobiscroll.ProviderGoogle || got.Title != "Work" || got.Color != "#4285F4" {
 		t.Fatalf("unexpected calendar: %+v", got)
+	}
+	if got.Account != "ana@company.com" || !got.ReadOnly {
+		t.Fatalf("unexpected account/readOnly: %+v", got)
 	}
 
 	reqs := srv.Requests()

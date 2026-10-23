@@ -8,6 +8,8 @@ class Calendar
 {
     /**
      * @param array<string, mixed> $original
+     * @param string $account The connected account this calendar belongs to
+     * @param bool $readOnly True when the authenticated connection cannot write to this calendar
      */
     public function __construct(
         public readonly string $provider,
@@ -17,6 +19,8 @@ class Calendar
         public readonly string $color,
         public readonly string $description,
         public readonly array $original,
+        public readonly string $account = '',
+        public readonly bool $readOnly = false,
     ) {
     }
 
@@ -33,6 +37,8 @@ class Calendar
             $data['color'] ?? '',
             $data['description'] ?? '',
             $data['original'] ?? [],
+            is_string($data['account'] ?? null) ? $data['account'] : '',
+            (bool)($data['readOnly'] ?? false),
         );
     }
 }

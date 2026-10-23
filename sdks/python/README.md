@@ -53,10 +53,11 @@ with MobiscrollConnectClient(
 # Step 1 — generate auth URL (server-side)
 auth_url = client.auth.generate_auth_url(
     user_id="user-123",
-    scope="calendar",       # optional
+    scope="read-write",     # optional: "read-write" (default), "read" or "free-busy"
     state="csrf-value",     # optional
     providers="google,microsoft",  # optional
     lng="es",               # optional: Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
+    theme="dark",           # optional: Connect page color scheme, "light" | "dark" | "auto"
 )
 
 # Step 2 — exchange the code (in your callback handler)
@@ -195,15 +196,18 @@ client.events.delete({
 
 ## Webhooks
 
+Pass the calendar's real id from `calendars.list()`; an alias such as `primary` creates a duplicate subscription. A `channel_id` you supply that another user already holds is rejected with a `MobiscrollConnectError` (HTTP 409).
+
 ```python
 # Subscribe to change notifications for a calendar
-subscription = client.webhooks.subscribe_webhook("google", "primary")
+subscription = client.webhooks.subscribe_webhook("google", "work@company.com")
 print(subscription.channel_id, subscription.subscription.resource_id)
 
 # ...persist subscription.channel_id (and subscription.subscription.resource_id
 # for Google) so you can unsubscribe later...
 
-# Unsubscribe when you're done
+# Unsubscribe when you're done. Connect replaces the channel id when it renews a
+# subscription, so use the current one from the latest delivery's metadata.channel_id.
 client.webhooks.unsubscribe_webhook(
     "google",
     subscription.channel_id,
@@ -231,6 +235,8 @@ def mobiscroll_webhook():
 ```
 
 On the async client, `await client.webhooks.verify_webhook(await request.body(), request.headers)`.
+
+Each event's `conference` is a `WebhookConference` (`url`, `provider`, `meeting_provider`, `data`) rather than the join-URL string `events.list()` returns.
 
 The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process (shared by every client instance) as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side.
 

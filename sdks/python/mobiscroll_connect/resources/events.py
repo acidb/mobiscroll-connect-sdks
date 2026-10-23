@@ -9,6 +9,7 @@ from .._internal.payloads import (
     build_event_payload,
     build_list_events_query,
 )
+from .._internal.responses import extract_written_event
 from ..api_client import ApiClient
 from ..exceptions import ServerError
 from ..models import CalendarEvent, EventsListResponse
@@ -80,14 +81,14 @@ class Events:
         ``calendarId``), ``title``, ``start``, ``end``."""
         payload = build_event_payload(event)
         response = self._api.post("event", json=payload)
-        return self._extract_event(response, "create")
+        return extract_written_event(response, "create")
 
     def update(self, event: Mapping[str, Any]) -> CalendarEvent:
         """Update an event. Required keys: ``provider``, ``calendar_id``,
         ``event_id``."""
         payload = build_event_payload(event)
         response = self._api.put("event", json=payload)
-        return self._extract_event(response, "update")
+        return extract_written_event(response, "update")
 
     def delete(self, params: Mapping[str, Any]) -> None:
         """Delete an event. Required keys: ``provider``, ``calendar_id``,
@@ -98,9 +99,3 @@ class Events:
         if isinstance(response, Mapping) and response.get("success") is False:
             raise ServerError(str(response.get("message") or "Failed to delete event"), 400)
 
-    @staticmethod
-    def _extract_event(response: Any, operation: str) -> CalendarEvent:
-        if isinstance(response, Mapping) and isinstance(response.get("event"), Mapping):
-            return CalendarEvent.from_dict(response["event"])
-        msg = response.get("message") if isinstance(response, Mapping) else None
-        raise ServerError(msg if isinstance(msg, str) else f"Failed to {operation} event", 400)

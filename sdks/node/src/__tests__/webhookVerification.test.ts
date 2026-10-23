@@ -122,6 +122,47 @@ describe('Webhooks.verifyWebhook', () => {
     expect(delivery.userId).toBe('user_42');
   });
 
+  it('parses a delivery with a conference object and converts start/end to Date', async () => {
+    get.mockResolvedValue(keysResponse([vectors.keys.active]));
+    const vector = byName('delivery: Google events with and without a conference');
+
+    const delivery = await createClient().webhooks.verifyWebhook(vector.body, vector.headers);
+
+    const [meeting, lunch] = delivery.events;
+    expect(meeting.conference).toEqual({
+      url: 'https://meet.google.com/abc-defg-hij',
+      provider: 'hangoutsMeet',
+      meetingProvider: 'hangoutsMeet',
+      data: expect.objectContaining({ conferenceId: 'abc-defg-hij' }),
+    });
+    expect(meeting.start).toBeInstanceOf(Date);
+    expect(meeting.start.getTime()).toBe(Date.parse('2026-09-22T09:00:00.000Z'));
+    expect(meeting.end.toISOString()).toBe('2026-09-22T10:00:00.000Z');
+    expect(meeting.lastModified).toBe('2026-09-21T09:58:12.000Z');
+    expect(meeting.changeType).toBe('updated');
+    expect(lunch.conference).toBeUndefined();
+    expect(lunch.allDay).toBe(true);
+    expect(delivery.metadata).toEqual({
+      channelId: 'chan_google_1',
+      eventCount: 2,
+      isInitialSync: false,
+    });
+  });
+
+  it('parses a deleted placeholder without calendarId or original', async () => {
+    get.mockResolvedValue(keysResponse([vectors.keys.active]));
+    const vector = byName('delivery: Microsoft Teams event and a deleted placeholder');
+
+    const delivery = await createClient().webhooks.verifyWebhook(vector.body, vector.headers);
+
+    const [teams, deleted] = delivery.events;
+    expect(teams.conference?.provider).toBe('teams');
+    expect(deleted.changeType).toBe('deleted');
+    expect(deleted.calendarId).toBeUndefined();
+    expect(deleted.original).toBeUndefined();
+    expect(deleted.start).toBeInstanceOf(Date);
+  });
+
   it('shares one key cache across client instances and honours max-age', async () => {
     get.mockResolvedValue(keysResponse([vectors.keys.active], 'max-age=120'));
 

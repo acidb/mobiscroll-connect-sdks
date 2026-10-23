@@ -21,8 +21,12 @@ public sealed class Webhooks
 
     /// <summary>
     /// Subscribe to webhook notifications for a calendar. The server auto-generates
-    /// <see cref="WebhookSubscribeData.ChannelId"/> when it is omitted.
+    /// <see cref="WebhookSubscribeData.ChannelId"/> when it is omitted. Pass the calendar's real ID from
+    /// <see cref="Calendars.ListAsync"/>; an alias such as <c>primary</c> creates a duplicate subscription.
     /// </summary>
+    /// <exception cref="MobiscrollConnectException">
+    /// A <see cref="WebhookSubscribeData.ChannelId"/> you supplied is already in use by another user (HTTP 409).
+    /// </exception>
     public async Task<WebhookSubscribeResponse> SubscribeWebhookAsync(WebhookSubscribeData data, CancellationToken ct = default)
     {
         if (data is null)
@@ -38,7 +42,8 @@ public sealed class Webhooks
     /// Unsubscribe from webhook notifications for a calendar. Returns <c>Success: true</c>
     /// even when the provider-side subscription had already expired — check
     /// <see cref="WebhookUnsubscribeResponse.Message"/> for details in that case; treat the
-    /// response as final regardless.
+    /// response as final regardless. Use the current channel ID: Connect replaces it when it renews a
+    /// subscription, so take it from the latest delivery's <see cref="WebhookDeliveryMetadata.ChannelId"/>.
     /// </summary>
     public async Task<WebhookUnsubscribeResponse> UnsubscribeWebhookAsync(WebhookUnsubscribeData data, CancellationToken ct = default)
     {
@@ -66,7 +71,10 @@ public sealed class Webhooks
     /// <param name="headers">The request headers, any casing.</param>
     /// <param name="ct">Cancels waiting for the keys; a fetch shared with other callers keeps running.</param>
     /// <returns>The parsed delivery.</returns>
-    /// <exception cref="WebhookVerificationException">The delivery is not genuine; respond with a 4xx.</exception>
+    /// <exception cref="WebhookVerificationException">
+    /// The delivery is not verified. Respond with 503 when <see cref="WebhookVerificationException.Reason"/> is
+    /// <see cref="WebhookVerificationReason.NoPublicKeys"/> (Connect retries) and with 401 otherwise (Connect does not retry).
+    /// </exception>
     public Task<WebhookDelivery> VerifyWebhookAsync(
         ReadOnlyMemory<byte> payload,
         IEnumerable<KeyValuePair<string, string>> headers,

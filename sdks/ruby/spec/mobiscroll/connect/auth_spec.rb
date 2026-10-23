@@ -31,6 +31,12 @@ RSpec.describe Mobiscroll::Connect::Resources::Auth do
       expect(params['state']).to eq('random-state')
     end
 
+    it 'includes the theme param when provided and omits it otherwise' do
+      url = client.auth.generate_auth_url(user_id: 'user-123', theme: 'dark')
+      expect(URI.decode_www_form(URI.parse(url).query).to_h['theme']).to eq('dark')
+      expect(client.auth.generate_auth_url(user_id: 'user-123')).not_to include('theme=')
+    end
+
     it 'includes the lng param when provided' do
       url = client.auth.generate_auth_url(user_id: 'user-123', lng: 'es')
       params = URI.decode_www_form(URI.parse(url).query).to_h

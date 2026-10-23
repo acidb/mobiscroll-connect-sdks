@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Mobiscroll\Connect\Exceptions;
 
 /**
- * Thrown when a webhook delivery fails verification. Respond with a 4xx and do not process it.
+ * Thrown when a webhook delivery fails verification. Do not process it. Respond with 503 when the reason is
+ * {@see self::NO_PUBLIC_KEYS} (the keys could not be fetched, so Connect retries) and with 401 otherwise.
  */
 class WebhookVerificationError extends MobiscrollConnectException
 {

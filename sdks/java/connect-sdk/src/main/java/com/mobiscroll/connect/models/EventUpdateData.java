@@ -30,6 +30,9 @@ public final class EventUpdateData {
     private final String availability;
     private final String privacy;
     private final String status;
+    /** Conference meeting URL. */
+    private final String conference;
+    private final EventConferenceData conferenceData;
 
     private EventUpdateData(Builder b) {
         this.provider = Objects.requireNonNull(b.provider, "provider");
@@ -49,6 +52,8 @@ public final class EventUpdateData {
         this.availability = b.availability;
         this.privacy = b.privacy;
         this.status = b.status;
+        this.conference = b.conference;
+        this.conferenceData = b.conferenceData;
     }
 
     @JsonProperty("provider")         public Provider getProvider() { return provider; }
@@ -70,6 +75,10 @@ public final class EventUpdateData {
     @JsonProperty("availability")     public String getAvailability() { return availability; }
     @JsonProperty("privacy")          public String getPrivacy() { return privacy; }
     @JsonProperty("status")           public String getStatus() { return status; }
+    /** Conference meeting URL to attach to the event. */
+    @JsonProperty("conference") public String getConference() { return conference; }
+    /** Conference options, e.g. {@code autoGenerate(true)} to create a provider meeting link. */
+    @JsonProperty("conferenceData") public EventConferenceData getConferenceData() { return conferenceData; }
 
     public static Builder builder() { return new Builder(); }
 
@@ -91,6 +100,8 @@ public final class EventUpdateData {
         private String availability;
         private String privacy;
         private String status;
+        private String conference;
+        private EventConferenceData conferenceData;
 
         public Builder provider(Provider v)           { this.provider = v; return this; }
         public Builder calendarId(String v)           { this.calendarId = v; return this; }
@@ -109,6 +120,8 @@ public final class EventUpdateData {
         public Builder availability(String v)         { this.availability = v; return this; }
         public Builder privacy(String v)              { this.privacy = v; return this; }
         public Builder status(String v)               { this.status = v; return this; }
+        public Builder conference(String v) { this.conference = v; return this; }
+        public Builder conferenceData(EventConferenceData v) { this.conferenceData = v; return this; }
 
         public EventUpdateData build() { return new EventUpdateData(this); }
     }

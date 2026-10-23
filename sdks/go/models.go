@@ -36,6 +36,7 @@ type AuthURLParams struct {
 	State     string     // optional CSRF state
 	Providers []Provider // optional: restrict to specific providers
 	Lng       string     // optional: Connect page language, e.g. "es"; falls back to Accept-Language then English. Supported languages: https://mobiscroll.com/docs/connect/localization#supported-languages
+	Theme     string     // optional: Connect page color scheme, "light" | "dark" | "auto" (follows the device setting); empty applies the project's default theme
 }
 
 // BlockedAccount is a connected account that withheld calendar access on its
@@ -101,13 +102,17 @@ type RevokeResponse struct {
 
 // Calendar is a calendar exposed by one of the supported providers.
 type Calendar struct {
-	Provider    Provider        `json:"provider"`
-	ID          string          `json:"id"`
-	Title       string          `json:"title"`
-	TimeZone    string          `json:"timeZone"`
-	Color       string          `json:"color"`
-	Description string          `json:"description"`
-	Original    json.RawMessage `json:"original,omitempty"`
+	Provider    Provider `json:"provider"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	TimeZone    string   `json:"timeZone"`
+	Color       string   `json:"color"`
+	Description string   `json:"description"`
+	// Account is the connected account this calendar belongs to.
+	Account string `json:"account"`
+	// ReadOnly is true when the authenticated connection cannot write to this calendar.
+	ReadOnly bool            `json:"readOnly"`
+	Original json.RawMessage `json:"original,omitempty"`
 }
 
 // Attendee is one attendee on an event.
@@ -192,6 +197,22 @@ type EventCreateData struct {
 	Availability string          `json:"availability,omitempty"`
 	Privacy      string          `json:"privacy,omitempty"`
 	Status       string          `json:"status,omitempty"`
+	// Conference is a conference meeting URL to attach to the event.
+	Conference string `json:"conference,omitempty"`
+	// ConferenceData holds conference options, e.g. AutoGenerate to create a
+	// provider meeting link.
+	ConferenceData *EventConferenceData `json:"conferenceData,omitempty"`
+}
+
+// EventConferenceData is the conference options of an event create or update.
+type EventConferenceData struct {
+	// AutoGenerate, when true, generates a provider meeting link where
+	// supported (Google Meet, Microsoft Teams); Conference and Provider are
+	// then ignored.
+	AutoGenerate *bool `json:"autoGenerate,omitempty"`
+	// Provider is optional; the calendar provider decides the conference type
+	// when the event is written.
+	Provider string `json:"provider,omitempty"`
 }
 
 // EventUpdateData is the body for Events.Update. EventID is required; all
@@ -214,6 +235,11 @@ type EventUpdateData struct {
 	Availability     string          `json:"availability,omitempty"`
 	Privacy          string          `json:"privacy,omitempty"`
 	Status           string          `json:"status,omitempty"`
+	// Conference is a conference meeting URL to attach to the event.
+	Conference string `json:"conference,omitempty"`
+	// ConferenceData holds conference options, e.g. AutoGenerate to create a
+	// provider meeting link.
+	ConferenceData *EventConferenceData `json:"conferenceData,omitempty"`
 }
 
 // EventDeleteParams is the input to Events.Delete.
@@ -280,10 +306,31 @@ type WebhookDelivery struct {
 
 // WebhookEvent is a changed event in a WebhookDelivery: the usual
 // CalendarEvent fields plus the kind of change.
+//
+// Conference shadows the embedded CalendarEvent.Conference: deliveries carry
+// an object there, while the events endpoints return the join URL as a string.
+// Deleted Microsoft, Apple and CalDAV events arrive as placeholders without
+// CalendarID and Original; rely only on ID, Provider and ChangeType for a
+// deleted event.
 type WebhookEvent struct {
 	CalendarEvent
+	// Conference is nil when the event has no conference.
+	Conference *WebhookConference `json:"conference,omitempty"`
 	// ChangeType is "created", "updated" or "deleted".
 	ChangeType string `json:"changeType,omitempty"`
+}
+
+// WebhookConference is the conference of a WebhookEvent.
+type WebhookConference struct {
+	// URL is the conference join URL.
+	URL string `json:"url"`
+	// Provider is the conference provider as the calendar provider reports
+	// it, e.g. "hangoutsMeet", "teams".
+	Provider string `json:"provider,omitempty"`
+	// MeetingProvider is the same value as Provider.
+	MeetingProvider string `json:"meetingProvider,omitempty"`
+	// Data is the provider-specific conference payload.
+	Data map[string]any `json:"data,omitempty"`
 }
 
 // WebhookDeliveryMetadata describes the subscription channel and batch of a

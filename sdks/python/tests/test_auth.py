@@ -35,24 +35,27 @@ def test_generate_auth_url_minimal(client):
     assert params["response_type"] == ["code"]
     assert params["user_id"] == ["user-1"]
     assert params["redirect_uri"] == ["https://app/callback"]
-    assert params["scope"] == ["calendar"]
+    assert params["scope"] == ["read-write"]
 
 
 def test_generate_auth_url_optional(client):
     url = client.auth.generate_auth_url(
-        user_id="u", state="csrf", providers="google,microsoft", scope="read-write", lng="es"
+        user_id="u", state="csrf", providers="google,microsoft", scope="read-write", lng="es",
+        theme="dark",
     )
     params = parse_qs(urlparse(url).query)
     assert params["state"] == ["csrf"]
     assert params["providers"] == ["google,microsoft"]
     assert params["scope"] == ["read-write"]
     assert params["lng"] == ["es"]
+    assert params["theme"] == ["dark"]
 
 
 def test_generate_auth_url_omits_lng_when_absent(client):
     url = client.auth.generate_auth_url(user_id="user-1")
     params = parse_qs(urlparse(url).query)
     assert "lng" not in params
+    assert "theme" not in params
 
 
 @respx.mock

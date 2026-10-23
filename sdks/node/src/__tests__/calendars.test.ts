@@ -25,6 +25,8 @@ describe('Calendars Resource', () => {
           id: 'work@company.com',
           title: 'My Calendar',
           provider: ProviderEnum.Google,
+          account: 'ana@company.com',
+          readOnly: true,
           timeZone: 'America/Los_Angeles',
           color: '#9fc6e7',
           description: 'Work calendar',
@@ -42,6 +44,8 @@ describe('Calendars Resource', () => {
 
       expect(mockApiClient.get).toHaveBeenCalledWith('/calendars');
       expect(result).toEqual(mockCalendars);
+      expect(result[0].account).toBe('ana@company.com');
+      expect(result[0].readOnly).toBe(true);
     });
 
     it('should handle empty calendar list', async () => {

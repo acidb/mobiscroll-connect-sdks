@@ -66,6 +66,10 @@ func TestEvents_CreateSendsJSONBodyToSingularPath(t *testing.T) {
 		Title:      "Meet",
 		Start:      time.Date(2026, 5, 1, 9, 0, 0, 0, time.UTC),
 		End:        time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC),
+		Conference: "https://meet.example.com/x",
+		ConferenceData: &mobiscroll.EventConferenceData{
+			AutoGenerate: mobiscroll.Ptr(true),
+		},
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
@@ -82,7 +86,10 @@ func TestEvents_CreateSendsJSONBodyToSingularPath(t *testing.T) {
 		t.Errorf("expected JSON content type, got %q", req.Header.Get("Content-Type"))
 	}
 	body := string(req.Body)
-	for _, want := range []string{`"provider":"google"`, `"title":"Meet"`, `"start":"2026-05-01T09:00:00Z"`} {
+	for _, want := range []string{
+		`"provider":"google"`, `"title":"Meet"`, `"start":"2026-05-01T09:00:00Z"`,
+		`"conference":"https://meet.example.com/x"`, `"conferenceData":{"autoGenerate":true}`,
+	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body missing %q: %s", want, body)
 		}

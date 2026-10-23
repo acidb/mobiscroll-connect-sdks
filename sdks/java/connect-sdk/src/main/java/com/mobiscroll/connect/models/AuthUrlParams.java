@@ -13,6 +13,7 @@ public final class AuthUrlParams {
     private final String scope;
     private final List<Provider> providers;
     private final String lng;
+    private final String theme;
 
     private AuthUrlParams(Builder b) {
         this.userId = Objects.requireNonNull(b.userId, "userId");
@@ -20,6 +21,7 @@ public final class AuthUrlParams {
         this.scope = b.scope;
         this.providers = b.providers;
         this.lng = b.lng;
+        this.theme = b.theme;
     }
 
     public String getUserId() { return userId; }
@@ -35,6 +37,12 @@ public final class AuthUrlParams {
      */
     public String getLng() { return lng; }
 
+    /**
+     * Color scheme of the Connect authorization pages: {@code "light"}, {@code "dark"} or {@code "auto"}
+     * (follows the device setting); null applies the project's default theme.
+     */
+    public String getTheme() { return theme; }
+
     public static Builder builder() { return new Builder(); }
 
     public static final class Builder {
@@ -43,12 +51,14 @@ public final class AuthUrlParams {
         private String scope;
         private List<Provider> providers;
         private String lng;
+        private String theme;
 
         public Builder userId(String v) { this.userId = v; return this; }
         public Builder state(String v) { this.state = v; return this; }
         public Builder scope(String v) { this.scope = v; return this; }
         public Builder providers(List<Provider> v) { this.providers = v; return this; }
         public Builder lng(String v) { this.lng = v; return this; }
+        public Builder theme(String v) { this.theme = v; return this; }
 
         public AuthUrlParams build() { return new AuthUrlParams(this); }
     }

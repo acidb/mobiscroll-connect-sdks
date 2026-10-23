@@ -78,6 +78,7 @@ $authUrl = $client->auth()->generateAuthUrl(
     // state: 'csrf-protection-value',
     // providers: 'google,microsoft',
     // lng: 'es', // Connect page language, see https://mobiscroll.com/docs/connect/localization#supported-languages
+    // theme: 'dark', // Connect page color scheme: 'light', 'dark' or 'auto'
 );
 
 header('Location: ' . $authUrl);
@@ -210,16 +211,19 @@ $client->events()->delete([
 
 ### Webhooks
 
+Pass the calendar's real ID from `calendars()->list()`; an alias such as `primary` creates a duplicate subscription. A `channelId` you supply that another user already holds is rejected with a `MobiscrollConnectException` (HTTP 409).
+
 ```php
 // Subscribe to change notifications for a calendar
 $subscription = $client->webhooks()->subscribeWebhook([
     'provider' => 'google',
-    'calendarId' => 'primary',
+    'calendarId' => 'work@company.com',
 ]);
 
 echo "Subscribed: {$subscription->channelId} -> {$subscription->serverWebhookUrl}\n";
 
-// Unsubscribe when you no longer want notifications
+// Unsubscribe when you no longer want notifications. Connect replaces the channel ID when it
+// renews a subscription, so use the current one from the latest delivery's metadata->channelId.
 $client->webhooks()->unsubscribeWebhook([
     'provider' => 'google',
     'channelId' => $subscription->channelId,
@@ -246,6 +250,8 @@ try {
 http_response_code(204);
 handleDelivery($delivery); // $delivery->userId, $delivery->calendarId, $delivery->events, ...
 ```
+
+Each event is a `WebhookEvent` whose `conference` is a `WebhookConference` (`url`, `provider`, `meetingProvider`, `data`) rather than the join-URL string `events()->list()` returns.
 
 Headers can be any array with header names in any casing, or a PSR-7 request. In Laravel or Symfony, pass `$request->getContent()` and `$request->headers->all()`.
 
@@ -401,6 +407,7 @@ src/
 ├── WebhookSubscription.php
 ├── WebhookDelivery.php
 ├── WebhookDeliveryMetadata.php
+├── WebhookConference.php
 ├── WebhookEvent.php
 ├── WebhookVerifier.php
 └── WebhookKeyStore.php

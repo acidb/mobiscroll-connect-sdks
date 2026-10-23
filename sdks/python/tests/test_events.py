@@ -83,15 +83,18 @@ def test_iter_all_follows_pagination(client):
     assert ids == ["1", "2"]
 
 
+EVENT_RESPONSE = {
+    "provider": "google", "id": "evt-1", "calendarId": "primary", "title": "x",
+    "start": "2024-06-15T10:00:00.000Z", "end": "2024-06-15T11:00:00.000Z", "allDay": False,
+    "conference": "https://meet.google.com/abc-defg-hij",
+    "conferenceData": {"provider": "hangoutsMeet", "conferenceId": "abc-defg-hij"},
+}
+
+
 @respx.mock
 def test_create_event(client):
     route = respx.post("https://connect.mobiscroll.com/api/event").mock(
-        return_value=httpx.Response(200, json={
-            "event": {
-                "provider": "google", "id": "evt-1", "calendarId": "primary",
-                "title": "x", "start": "2024-06-15T10:00:00Z", "end": "2024-06-15T11:00:00Z",
-            }
-        })
+        return_value=httpx.Response(201, json=EVENT_RESPONSE)
     )
     e = client.events.create({
         "provider": "google",
@@ -101,9 +104,34 @@ def test_create_event(client):
         "end": "2024-06-15T11:00:00Z",
     })
     assert e.id == "evt-1"
+    assert e.conference == "https://meet.google.com/abc-defg-hij"
     body = route.calls.last.request.read().decode()
     assert "calendarId" in body
     assert "calendar_id" not in body
+
+
+@respx.mock
+def test_update_event_returns_the_bare_event(client):
+    respx.put("https://connect.mobiscroll.com/api/event").mock(
+        return_value=httpx.Response(200, json={**EVENT_RESPONSE, "title": "y"})
+    )
+    e = client.events.update({
+        "provider": "google", "calendar_id": "primary", "event_id": "evt-1", "title": "y",
+    })
+    assert e.id == "evt-1"
+    assert e.title == "y"
+
+
+@respx.mock
+def test_create_event_accepts_an_event_envelope(client):
+    respx.post("https://connect.mobiscroll.com/api/event").mock(
+        return_value=httpx.Response(201, json={"event": EVENT_RESPONSE})
+    )
+    e = client.events.create({
+        "provider": "google", "calendar_id": "primary", "title": "x",
+        "start": "2024-06-15T10:00:00Z", "end": "2024-06-15T11:00:00Z",
+    })
+    assert e.id == "evt-1"
 
 
 @respx.mock
@@ -119,13 +147,25 @@ def test_create_missing_event_raises(client):
 
 
 @respx.mock
+def test_create_failure_raises_validation_error(client):
+    respx.post("https://connect.mobiscroll.com/api/event").mock(
+        return_value=httpx.Response(400, json={"message": "Missing required fields: calendarId, title, start, end"})
+    )
+    with pytest.raises(ValidationError, match="Missing required fields"):
+        client.events.create({
+            "provider": "google", "calendar_id": "primary", "title": "x",
+            "start": "2024-06-15T10:00:00Z", "end": "2024-06-15T11:00:00Z",
+        })
+
+
+@respx.mock
 def test_delete_event(client):
     route = respx.delete("https://connect.mobiscroll.com/api/event").mock(
-        return_value=httpx.Response(200, json={"success": True})
+        return_value=httpx.Response(204)
     )
-    client.events.delete({
+    assert client.events.delete({
         "provider": "google", "calendar_id": "primary", "event_id": "evt-1",
-    })
+    }) is None
     params = parse_qs(urlparse(str(route.calls.last.request.url)).query)
     assert params["calendarId"] == ["primary"]
     assert params["eventId"] == ["evt-1"]
@@ -134,9 +174,9 @@ def test_delete_event(client):
 @respx.mock
 def test_delete_failure_raises(client):
     respx.delete("https://connect.mobiscroll.com/api/event").mock(
-        return_value=httpx.Response(200, json={"success": False, "message": "nope"})
+        return_value=httpx.Response(400, json={"message": "Event not found"})
     )
-    with pytest.raises(ServerError, match="nope"):
+    with pytest.raises(ValidationError, match="Event not found"):
         client.events.delete({
             "provider": "google", "calendar_id": "primary", "event_id": "evt-1",
         })

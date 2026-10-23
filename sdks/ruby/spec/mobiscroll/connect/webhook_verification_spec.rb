@@ -275,5 +275,46 @@ RSpec.describe 'Webhook verification' do
 
       expect(reason_of { create_client.webhooks.verify_webhook(body, headers) }).to eq('invalid_payload')
     end
+
+    it 'parses a delivery with a conference object' do
+      WebMock.stub_request(:get, keys_url).to_return(keys_response([keys['active']]))
+      case_ = vector('delivery: Google events with and without a conference')
+
+      delivery = create_client.webhooks.verify_webhook(case_['body'], case_['headers'])
+
+      meeting, lunch = delivery.events
+      expect(meeting.conference).to be_a(Mobiscroll::Connect::WebhookConference)
+      expect(meeting.conference.url).to eq('https://meet.google.com/abc-defg-hij')
+      expect(meeting.conference.provider).to eq('hangoutsMeet')
+      expect(meeting.conference.meeting_provider).to eq('hangoutsMeet')
+      expect(meeting.conference.data['conferenceId']).to eq('abc-defg-hij')
+      expect(meeting.start).to eq('2026-09-22T09:00:00.000Z')
+      expect(meeting.change_type).to eq('updated')
+      expect(lunch.conference).to be_nil
+      expect(lunch.all_day).to be(true)
+      expect(delivery.metadata.channel_id).to eq('chan_google_1')
+    end
+
+    it 'parses a deleted placeholder without calendar_id' do
+      WebMock.stub_request(:get, keys_url).to_return(keys_response([keys['active']]))
+      case_ = vector('delivery: Microsoft Teams event and a deleted placeholder')
+
+      teams, deleted = create_client.webhooks.verify_webhook(case_['body'], case_['headers']).events
+
+      expect(teams.conference.provider).to eq('teams')
+      expect(deleted.change_type).to eq('deleted')
+      expect(deleted.calendar_id).to be_nil
+      expect(deleted.original).to be_nil
+    end
+
+    it 'maps a present, absent or null conference' do
+      base = { 'id' => 'e1', 'provider' => 'google', 'changeType' => 'updated' }
+
+      present = Mobiscroll::Connect::WebhookEvent.from_h(base.merge('conference' => { 'url' => 'https://x' }))
+      expect(present.conference.url).to eq('https://x')
+      expect(present.conference.data).to be_nil
+      expect(Mobiscroll::Connect::WebhookEvent.from_h(base).conference).to be_nil
+      expect(Mobiscroll::Connect::WebhookEvent.from_h(base.merge('conference' => nil)).conference).to be_nil
+    end
   end
 end

@@ -39,6 +39,7 @@ describe('Auth Resource', () => {
         state: 'random-state',
         scope: 'read-write',
         lng: 'es',
+        theme: 'dark',
       });
 
       expect(url).toContain('https://connect.mobiscroll.com/api/oauth/authorize');
@@ -49,6 +50,7 @@ describe('Auth Resource', () => {
       expect(url).toContain('state=random-state');
       expect(url).toContain('scope=read-write');
       expect(url).toContain('lng=es');
+      expect(url).toContain('theme=dark');
     });
 
     it('should generate URL with only required parameters', () => {
@@ -62,6 +64,7 @@ describe('Auth Resource', () => {
       expect(url).toContain('user_id=user-123');
       expect(url).not.toContain('state=');
       expect(url).not.toContain('lng=');
+      expect(url).not.toContain('theme=');
     });
   });
 

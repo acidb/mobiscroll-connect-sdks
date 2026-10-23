@@ -30,7 +30,13 @@ public final class Webhooks {
         this.api = api;
     }
 
-    /** Subscribe to change notifications for a calendar. */
+    /**
+     * Subscribe to change notifications for a calendar. Pass the calendar's real ID from
+     * {@code calendars().list()}; an alias such as {@code primary} creates a duplicate subscription.
+     *
+     * @throws MobiscrollConnectException when a {@code channelId} you supplied is already in use by another
+     *                                    user (HTTP 409)
+     */
     public WebhookSubscribeResponse subscribeWebhook(WebhookSubscribeParams params) {
         return api.post("/subscribe-webhook", params, new TypeReference<WebhookSubscribeResponse>() {});
     }
@@ -39,6 +45,9 @@ public final class Webhooks {
      * Unsubscribe a previously created webhook channel. A {@code 200} response is final: on a
      * provider-side unsubscribe failure (e.g. an already-expired subscription) the server still
      * returns {@code success: true} with an explanatory message, after removing the local mapping.
+     *
+     * <p>Use the current channel ID: Connect replaces it when it renews a subscription, so take it from the
+     * latest delivery's {@code getMetadata().getChannelId()}.
      */
     public WebhookUnsubscribeResponse unsubscribeWebhook(WebhookUnsubscribeParams params) {
         return api.post("/unsubscribe-webhook", params, new TypeReference<WebhookUnsubscribeResponse>() {});
@@ -71,7 +80,8 @@ public final class Webhooks {
      *     try {
      *         delivery = client.webhooks().verifyWebhook(body, headers);
      *     } catch (WebhookVerificationException e) {
-     *         return ResponseEntity.status(401).build();
+     *         // 503 lets Connect retry when the keys could not be loaded; 401 is final.
+     *         return ResponseEntity.status(e.getReason() == Reason.NO_PUBLIC_KEYS ? 503 : 401).build();
      *     }
      *     handleDelivery(delivery);
      *     return ResponseEntity.noContent().build();
@@ -83,7 +93,9 @@ public final class Webhooks {
      *                collections of them, so both {@code Map<String, String>} and
      *                {@code Map<String, List<String>>} work
      * @return the parsed delivery
-     * @throws WebhookVerificationException when the delivery is not genuine; respond with a 4xx
+     * @throws WebhookVerificationException when the delivery is not verified; respond with 503 when the reason
+     *                                      is {@link Reason#NO_PUBLIC_KEYS} (Connect retries) and with 401
+     *                                      otherwise (Connect does not retry)
      */
     public WebhookDelivery verifyWebhook(byte[] payload, Map<String, ?> headers) {
         WebhookKeyStore store = WebhookKeyStore.forUrl(keysUrl());

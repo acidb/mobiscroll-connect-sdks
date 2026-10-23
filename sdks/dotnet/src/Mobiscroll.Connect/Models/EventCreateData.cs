@@ -23,6 +23,12 @@ public class EventCreateData
 
     public Dictionary<string, object>? Custom { get; set; }
 
+    /// <summary>Conference meeting URL to attach to the event.</summary>
+    public string? Conference { get; set; }
+
+    /// <summary>Conference options, e.g. <c>AutoGenerate = true</c> to create a provider meeting link.</summary>
+    public EventConferenceData? ConferenceData { get; set; }
+
     /// <summary>"busy" | "free"</summary>
     public string? Availability { get; set; }
 

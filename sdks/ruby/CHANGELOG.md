@@ -9,6 +9,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - New: `auth.revoke(token = nil)` revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect` first to remove a user entirely.
+- New: `Calendar` has `account` (the connected account the calendar belongs to) and `read_only` (`true` when the connection cannot write to it).
+- New: `generate_auth_url` takes `theme:` (`'light'`, `'dark'` or `'auto'`) for the Connect pages.
+
+### Fixed
+
+- `WebhookEvent#conference` is now a `WebhookConference` (`url`, `provider`, `meeting_provider`, `data`), matching the object deliveries contain; it was the raw Hash. `CalendarEvent#conference` from `events.list` stays the join-URL String.
+- Corrected the guidance for a failed `verify_webhook`: respond `503` when `reason` is `'no_public_keys'` so Connect retries the delivery, and `401` otherwise.
+- `events.create` and `events.update` now send `attendees` as email strings, as the API expects; `Attendee` objects and hashes are reduced to their email. They now also send `status` and `conference_data:` (as `conferenceData`, e.g. `{ 'autoGenerate' => true }`), and no longer send `color`, which the API does not accept on writes.
 
 ## [1.6.0] — 2026-10-08
 

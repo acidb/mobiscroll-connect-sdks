@@ -26,10 +26,13 @@ class Webhooks
      *
      * @param array<string, mixed> $params Subscription data:
      *   - provider: string ('google'|'microsoft'|'apple'|'caldav') REQUIRED
-     *   - calendarId: string Calendar ID REQUIRED
+     *   - calendarId: string The calendar's real ID from `calendars()->list()` REQUIRED; an alias such as
+     *     'primary' creates a duplicate subscription
      *   - channelId?: string Client-supplied channel ID (auto-generated server-side if omitted)
      *   - expiration?: int Provider-specific expiration timestamp (ms epoch)
      * @return SubscribeWebhookResponse
+     * @throws \Mobiscroll\Connect\Exceptions\MobiscrollConnectException When a `channelId` you supplied is
+     *   already in use by another user (HTTP 409)
      */
     public function subscribeWebhook(array $params): SubscribeWebhookResponse
     {
@@ -51,7 +54,8 @@ class Webhooks
      *
      * @param array<string, mixed> $params Unsubscription data:
      *   - provider: string REQUIRED
-     *   - channelId: string REQUIRED
+     *   - channelId: string REQUIRED. The current channel ID: Connect replaces it when it renews a
+     *     subscription, so take it from the latest delivery's `metadata->channelId`
      *   - resourceId?: string Required by some providers (e.g. Google) to fully unsubscribe
      * @return UnsubscribeWebhookResponse
      */
@@ -82,7 +86,8 @@ class Webhooks
      * @param string $payload The raw request body, exactly as received; not a decoded array
      * @param array<string, string|array<int, string>|null>|MessageInterface $headers The request headers, any casing
      * @return WebhookDelivery The parsed delivery
-     * @throws WebhookVerificationError When the delivery is not genuine; respond with a 4xx
+     * @throws WebhookVerificationError When the delivery is not verified. Respond with 503 when the reason is
+     *   `no_public_keys` (Connect retries) and with 401 otherwise (Connect does not retry)
      */
     public function verifyWebhook(string $payload, array|MessageInterface $headers): WebhookDelivery
     {

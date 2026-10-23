@@ -106,6 +106,37 @@ RSpec.describe Mobiscroll::Connect::Resources::Events do
 
       expect(stub).to have_been_requested
     end
+
+    it 'sends attendees as email strings and the writable fields the API accepts' do
+      sent = nil
+      WebMock.stub_request(:post, "#{MockServer::BASE_URL}/event")
+             .with { |req| sent = JSON.parse(req.body) }
+             .to_return(status: 201, body: JSON.generate(event_fixture),
+                        headers: { 'Content-Type' => 'application/json' })
+
+      client.events.create(
+        provider: 'google',
+        calendar_id: 'primary',
+        title: 'Team Meeting',
+        start: '2024-01-15T10:00:00Z',
+        end: '2024-01-15T11:00:00Z',
+        attendees: [
+          Mobiscroll::Connect::Attendee.new(email: 'ana@company.com', status: 'accepted'),
+          { 'email' => 'bob@company.com' },
+          'zoe@example.com'
+        ],
+        status: 'tentative',
+        conference: 'https://meet.example.com/x',
+        conference_data: { 'autoGenerate' => true },
+        color: '#ff0000'
+      )
+
+      expect(sent['attendees']).to eq(%w[ana@company.com bob@company.com zoe@example.com])
+      expect(sent['status']).to eq('tentative')
+      expect(sent['conference']).to eq('https://meet.example.com/x')
+      expect(sent['conferenceData']).to eq({ 'autoGenerate' => true })
+      expect(sent).not_to have_key('color')
+    end
   end
 
   describe '#update' do

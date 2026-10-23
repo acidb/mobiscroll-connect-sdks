@@ -12,7 +12,7 @@ use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use Mobiscroll\Connect\Exceptions\{MobiscrollConnectException, WebhookVerificationError};
-use Mobiscroll\Connect\{MobiscrollConnectClient, WebhookDelivery, WebhookEvent, WebhookKeyStore, WebhookVerifier};
+use Mobiscroll\Connect\{MobiscrollConnectClient, WebhookConference, WebhookDelivery, WebhookEvent, WebhookKeyStore, WebhookVerifier};
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
@@ -325,6 +325,47 @@ class WebhookVerificationTest extends TestCase
         $this->assertSame('evt_1', $delivery->events[0]->id);
         $this->assertSame('google', $delivery->events[0]->provider);
         $this->assertSame(1, $delivery->metadata->eventCount);
+    }
+
+    public function testParsesADeliveryWithAConferenceObject(): void
+    {
+        $delivery = $this->verify($this->createClient(), 'delivery: Google events with and without a conference');
+
+        [$meeting, $lunch] = $delivery->events;
+        $this->assertInstanceOf(WebhookConference::class, $meeting->conference);
+        $this->assertSame('https://meet.google.com/abc-defg-hij', $meeting->conference->url);
+        $this->assertSame('hangoutsMeet', $meeting->conference->provider);
+        $this->assertSame('hangoutsMeet', $meeting->conference->meetingProvider);
+        $this->assertSame('abc-defg-hij', $meeting->conference->data['conferenceId'] ?? null);
+        $this->assertSame('2026-09-22T09:00:00+00:00', $meeting->start->format(DATE_ATOM));
+        $this->assertSame('2026-09-21T09:58:12.000Z', $meeting->lastModified);
+        $this->assertSame('updated', $meeting->changeType);
+        $this->assertNull($lunch->conference);
+        $this->assertTrue($lunch->allDay);
+        $this->assertSame('chan_google_1', $delivery->metadata->channelId);
+    }
+
+    public function testParsesADeletedPlaceholderWithoutCalendarId(): void
+    {
+        $delivery = $this->verify($this->createClient(), 'delivery: Microsoft Teams event and a deleted placeholder');
+
+        [$teams, $deleted] = $delivery->events;
+        $this->assertSame('teams', $teams->conference?->provider);
+        $this->assertSame('deleted', $deleted->changeType);
+        $this->assertSame($delivery->calendarId, $deleted->calendarId);
+        $this->assertSame([], $deleted->original);
+    }
+
+    public function testWebhookEventConferencePresentAbsentAndNull(): void
+    {
+        $base = ['id' => 'e1', 'provider' => 'google', 'calendarId' => 'c', 'changeType' => 'updated'];
+
+        $present = WebhookEvent::fromArray($base + ['conference' => ['url' => 'https://x', 'provider' => 'teams']]);
+        $this->assertNotNull($present->conference);
+        $this->assertSame('https://x', $present->conference->url);
+        $this->assertNull($present->conference->data);
+        $this->assertNull(WebhookEvent::fromArray($base)->conference);
+        $this->assertNull(WebhookEvent::fromArray($base + ['conference' => null])->conference);
     }
 
     public function testSharesOneKeyCacheAcrossClientInstancesAndHonoursMaxAge(): void

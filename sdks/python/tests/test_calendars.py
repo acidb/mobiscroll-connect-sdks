@@ -19,7 +19,10 @@ def client():
 def test_list_calendars(client):
     respx.get("https://connect.mobiscroll.com/api/calendars").mock(
         return_value=httpx.Response(200, json=[
-            {"provider": "google", "id": "primary", "title": "Personal", "timeZone": "UTC"},
+            {
+                "provider": "google", "id": "primary", "title": "Personal", "timeZone": "UTC",
+                "account": "ana@company.com", "readOnly": True,
+            },
             {"provider": "microsoft", "id": "calendar", "title": "Work", "timeZone": "UTC"},
         ])
     )
@@ -27,6 +30,9 @@ def test_list_calendars(client):
     assert len(calendars) == 2
     assert calendars[0].provider == "google"
     assert calendars[1].title == "Work"
+    assert calendars[0].account == "ana@company.com"
+    assert calendars[0].read_only is True
+    assert calendars[1].read_only is False
 
 
 @respx.mock

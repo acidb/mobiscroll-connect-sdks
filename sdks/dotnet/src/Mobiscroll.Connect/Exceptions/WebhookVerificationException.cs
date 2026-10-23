@@ -23,7 +23,9 @@ public enum WebhookVerificationReason
 }
 
 /// <summary>
-/// Thrown when a webhook delivery fails verification. Respond with a 4xx and do not process it.
+/// Thrown when a webhook delivery fails verification. Do not process it. Respond with 503 when <see cref="Reason"/> is
+/// <see cref="WebhookVerificationReason.NoPublicKeys"/> (the keys could not be fetched, so Connect retries) and with 401
+/// otherwise.
 /// </summary>
 public sealed class WebhookVerificationException : MobiscrollConnectException
 {

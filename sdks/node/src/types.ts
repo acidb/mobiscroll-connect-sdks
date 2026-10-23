@@ -178,6 +178,10 @@ export const ProviderNames: ProviderName[] = [
 
 export type Calendar = {
   provider: ProviderName;
+  /** The connected account this calendar belongs to. */
+  account: string;
+  /** `true` when the authenticated connection cannot write to this calendar. */
+  readOnly: boolean;
   id: string;
   title: string;
   timeZone: string;
@@ -208,8 +212,13 @@ export type CalendarEventStatus = 'confirmed' | 'tentative' | 'cancelled';
  * For the plain join URL prefer {@link CalendarEvent.conference}.
  */
 export interface ConferenceData {
-  /** Conference system identifier, e.g. `google-meet`, `microsoft-teams`, `zoom`. */
+  /** Conference system identifier as the provider reports it, e.g. `hangoutsMeet` or `google-meet` (Google), `teams` (Microsoft), `caldav` (Apple, CalDAV). */
   provider?: string;
+  /**
+   * On create or update, `true` generates a provider meeting link where supported (Google Meet,
+   * Microsoft Teams); `conference` and the other fields are then ignored.
+   */
+  autoGenerate?: boolean;
   [key: string]: unknown;
 }
 
@@ -240,9 +249,40 @@ export interface CalendarEvent {
   original: calendar_v3.Schema$Event | MicrosoftGraphEvent | VEvent;
 }
 
-export type WebhookEvent = CalendarEvent & {
+/**
+ * Conference details on a webhook delivery event. Deliveries carry an object here, while
+ * `events.list()` returns the join URL as a string in {@link CalendarEvent.conference}.
+ */
+export interface WebhookConference {
+  /** Conference join URL. */
+  url: string;
+  /** Conference provider as the calendar provider reports it, e.g. `hangoutsMeet`, `teams`. */
+  provider: string;
+  /** Same value as `provider`. */
+  meetingProvider: string;
+  /** Provider-specific conference payload. */
+  data?: Record<string, unknown>;
+}
+
+/**
+ * An event in a webhook delivery. `start` and `end` are converted to `Date` by `verifyWebhook`.
+ *
+ * Deleted Microsoft, Apple and CalDAV events arrive as placeholders without `calendarId` and
+ * `original`; rely only on `id`, `provider` and `changeType` for a `deleted` event.
+ */
+export interface WebhookEvent extends Omit<
+  CalendarEvent,
+  'calendarId' | 'conference' | 'conferenceData' | 'lastModified' | 'original'
+> {
+  /** Absent on deleted placeholders. */
+  calendarId?: string;
+  conference?: WebhookConference;
+  /** ISO 8601 timestamp of the last modification; for a deleted placeholder, when the deletion was detected. */
+  lastModified: string;
+  /** Provider-native event; absent on deleted placeholders. */
+  original?: CalendarEvent['original'];
   changeType: 'created' | 'updated' | 'deleted';
-};
+}
 
 export type RecurrenceFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 
@@ -270,6 +310,10 @@ export interface EventCreateData {
   attendees?: string[];
   recurrence?: RecurrenceRule;
   custom?: Record<string, unknown>;
+  /** Conference meeting URL to attach to the event. */
+  conference?: string;
+  /** Conference options, e.g. `{ autoGenerate: true }` to create a provider meeting link. */
+  conferenceData?: ConferenceData;
   availability?: CalendarEventAvailability;
   privacy?: CalendarEventPrivacy;
   status?: CalendarEventStatus;
@@ -350,6 +394,12 @@ export interface AuthorizeParams {
    * browser's Accept-Language header, then English.
    */
   lng?: string;
+
+  /**
+   * Optional color scheme of the Connect authorization pages: `'light'`, `'dark'` or `'auto'`
+   * (follows the device setting). When omitted, the project's default theme applies.
+   */
+  theme?: 'light' | 'dark' | 'auto';
 }
 
 /**
@@ -547,7 +597,9 @@ export type WebhookVerificationFailure =
   | 'invalid_payload';
 
 /**
- * Thrown when a webhook delivery fails verification. Respond with a 4xx and do not process it.
+ * Thrown when a webhook delivery fails verification. Do not process the delivery. Respond with
+ * `503` when `reason` is `no_public_keys` (the keys could not be fetched, so Connect retries), and
+ * with `401` otherwise (Connect does not retry).
  */
 export class WebhookVerificationError extends MobiscrollConnectError {
   constructor(

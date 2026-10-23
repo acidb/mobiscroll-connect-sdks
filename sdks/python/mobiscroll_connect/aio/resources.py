@@ -11,6 +11,7 @@ from .._internal.payloads import (
     build_event_payload,
     build_list_events_query,
 )
+from .._internal.responses import extract_written_event
 from .._internal.webhook_keys import (
     WebhookKeyStore,
     is_retryable,
@@ -54,10 +55,11 @@ class AsyncAuth:
         self,
         user_id: str,
         *,
-        scope: str = "calendar",
+        scope: str = "read-write",
         state: str | None = None,
         providers: str | None = None,
         lng: str | None = None,
+        theme: str | None = None,
     ) -> str:
         cfg = self._api.config
         params = {
@@ -73,6 +75,8 @@ class AsyncAuth:
             params["providers"] = providers
         if lng is not None:
             params["lng"] = lng
+        if theme is not None:
+            params["theme"] = theme
         return f"{self._api.base_url}/oauth/authorize?{urlencode(params)}"
 
     async def get_token(self, code: str) -> TokenResponse:
@@ -243,12 +247,12 @@ class AsyncEvents:
     async def create(self, event: Mapping[str, Any]) -> CalendarEvent:
         payload = build_event_payload(event)
         response = await self._api.post("event", json=payload)
-        return self._extract_event(response, "create")
+        return extract_written_event(response, "create")
 
     async def update(self, event: Mapping[str, Any]) -> CalendarEvent:
         payload = build_event_payload(event)
         response = await self._api.put("event", json=payload)
-        return self._extract_event(response, "update")
+        return extract_written_event(response, "update")
 
     async def delete(self, params: Mapping[str, Any]) -> None:
         query = build_delete_query(params)
@@ -256,12 +260,6 @@ class AsyncEvents:
         if isinstance(response, Mapping) and response.get("success") is False:
             raise ServerError(str(response.get("message") or "Failed to delete event"), 400)
 
-    @staticmethod
-    def _extract_event(response: Any, operation: str) -> CalendarEvent:
-        if isinstance(response, Mapping) and isinstance(response.get("event"), Mapping):
-            return CalendarEvent.from_dict(response["event"])
-        msg = response.get("message") if isinstance(response, Mapping) else None
-        raise ServerError(msg if isinstance(msg, str) else f"Failed to {operation} event", 400)
 
 
 class AsyncWebhooks:
