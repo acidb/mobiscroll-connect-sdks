@@ -8,15 +8,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `Auth.RevokeAsync(token?)` revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `DisconnectAsync()` first to remove a user entirely.
-- `Calendar` has `Account` (the connected account the calendar belongs to) and `ReadOnly` (`true` when the connection cannot write to it).
-- `EventCreateData` and `EventUpdateData` take `Conference` (a meeting URL) and `ConferenceData` (an `EventConferenceData`; `AutoGenerate = true` creates a provider meeting link).
+- `Auth.RevokeAsync(token?)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens (the whole grant).
+  - Without a token it revokes the stored refresh token, or the access token when there is none, then clears the stored credentials.
+  - It does not disconnect calendar accounts or stop webhooks; call `DisconnectAsync()` first to remove a user entirely.
 - `AuthorizeParams.Theme` (`"light"`, `"dark"` or `"auto"`) sets the color scheme of the Connect pages.
+- `Calendar` objects now include `Account` (the connected account the calendar belongs to) and `ReadOnly` (`true` when the connection cannot write to it).
+- `EventCreateData` and `EventUpdateData` now include `Conference` (a meeting URL) and `ConferenceData` (an `EventConferenceData`; `AutoGenerate = true` creates a meeting link).
 
 ### Fixed
 
-- `VerifyWebhookAsync()` now accepts deliveries whose events include a conference; they were rejected with reason `InvalidPayload`. `WebhookEvent.Conference` is a `WebhookConference` (`Url`, `Provider`, `MeetingProvider`, `Data`), matching the object deliveries contain. `WebhookEvent` no longer derives from `CalendarEvent`, whose `Conference` stays the join-URL string `Events.ListAsync()` returns; it keeps the same properties.
-- Corrected the guidance for a failed `VerifyWebhookAsync()`: respond `503` when `Reason` is `NoPublicKeys` so Connect retries the delivery, and `401` otherwise.
+- `VerifyWebhookAsync()` accepts deliveries whose events include a conference. Before, it rejected the whole delivery with reason `InvalidPayload`.
+- On those events:
+  - `WebhookEvent.Conference` is the join URL, or `null` when the delivered object has no `url`.
+  - `ConferenceData` is the REST shape returned by `Events.ListAsync()`: the delivery's own `conferenceData` (Connect 1.6.1 and later), or for an earlier delivery, one built from the delivered `conference` object.
+- A `conference` that is neither a string, an object nor `null` fails with reason `InvalidPayload`.
+- A delivery whose JSON repeats a property name now fails with reason `InvalidPayload`.
+- `VerifyWebhookAsync()`, documentation only (no change in behaviour): the doc comments of `VerifyWebhookAsync()` and `WebhookVerificationException` said to answer a failed verification with a `4xx`. They now say:
+  - `503` when `Reason` is `NoPublicKeys`: the public keys could not be loaded, and Connect retries the delivery.
+  - `401` for every other reason: Connect does not retry.
+  - The README example already answered this way.
+  - If your handler answers a `4xx` for `NoPublicKeys`, Connect drops that delivery; answer `503` instead.
 
 ## [1.6.0] — 2026-10-08
 

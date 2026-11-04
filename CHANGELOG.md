@@ -4,13 +4,13 @@ The seven Connect SDKs release independently, so each one keeps its own changelo
 
 | SDK | Changelog | Registry | Latest |
 |-----|-----------|----------|--------|
-| Node.js | [sdks/node/CHANGELOG.md](sdks/node/CHANGELOG.md) | [npm](https://www.npmjs.com/package/@mobiscroll/connect-sdk) | 1.5.0 |
-| Python | [sdks/python/CHANGELOG.md](sdks/python/CHANGELOG.md) | [PyPI](https://pypi.org/project/mobiscroll-connect-sdk/) | 1.5.0 |
-| PHP | [sdks/php/CHANGELOG.md](sdks/php/CHANGELOG.md) | [Packagist](https://packagist.org/packages/mobiscroll/connect-php) | 1.5.0 |
-| .NET | [sdks/dotnet/CHANGELOG.md](sdks/dotnet/CHANGELOG.md) | [NuGet](https://www.nuget.org/packages/Mobiscroll.Connect) | 1.5.0 |
-| Java | [sdks/java/CHANGELOG.md](sdks/java/CHANGELOG.md) | [Maven Central](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk) | 1.5.0 |
-| Go | [sdks/go/CHANGELOG.md](sdks/go/CHANGELOG.md) | [pkg.go.dev](https://pkg.go.dev/github.com/acidb/mobiscroll-connect-sdks/sdks/go) | 1.5.0 |
-| Ruby | [sdks/ruby/CHANGELOG.md](sdks/ruby/CHANGELOG.md) | [RubyGems](https://rubygems.org/gems/mobiscroll-connect) | 1.5.0 |
+| Node.js | [sdks/node/CHANGELOG.md](sdks/node/CHANGELOG.md) | [npm](https://www.npmjs.com/package/@mobiscroll/connect-sdk) | 1.6.1 |
+| Python | [sdks/python/CHANGELOG.md](sdks/python/CHANGELOG.md) | [PyPI](https://pypi.org/project/mobiscroll-connect-sdk/) | 1.6.1 |
+| PHP | [sdks/php/CHANGELOG.md](sdks/php/CHANGELOG.md) | [Packagist](https://packagist.org/packages/mobiscroll/connect-php) | 1.6.1 |
+| .NET | [sdks/dotnet/CHANGELOG.md](sdks/dotnet/CHANGELOG.md) | [NuGet](https://www.nuget.org/packages/Mobiscroll.Connect) | 1.6.1 |
+| Java | [sdks/java/CHANGELOG.md](sdks/java/CHANGELOG.md) | [Maven Central](https://central.sonatype.com/artifact/com.mobiscroll/connect-sdk) | 1.6.1 |
+| Go | [sdks/go/CHANGELOG.md](sdks/go/CHANGELOG.md) | [pkg.go.dev](https://pkg.go.dev/github.com/acidb/mobiscroll-connect-sdks/sdks/go) | 1.6.1 |
+| Ruby | [sdks/ruby/CHANGELOG.md](sdks/ruby/CHANGELOG.md) | [RubyGems](https://rubygems.org/gems/mobiscroll-connect) | 1.6.1 |
 
 ## Cross-SDK releases
 

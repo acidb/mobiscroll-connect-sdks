@@ -8,17 +8,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `auth.revoke(token?)` revokes the user's Connect access and refresh tokens (the whole grant). Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
-- `Calendar` has `account` (the connected account the calendar belongs to) and `readOnly` (`true` when the connection cannot write to it).
-- `EventCreateData` and `EventUpdateData` take `conference` (a meeting URL) and `conferenceData` (`{ autoGenerate: true }` creates a provider meeting link).
-- `generateAuthUrl()` takes `theme` (`'light'`, `'dark'` or `'auto'`) for the Connect pages.
+- `auth.revoke(token?)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens (the whole grant).
+  - Without an argument it revokes the stored refresh token, or the access token when there is none, then clears the stored credentials.
+  - It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
+- `generateAuthUrl()` accepts a `theme` option (`'light'`, `'dark'` or `'auto'`) that sets the color scheme of the Connect pages.
+- `ConferenceData` declares `url` and `original`, which the API returns from 1.6.1.
 
 ### Fixed
 
-- `verifyWebhook()` now types each event's `conference` as a `WebhookConference` object (`url`, `provider`, `meetingProvider`, `data`), which is what deliveries contain; `events.list()` keeps the join-URL string.
-- `verifyWebhook()` now returns each event's `start` and `end` as `Date`, as declared; they were ISO strings, so calling `Date` methods on them threw. On `WebhookEvent`, `calendarId` and `original` are now optional (deleted events arrive without them) and `lastModified` is always present.
-- `events.list()`, `events.create()` and `events.update()` now return `start` and `end` as `Date`, as declared, instead of ISO strings.
-- Corrected the guidance for a failed `verifyWebhook()`: respond `503` when `reason` is `no_public_keys` so Connect retries the delivery, and `401` otherwise.
+- `verifyWebhook()` return type (types only, no change at runtime):
+  - `start` and `end` are typed `string`, the ISO 8601 strings the SDK returns. They were typed `Date`, so calling `Date` methods on them threw.
+  - `lastModified` is always present.
+  - `original` is optional: deleted Microsoft, Apple and CalDAV events arrive without it.
+  - `calendarId` is optional: deleted Microsoft, Apple and CalDAV events in deliveries sent before Connect 1.6.1 arrive without it.
+- `verifyWebhook()`, documentation only (no change in behaviour): the doc comments of `verifyWebhook()` and `WebhookVerificationError` said to answer a failed verification with a `4xx`. They now say:
+  - `503` when `reason` is `no_public_keys`: the public keys could not be loaded, and Connect retries the delivery.
+  - `401` for every other reason: Connect does not retry.
+  - The README example already answered this way.
+  - If your handler answers a `4xx` for `no_public_keys`, Connect drops that delivery; answer `503` instead.
+- `start` and `end` on `CalendarEvent` from `events.list()`, `events.create()` and `events.update()` are typed `string` too, for the same reason.
+- The `EventCreateData` and `EventUpdateData` types were missing `conference` (a meeting URL) and `conferenceData`, so TypeScript rejected `{ autoGenerate: true }` in an object literal. The SDK already sent both fields at runtime.
+- The `Calendar` type was missing `account` (the connected account the calendar belongs to) and `readOnly` (`true` when the connection cannot write to it). Both were already present at runtime.
 
 ## [1.6.0] — 2026-10-08
 

@@ -8,17 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `auth.revoke(token=None)` on the sync and async clients revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
-- `Calendar` has `account` (the connected account the calendar belongs to) and `read_only` (`True` when the connection cannot write to it).
-- `events.create()` and `events.update()` map the `conference_data` key to the API's `conferenceData`, so `{"autoGenerate": True}` creates a provider meeting link; `conference` takes a meeting URL.
-- `generate_auth_url()` takes `theme` (`"light"`, `"dark"` or `"auto"`) for the Connect pages, on the sync and async clients.
+- `auth.revoke(token=None)` for `POST /api/oauth/revoke`, on the sync and async clients: revokes the user's Connect access and refresh tokens (the whole grant).
+  - Without an argument it revokes the stored refresh token, or the access token when there is none, then clears the stored credentials.
+  - It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
+- `generate_auth_url()` accepts a `theme` option (`"light"`, `"dark"` or `"auto"`) that sets the color scheme of the Connect pages, on the sync and async clients.
+- `Calendar` objects now include `account` (the connected account the calendar belongs to) and `read_only` (`True` when the connection cannot write to it).
+- `events.create()` and `events.update()` send a `conference_data` key as `conferenceData`, so `{"autoGenerate": True}` creates a meeting link. `conference` takes a meeting URL.
 
 ### Fixed
 
-- `WebhookEvent.conference` is now a `WebhookConference` (`url`, `provider`, `meeting_provider`, `data`), matching the object deliveries contain; it was typed as a string and held the raw dictionary. `CalendarEvent.conference` from `events.list()` stays the join-URL string.
-- Corrected the guidance for a failed `verify_webhook()`: respond `503` when `reason` is `"no_public_keys"` so Connect retries the delivery, and `401` otherwise.
-- `events.create()` and `events.update()` on the sync and async clients now return the written event; they raised `ServerError` on every successful write because they expected the event inside an `event` field.
-- The default `scope` of `generate_auth_url()` is now `"read-write"` on the sync and async clients. It was `"calendar"`, which is not a Connect scope; Connect treated it as `read-write`, so the authorization behaves the same.
+- `events.create()` and `events.update()` now return the written event, on the sync and async clients. They raised `ServerError` on every successful write, because they expected the event inside an `event` field.
+- The default `scope` of `generate_auth_url()` is now `"read-write"`, on the sync and async clients. It was `"calendar"`, which is not a Connect scope; Connect treated it as `read-write`, so the authorization behaves the same.
+- `verify_webhook()`, documentation only (no change in behaviour): the doc comments of `verify_webhook()` and `WebhookVerificationError` said to answer a failed verification with a `4xx`. They now say:
+  - `503` when `reason` is `"no_public_keys"`: the public keys could not be loaded, and Connect retries the delivery.
+  - `401` for every other reason: Connect does not retry.
+  - The README example already answered this way.
+  - If your handler answers a `4xx` for `"no_public_keys"`, Connect drops that delivery; answer `503` instead.
 
 ## [1.6.0] — 2026-10-08
 

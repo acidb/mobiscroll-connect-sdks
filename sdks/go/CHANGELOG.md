@@ -8,15 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `Auth().Revoke(ctx, token)` revokes the user's Connect access and refresh tokens (the whole grant) and returns a `*RevokeResponse`. With an empty `token` it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `Disconnect` first to remove a user entirely.
-- `Calendar` has `Account` (the connected account the calendar belongs to) and `ReadOnly` (`true` when the connection cannot write to it).
-- `EventCreateData` and `EventUpdateData` have `Conference` (a meeting URL) and `ConferenceData` (`*EventConferenceData`; `AutoGenerate: mobiscroll.Ptr(true)` creates a provider meeting link).
+- `Auth().Revoke(ctx, token)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens (the whole grant).
+  - With an empty `token` it revokes the stored refresh token, or the access token when there is none, then clears the stored credentials.
+  - It does not disconnect calendar accounts or stop webhooks; call `Disconnect` first to remove a user entirely.
 - `AuthURLParams.Theme` (`"light"`, `"dark"` or `"auto"`) sets the color scheme of the Connect pages.
+- `Calendar` objects now include `Account` (the connected account the calendar belongs to) and `ReadOnly` (`true` when the connection cannot write to it).
+- `EventCreateData` and `EventUpdateData` now include `Conference` (a meeting URL) and `ConferenceData` (`*EventConferenceData`; `AutoGenerate: mobiscroll.Ptr(true)` creates a meeting link).
 
 ### Fixed
 
-- `VerifyWebhook` now accepts deliveries whose events include a conference; they were rejected with reason `invalid_payload`. `WebhookEvent.Conference` is a `*WebhookConference` (`URL`, `Provider`, `MeetingProvider`, `Data`), matching the object deliveries contain, and shadows the embedded `CalendarEvent.Conference`, which stays the join-URL string the events endpoints return.
-- Corrected the guidance for a failed `VerifyWebhook`: respond `503` when `Reason` is `WebhookNoPublicKeys` so Connect retries the delivery, and `401` otherwise.
+- `VerifyWebhook` accepts deliveries whose events include a conference. Before, it rejected the whole delivery with reason `invalid_payload`.
+- On those events:
+  - `WebhookEvent.Conference` is the join URL, or an empty string when the delivered object has no `url`.
+  - `ConferenceData` is the REST shape returned by the events endpoints: the delivery's own `conferenceData` (Connect 1.6.1 and later), or for an earlier delivery, one built from the delivered `conference` object.
+- A `conference` that is neither a string, an object nor `null` fails with reason `invalid_payload`.
+- `VerifyWebhook`, documentation only (no change in behaviour): the doc comments of `VerifyWebhook` and `WebhookVerificationError` said to answer a failed verification with a `4xx`. They now say:
+  - `503` when `Reason` is `WebhookNoPublicKeys`: the public keys could not be loaded, and Connect retries the delivery.
+  - `401` for every other reason: Connect does not retry.
+  - If your handler answers a `4xx` for `WebhookNoPublicKeys`, Connect drops that delivery; answer `503` instead.
 
 ## [1.6.0] — 2026-10-08
 

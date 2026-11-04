@@ -8,15 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `auth.revoke(token = nil)` revokes the user's Connect access and refresh tokens (the whole grant) and returns a `RevokeResponse`. Without an argument it revokes the stored refresh token, else the access token, then clears the stored credentials. It does not disconnect calendar accounts or stop webhooks; call `disconnect` first to remove a user entirely.
-- `Calendar` has `account` (the connected account the calendar belongs to) and `read_only` (`true` when the connection cannot write to it).
-- `generate_auth_url` takes `theme:` (`'light'`, `'dark'` or `'auto'`) for the Connect pages.
+- `auth.revoke(token = nil)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens (the whole grant).
+  - Without an argument it revokes the stored refresh token, or the access token when there is none, then clears the stored credentials.
+  - It does not disconnect calendar accounts or stop webhooks; call `disconnect` first to remove a user entirely.
+- `generate_auth_url` accepts a `theme:` option (`'light'`, `'dark'` or `'auto'`) that sets the color scheme of the Connect pages.
+- `Calendar` objects now include `account` (the connected account the calendar belongs to) and `read_only` (`true` when the connection cannot write to it).
+- `events.create` and `events.update` now send `status`, and `conference_data:` as `conferenceData` (for example `{ 'autoGenerate' => true }`).
 
 ### Fixed
 
-- `WebhookEvent#conference` is now a `WebhookConference` (`url`, `provider`, `meeting_provider`, `data`), matching the object deliveries contain; it was the raw Hash. `CalendarEvent#conference` from `events.list` stays the join-URL String.
-- Corrected the guidance for a failed `verify_webhook`: respond `503` when `reason` is `'no_public_keys'` so Connect retries the delivery, and `401` otherwise.
-- `events.create` and `events.update` now send `attendees` as email strings, as the API expects; `Attendee` objects and hashes are reduced to their email. They now also send `status` and `conference_data:` (as `conferenceData`, e.g. `{ 'autoGenerate' => true }`), and no longer send `color`, which the API does not accept on writes.
+- `events.create` and `events.update` now send `attendees` as email strings, as the API expects; an `Attendee` or a Hash is reduced to its email.
+- `events.create` and `events.update` no longer send `color`, which the API does not accept on writes.
+- `verify_webhook`, documentation only (no change in behaviour): the doc comments of `verify_webhook` and `WebhookVerificationError` said to answer a failed verification with a `4xx`. They now say:
+  - `503` when `reason` is `'no_public_keys'`: the public keys could not be loaded, and Connect retries the delivery.
+  - `401` for every other reason: Connect does not retry.
+  - The README example already answered this way.
+  - If your handler answers a `4xx` for `'no_public_keys'`, Connect drops that delivery; answer `503` instead.
 
 ## [1.6.0] — 2026-10-08
 
