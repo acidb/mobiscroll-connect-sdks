@@ -26,7 +26,6 @@ import java.util.function.Supplier;
 import com.mobiscroll.connect.exceptions.WebhookVerificationException;
 import com.mobiscroll.connect.exceptions.WebhookVerificationException.Reason;
 import com.mobiscroll.connect.internal.WebhookKeyStore;
-import com.mobiscroll.connect.models.WebhookConference;
 import com.mobiscroll.connect.models.WebhookDelivery;
 import com.mobiscroll.connect.models.WebhookEvent;
 import com.mobiscroll.connect.support.ClientFactory;
@@ -280,17 +279,15 @@ class WebhookVerificationTest {
         WebhookDelivery delivery = client(null).webhooks().verifyWebhook(vector.body, vector.headers);
 
         WebhookEvent meeting = delivery.getEvents().get(0);
-        WebhookConference conference = meeting.getConference();
-        assertThat(conference).isNotNull();
-        assertThat(conference.getUrl()).isEqualTo("https://meet.google.com/abc-defg-hij");
-        assertThat(conference.getProvider()).isEqualTo("hangoutsMeet");
-        assertThat(conference.getMeetingProvider()).isEqualTo("hangoutsMeet");
-        assertThat(conference.getData()).containsEntry("conferenceId", "abc-defg-hij");
+        assertThat(meeting.getConference()).isEqualTo("https://meet.google.com/abc-defg-hij");
+        assertThat(meeting.getConferenceData()).containsEntry("provider", "hangoutsMeet");
+        assertThat(meeting.getConferenceData()).containsEntry("conferenceId", "abc-defg-hij");
         assertThat(meeting.getStart()).isEqualTo(OffsetDateTime.of(2026, 9, 22, 9, 0, 0, 0, ZoneOffset.UTC));
         assertThat(meeting.getLastModified()).isEqualTo("2026-09-21T09:58:12.000Z");
         assertThat(meeting.getChangeType()).isEqualTo("updated");
         assertThat(meeting.getAttendees().get(0).getOrganizer()).isTrue();
         assertThat(delivery.getEvents().get(1).getConference()).isNull();
+        assertThat(delivery.getEvents().get(1).getConferenceData()).isNull();
         assertThat(delivery.getEvents().get(1).getAllDay()).isTrue();
         assertThat(delivery.getMetadata().getChannelId()).isEqualTo("chan_google_1");
     }
@@ -301,27 +298,161 @@ class WebhookVerificationTest {
 
         WebhookDelivery delivery = client(null).webhooks().verifyWebhook(vector.body, vector.headers);
 
-        assertThat(delivery.getEvents().get(0).getConference().getProvider()).isEqualTo("teams");
+        assertThat(delivery.getEvents().get(0).getConferenceData()).containsEntry("provider", "teams");
         WebhookEvent deleted = delivery.getEvents().get(1);
         assertThat(deleted.getChangeType()).isEqualTo("deleted");
         assertThat(deleted.getCalendarId()).isNull();
         assertThat(deleted.getOriginal()).isNull();
     }
 
-    @Test void acceptsANullConference() throws Exception {
+    @Test void keepsTheApi161ConferenceDataAndCalendarIdOnDeletedEvents() {
+        serve(() -> keysResponse(WebhookVectors.key("active")));
+
+        WebhookDelivery google = verifyVector("delivery: 1.6.1 Google Meet event with conferenceData and a cancelled event with calendarId");
+        WebhookEvent meet = google.getEvents().get(0);
+        assertThat(meet.getConference()).isEqualTo("https://meet.google.com/abc-defg-hij");
+        assertThat(meet.getConferenceData()).containsEntry("provider", "hangoutsMeet");
+        assertThat(meet.getConferenceData()).containsEntry("url", "https://meet.google.com/abc-defg-hij");
+        assertThat(meet.getConferenceData()).containsEntry("conferenceId", "abc-defg-hij");
+        assertThat(meet.getConferenceData()).extractingByKey("original").isInstanceOf(java.util.Map.class);
+        assertThat(((java.util.Map<?, ?>) meet.getConferenceData().get("original")).get("conferenceId")).isEqualTo("abc-defg-hij");
+        assertThat(google.getEvents().get(1).getCalendarId()).isEqualTo("work@company.com");
+
+        WebhookDelivery microsoft = verifyVector("delivery: 1.6.1 Microsoft Teams event with conferenceData and a deleted placeholder with calendarId");
+        assertThat(microsoft.getEvents().get(0).getConferenceData()).containsEntry("provider", "teams");
+        assertThat(((java.util.Map<?, ?>) microsoft.getEvents().get(0).getConferenceData().get("original")).get("conferenceId")).isEqualTo("123456789");
+        assertThat(microsoft.getEvents().get(1).getCalendarId()).isEqualTo("AAMkAGI2Y2FsAAA=");
+
+        WebhookDelivery apple = verifyVector("delivery: 1.6.1 Apple event with a URL as conference and a deleted placeholder with calendarId");
+        assertThat(apple.getEvents().get(0).getConference()).isEqualTo("https://example.com/room/42");
+        assertThat(apple.getEvents().get(0).getConferenceData()).containsOnly(
+                java.util.Map.entry("provider", "caldav"), java.util.Map.entry("url", "https://example.com/room/42"));
+        assertThat(apple.getEvents().get(1).getCalendarId()).isEqualTo("https://caldav.icloud.com/1234567/calendars/work/");
+    }
+
+    private WebhookDelivery verifyVector(String name) {
+        WebhookVectors.Case vector = WebhookVectors.byName(name);
+        return client(null).webhooks().verifyWebhook(vector.body, vector.headers);
+    }
+
+    /** Signs a delivery holding one event with a fresh key, pinned in the client, and verifies it. */
+    private WebhookEvent verifyEvent(String eventJson, String deliveryProvider) throws Exception {
         serve(() -> new MockResponse().setResponseCode(500));
         KeyPair pair = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
         byte[] spki = pair.getPublic().getEncoded();
         String pinned = "whpk_" + Base64.getEncoder().encodeToString(Arrays.copyOfRange(spki, spki.length - 32, spki.length));
-        String body = "{\"provider\":\"google\",\"userId\":\"u1\",\"calendarId\":\"c1\","
-                + "\"events\":[{\"id\":\"e1\",\"provider\":\"google\",\"title\":\"T\","
-                + "\"start\":\"2026-09-21T10:00:00.000Z\",\"end\":\"2026-09-21T11:00:00.000Z\","
-                + "\"conference\":null,\"changeType\":\"updated\"}],"
+        String body = "{\"provider\":\"" + deliveryProvider + "\",\"userId\":\"u1\",\"calendarId\":\"c1\","
+                + "\"events\":[" + eventJson + "],"
                 + "\"metadata\":{\"channelId\":\"ch1\",\"eventCount\":1,\"isInitialSync\":false}}";
-
         WebhookDelivery delivery = client(pinned).webhooks().verifyWebhook(body, sign(pair, body));
+        assertThat(delivery.getEvents()).hasSize(1);
+        return delivery.getEvents().get(0);
+    }
 
-        assertThat(delivery.getEvents().get(0).getConference()).isNull();
+    private static String eventJson(String provider, String extra) {
+        return "{\"id\":\"e1\",\"provider\":\"" + provider + "\",\"calendarId\":\"c1\",\"title\":\"T\","
+                + "\"start\":\"2026-09-21T10:00:00.000Z\",\"end\":\"2026-09-21T11:00:00.000Z\","
+                + "\"changeType\":\"updated\"" + (extra == null ? "" : "," + extra) + "}";
+    }
+
+    @Test void convertsAConferenceObjectToTheUrlAndRestConferenceData() throws Exception {
+        WebhookEvent event = verifyEvent(eventJson("google",
+                "\"conference\":{\"url\":\"https://meet.google.com/abc\",\"provider\":\"hangoutsMeet\","
+                        + "\"meetingProvider\":\"hangoutsMeet\",\"autoGenerate\":false,"
+                        + "\"data\":{\"conferenceId\":\"abc\",\"entryPoints\":[{\"uri\":\"https://meet.google.com/abc\"}]}}"),
+                "google");
+
+        assertThat(event.getConference()).isEqualTo("https://meet.google.com/abc");
+        assertThat(event.getConferenceData()).containsExactly(
+                Map.entry("provider", "hangoutsMeet"),
+                Map.entry("autoGenerate", false),
+                Map.entry("conferenceId", "abc"),
+                Map.entry("entryPoints", List.of(Map.of("uri", "https://meet.google.com/abc"))));
+        assertThat(event.getChangeType()).isEqualTo("updated");
+    }
+
+    @Test void infersTheConferenceProviderFromTheEventProvider() throws Exception {
+        String[][] cases = {{"google", "google-meet"}, {"microsoft", "teams"}, {"apple", "caldav"}, {"caldav", "caldav"}};
+        for (String[] c : cases) {
+            WebhookEvent event = verifyEvent(
+                    eventJson(c[0], "\"conference\":{\"url\":\"https://x.test/j\",\"provider\":\"\"}"), "google");
+
+            assertThat(event.getConference()).isEqualTo("https://x.test/j");
+            assertThat(event.getConferenceData()).containsExactly(Map.entry("provider", c[1]));
+        }
+    }
+
+    @Test void infersTheConferenceProviderFromTheDeliveryWhenTheEventHasNone() throws Exception {
+        WebhookEvent event = verifyEvent(
+                "{\"id\":\"e1\",\"title\":\"T\",\"start\":\"2026-09-21T10:00:00.000Z\","
+                        + "\"conference\":{\"url\":\"https://x.test/j\"}}",
+                "microsoft");
+
+        assertThat(event.getConferenceData()).containsExactly(Map.entry("provider", "teams"));
+    }
+
+    @Test void aConferenceObjectWithoutAUrlHasNullConference() throws Exception {
+        WebhookEvent autoOnly = verifyEvent(eventJson("google", "\"conference\":{\"autoGenerate\":true}"), "google");
+        assertThat(autoOnly.getConference()).isNull();
+        assertThat(autoOnly.getConferenceData()).containsExactly(
+                Map.entry("provider", "google-meet"), Map.entry("autoGenerate", true));
+
+        WebhookEvent emptyUrl = verifyEvent(
+                eventJson("caldav", "\"conference\":{\"url\":\"\",\"data\":{\"k\":1}}"), "caldav");
+        assertThat(emptyUrl.getConference()).isNull();
+        assertThat(emptyUrl.getConferenceData()).containsExactly(
+                Map.entry("provider", "caldav"), Map.entry("k", 1));
+
+        WebhookEvent nonString = verifyEvent(
+                eventJson("google", "\"conference\":{\"url\":5,\"autoGenerate\":\"yes\"}"), "google");
+        assertThat(nonString.getConference()).isNull();
+        assertThat(nonString.getConferenceData()).containsExactly(Map.entry("provider", "google-meet"));
+    }
+
+    @Test void leavesAStringConferenceUnchanged() throws Exception {
+        WebhookEvent event = verifyEvent(eventJson("google", "\"conference\":\"https://meet.test/s\""), "google");
+
+        assertThat(event.getConference()).isEqualTo("https://meet.test/s");
+        assertThat(event.getConferenceData()).isNull();
+    }
+
+    @Test void acceptsANullOrAbsentConference() throws Exception {
+        for (String extra : new String[] {null, "\"conference\":null"}) {
+            WebhookEvent event = verifyEvent(eventJson("google", extra), "google");
+
+            assertThat(event.getConference()).isNull();
+            assertThat(event.getConferenceData()).isNull();
+        }
+    }
+
+    @Test void rejectsAConferenceThatIsNotAStringOrObject() {
+        for (String conference : new String[] {"5", "true", "[1,2]", "[]"}) {
+            assertThatThrownBy(() -> verifyEvent(eventJson("google", "\"conference\":" + conference), "google"))
+                    .as(conference)
+                    .satisfies(t -> assertThat(reasonOf(t)).isEqualTo(Reason.INVALID_PAYLOAD));
+        }
+    }
+
+    @Test void leavesTheEventsOwnConferenceDataUntouched() throws Exception {
+        WebhookEvent event = verifyEvent(eventJson("google",
+                "\"conference\":{\"url\":\"https://x.test/j\",\"provider\":\"teams\",\"data\":{\"a\":1}},"
+                        + "\"conferenceData\":{\"own\":true}"), "google");
+
+        assertThat(event.getConference()).isEqualTo("https://x.test/j");
+        assertThat(event.getConferenceData()).containsExactly(Map.entry("own", true));
+    }
+
+    @Test void acceptsADeletedPlaceholderWithoutCalendarIdOrOriginal() throws Exception {
+        WebhookEvent event = verifyEvent("{\"provider\":\"microsoft\",\"id\":\"gone_1\",\"changeType\":\"deleted\"}", "microsoft");
+
+        assertThat(event.getChangeType()).isEqualTo("deleted");
+        assertThat(event.getCalendarId()).isNull();
+        assertThat(event.getOriginal()).isNull();
+        assertThat(event.getConference()).isNull();
+    }
+
+    @Test void aWebhookEventIsACalendarEvent() {
+        assertThat(com.mobiscroll.connect.models.CalendarEvent.class).isAssignableFrom(WebhookEvent.class);
     }
 
     private Map<String, String> sign(KeyPair pair, String body) throws Exception {

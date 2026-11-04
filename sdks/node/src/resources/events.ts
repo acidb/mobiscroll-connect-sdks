@@ -8,7 +8,6 @@ import {
   UpdateEventData,
   CreateEventData,
 } from '../types';
-import { reviveEventDates } from '../eventDates';
 
 /**
  * Events resource for managing calendar events across multiple providers
@@ -39,10 +38,7 @@ export class Events {
     const path = query ? `/events?${query}` : '/events';
 
     const response = await this.client.get<EventsListResponse>(path);
-    const data = response.data || { events: [] };
-    return Array.isArray(data.events)
-      ? { ...data, events: data.events.map(reviveEventDates) }
-      : data;
+    return response.data || { events: [] };
   }
 
   /**
@@ -52,7 +48,7 @@ export class Events {
    */
   async create(params: CreateEventData): Promise<EventResponse> {
     const response = await this.client.post<EventResponse>('/event', params);
-    return reviveEventDates(response.data);
+    return response.data;
   }
 
   /**
@@ -62,7 +58,7 @@ export class Events {
    */
   async update(params: UpdateEventData): Promise<EventResponse> {
     const response = await this.client.put<EventResponse>('/event', params);
-    return reviveEventDates(response.data);
+    return response.data;
   }
 
   /**

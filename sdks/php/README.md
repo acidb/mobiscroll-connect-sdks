@@ -251,7 +251,7 @@ http_response_code(204);
 handleDelivery($delivery); // $delivery->userId, $delivery->calendarId, $delivery->events, ...
 ```
 
-Each event is a `WebhookEvent` whose `conference` is a `WebhookConference` (`url`, `provider`, `meetingProvider`, `data`) rather than the join-URL string `events()->list()` returns.
+Each event is a `WebhookEvent`, which is a `CalendarEvent` plus `changeType`. A delivery carries `conference` as an object (`url`, `provider`, `meetingProvider`, `data`); `verifyWebhook()` converts it to the shape `events()->list()` returns: `conference` is the join URL string (`null` when the object has no non-empty `url`) and `conferenceData` is the REST shape (`provider`, `autoGenerate` when boolean, and the keys of `data` at the top level; `null` when empty). Deliveries from Connect 1.6.1 on carry `conferenceData` themselves, with `url` and `original`, and the SDK keeps it; for an earlier delivery the SDK builds it from the `conference` object, without `url` and `original`. A `conference` that is neither a string, an object nor `null` fails with `invalid_payload`.
 
 Headers can be any array with header names in any casing, or a PSR-7 request. In Laravel or Symfony, pass `$request->getContent()` and `$request->headers->all()`.
 
@@ -407,7 +407,6 @@ src/
 ├── WebhookSubscription.php
 ├── WebhookDelivery.php
 ├── WebhookDeliveryMetadata.php
-├── WebhookConference.php
 ├── WebhookEvent.php
 ├── WebhookVerifier.php
 └── WebhookKeyStore.php

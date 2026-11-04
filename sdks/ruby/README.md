@@ -235,7 +235,7 @@ post '/webhooks/mobiscroll' do
 end
 ```
 
-Each event's `conference` is a `WebhookConference` (`url`, `provider`, `meeting_provider`, `data`), nil when absent, rather than the join-URL string `events.list` returns.
+Each event's `conference` is exactly what the delivery carried, not the join-URL string `events.list` returns: a Hash with the keys `url`, `provider`, `meetingProvider` and `data` (as sent, camelCase), or nil when absent. `conference_data` is the delivery's `conferenceData` (Connect 1.6.1 and later), the same object `events.list` returns, passed through unchanged.
 
 `headers` can be a Hash with any key casing, a Rack env (`HTTP_WEBHOOK_ID` keys), or Rails' `request.headers` (pass `request.raw_post` as the body in Rails).
 

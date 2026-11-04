@@ -345,16 +345,15 @@ public sealed class WebhookVerificationTests : IDisposable
         var delivery = await client.Webhooks.VerifyWebhookAsync(vector.Body, vector.Headers);
 
         var meeting = delivery.Events[0];
-        Assert.NotNull(meeting.Conference);
-        Assert.Equal("https://meet.google.com/abc-defg-hij", meeting.Conference!.Url);
-        Assert.Equal("hangoutsMeet", meeting.Conference.Provider);
-        Assert.Equal("hangoutsMeet", meeting.Conference.MeetingProvider);
-        Assert.Equal("abc-defg-hij", meeting.Conference.Data!["conferenceId"].GetString());
+        Assert.Equal("https://meet.google.com/abc-defg-hij", meeting.Conference);
+        Assert.Equal("hangoutsMeet", meeting.ConferenceData!["provider"].GetString());
+        Assert.Equal("abc-defg-hij", meeting.ConferenceData["conferenceId"].GetString());
         Assert.Equal(new DateTime(2026, 9, 22, 9, 0, 0, DateTimeKind.Utc), meeting.Start.ToUniversalTime());
         Assert.Equal("2026-09-21T09:58:12.000Z", meeting.LastModified);
         Assert.Equal("updated", meeting.ChangeType);
         Assert.True(meeting.Attendees![0].Organizer);
         Assert.Null(delivery.Events[1].Conference);
+        Assert.Null(delivery.Events[1].ConferenceData);
         Assert.True(delivery.Events[1].AllDay);
         Assert.Equal("chan_google_1", delivery.Metadata.ChannelId);
     }
@@ -367,7 +366,7 @@ public sealed class WebhookVerificationTests : IDisposable
 
         var delivery = await client.Webhooks.VerifyWebhookAsync(vector.Body, vector.Headers);
 
-        Assert.Equal("teams", delivery.Events[0].Conference!.Provider);
+        Assert.Equal("teams", delivery.Events[0].ConferenceData!["provider"].GetString());
         var deleted = delivery.Events[1];
         Assert.Equal("deleted", deleted.ChangeType);
         Assert.Equal(string.Empty, deleted.CalendarId);
@@ -375,15 +374,43 @@ public sealed class WebhookVerificationTests : IDisposable
     }
 
     [Fact]
-    public async Task VerifyWebhookAsync_AcceptsANullConference()
+    public async Task VerifyWebhookAsync_KeepsTheApi161ConferenceDataAndCalendarIdOnDeletedEvents()
     {
+        async Task<WebhookDelivery> Verify(string name)
+        {
+            var vector = WebhookVectors.ByName(name);
+            using var client = ClientFactory.Create(EnqueueKeys(new FakeHttpMessageHandler(), WebhookVectors.Key("active")));
+            return await client.Webhooks.VerifyWebhookAsync(vector.Body, vector.Headers);
+        }
+
+        var google = await Verify("delivery: 1.6.1 Google Meet event with conferenceData and a cancelled event with calendarId");
+        Assert.Equal("https://meet.google.com/abc-defg-hij", google.Events[0].Conference);
+        Assert.Equal("hangoutsMeet", google.Events[0].ConferenceData!["provider"].GetString());
+        Assert.Equal("https://meet.google.com/abc-defg-hij", google.Events[0].ConferenceData!["url"].GetString());
+        Assert.Equal("abc-defg-hij", google.Events[0].ConferenceData!["original"].GetProperty("conferenceId").GetString());
+        Assert.Equal("abc-defg-hij", google.Events[0].ConferenceData!["conferenceId"].GetString());
+        Assert.Equal("work@company.com", google.Events[1].CalendarId);
+
+        var microsoft = await Verify("delivery: 1.6.1 Microsoft Teams event with conferenceData and a deleted placeholder with calendarId");
+        Assert.Equal("teams", microsoft.Events[0].ConferenceData!["provider"].GetString());
+        Assert.Equal("123456789", microsoft.Events[0].ConferenceData!["original"].GetProperty("conferenceId").GetString());
+        Assert.Equal("AAMkAGI2Y2FsAAA=", microsoft.Events[1].CalendarId);
+
+        var apple = await Verify("delivery: 1.6.1 Apple event with a URL as conference and a deleted placeholder with calendarId");
+        Assert.Equal("https://example.com/room/42", apple.Events[0].Conference);
+        Assert.Equal("caldav", apple.Events[0].ConferenceData!["provider"].GetString());
+        Assert.Equal("https://example.com/room/42", apple.Events[0].ConferenceData!["url"].GetString());
+        Assert.Equal("https://caldav.icloud.com/1234567/calendars/work/", apple.Events[1].CalendarId);
+    }
+
+    private async Task<WebhookDelivery> VerifySignedAsync(string eventsJson, string deliveryProvider = "google")
+    {
+        WebhookKeyStore.Reset();
+        WebhookKeyStore.Clock = _clock;
         using var key = Key.Create(SignatureAlgorithm.Ed25519);
         var publicKey = "whpk_" + Convert.ToBase64String(key.PublicKey.Export(KeyBlobFormat.RawPublicKey));
-        const string body = """
-        {"provider":"google","userId":"u1","calendarId":"c1","timestamp":"2026-09-21T10:00:00.000Z",
-         "events":[{"id":"e1","provider":"google","calendarId":"c1","title":"A","start":"2026-09-21T10:00:00.000Z","end":"2026-09-21T11:00:00.000Z","allDay":false,"lastModified":"2026-09-21T09:00:00.000Z","conference":null,"changeType":"updated"}],
-         "metadata":{"channelId":"ch1","eventCount":1,"isInitialSync":false}}
-        """;
+        var body = "{\"provider\":\"" + deliveryProvider + "\",\"userId\":\"u1\",\"calendarId\":\"c1\",\"timestamp\":\"2026-09-21T10:00:00.000Z\","
+            + "\"events\":[" + eventsJson + "],\"metadata\":{\"channelId\":\"ch1\",\"eventCount\":1,\"isInitialSync\":false}}";
         var timestamp = _valid.Now.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var signature = SignatureAlgorithm.Ed25519.Sign(key, Encoding.UTF8.GetBytes($"msg_1.{timestamp}.{body}"));
         var headers = new Dictionary<string, string>
@@ -393,9 +420,131 @@ public sealed class WebhookVerificationTests : IDisposable
             ["webhook-signature"] = "v1a," + Convert.ToBase64String(signature),
         };
         using var client = ClientFactory.Create(EnqueueKeys(new FakeHttpMessageHandler(), publicKey));
-
-        var delivery = await client.Webhooks.VerifyWebhookAsync(body, headers);
-
-        Assert.Null(delivery.Events[0].Conference);
+        return await client.Webhooks.VerifyWebhookAsync(body, headers);
     }
+
+    private static string EventJson(string provider, string? extra)
+        => "{\"id\":\"e1\",\"provider\":\"" + provider + "\",\"calendarId\":\"c1\",\"title\":\"A\",\"start\":\"2026-09-21T10:00:00.000Z\","
+            + "\"end\":\"2026-09-21T11:00:00.000Z\",\"allDay\":false,\"changeType\":\"updated\"" + (extra is null ? "" : "," + extra) + "}";
+
+    [Fact]
+    public async Task VerifyWebhookAsync_ConvertsAConferenceObjectToTheUrlAndRestConferenceData()
+    {
+        var delivery = await VerifySignedAsync(EventJson("google",
+            "\"conference\":{\"url\":\"https://meet.google.com/abc\",\"provider\":\"hangoutsMeet\",\"meetingProvider\":\"hangoutsMeet\","
+            + "\"autoGenerate\":false,\"data\":{\"conferenceId\":\"abc\",\"entryPoints\":[{\"uri\":\"https://meet.google.com/abc\"}]}}"));
+
+        var evt = delivery.Events[0];
+        Assert.Equal("https://meet.google.com/abc", evt.Conference);
+        var data = evt.ConferenceData!;
+        Assert.Equal(new[] { "provider", "autoGenerate", "conferenceId", "entryPoints" }, data.Keys.ToArray());
+        Assert.Equal("hangoutsMeet", data["provider"].GetString());
+        Assert.False(data["autoGenerate"].GetBoolean());
+        Assert.Equal("abc", data["conferenceId"].GetString());
+        Assert.Equal("https://meet.google.com/abc", data["entryPoints"][0].GetProperty("uri").GetString());
+        Assert.Equal("updated", evt.ChangeType);
+    }
+
+    [Theory]
+    [InlineData("google", "google-meet")]
+    [InlineData("microsoft", "teams")]
+    [InlineData("apple", "caldav")]
+    [InlineData("caldav", "caldav")]
+    public async Task VerifyWebhookAsync_InfersTheConferenceProviderFromTheEventProvider(string provider, string expected)
+    {
+        var delivery = await VerifySignedAsync(
+            EventJson(provider, "\"conference\":{\"url\":\"https://x.test/j\",\"provider\":\"\"}"), "google");
+
+        var evt = delivery.Events[0];
+        Assert.Equal("https://x.test/j", evt.Conference);
+        Assert.Equal(new[] { "provider" }, evt.ConferenceData!.Keys.ToArray());
+        Assert.Equal(expected, evt.ConferenceData["provider"].GetString());
+    }
+
+    [Fact]
+    public async Task VerifyWebhookAsync_InfersTheConferenceProviderFromTheDeliveryWhenTheEventHasNone()
+    {
+        var delivery = await VerifySignedAsync(
+            "{\"id\":\"e1\",\"calendarId\":\"c1\",\"title\":\"A\",\"start\":\"2026-09-21T10:00:00.000Z\",\"end\":\"2026-09-21T11:00:00.000Z\","
+            + "\"conference\":{\"url\":\"https://x.test/j\"}}", "microsoft");
+
+        Assert.Equal("teams", delivery.Events[0].ConferenceData!["provider"].GetString());
+    }
+
+    [Fact]
+    public async Task VerifyWebhookAsync_ConferenceObjectWithoutAUrlHasNullConference()
+    {
+        var autoOnly = (await VerifySignedAsync(EventJson("google", "\"conference\":{\"autoGenerate\":true}"))).Events[0];
+        Assert.Null(autoOnly.Conference);
+        Assert.Equal(new[] { "provider", "autoGenerate" }, autoOnly.ConferenceData!.Keys.ToArray());
+        Assert.True(autoOnly.ConferenceData["autoGenerate"].GetBoolean());
+
+        var emptyUrl = (await VerifySignedAsync(EventJson("caldav", "\"conference\":{\"url\":\"\",\"data\":{\"k\":1}}"))).Events[0];
+        Assert.Null(emptyUrl.Conference);
+        Assert.Equal("caldav", emptyUrl.ConferenceData!["provider"].GetString());
+        Assert.Equal(1, emptyUrl.ConferenceData["k"].GetInt32());
+
+        var nothing = (await VerifySignedAsync(EventJson("google", "\"conference\":{\"url\":5,\"autoGenerate\":\"yes\"}"))).Events[0];
+        Assert.Null(nothing.Conference);
+        Assert.Equal(new[] { "provider" }, nothing.ConferenceData!.Keys.ToArray());
+    }
+
+    [Fact]
+    public async Task VerifyWebhookAsync_LeavesAStringConferenceUnchanged()
+    {
+        var evt = (await VerifySignedAsync(EventJson("google", "\"conference\":\"https://meet.test/s\""))).Events[0];
+
+        Assert.Equal("https://meet.test/s", evt.Conference);
+        Assert.Null(evt.ConferenceData);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("\"conference\":null")]
+    public async Task VerifyWebhookAsync_AcceptsANullOrAbsentConference(string extra)
+    {
+        var evt = (await VerifySignedAsync(EventJson("google", extra.Length == 0 ? null : extra))).Events[0];
+
+        Assert.Null(evt.Conference);
+        Assert.Null(evt.ConferenceData);
+    }
+
+    [Theory]
+    [InlineData("5")]
+    [InlineData("true")]
+    [InlineData("[1,2]")]
+    [InlineData("[]")]
+    public async Task VerifyWebhookAsync_RejectsAConferenceThatIsNotAStringOrObject(string conference)
+    {
+        var ex = await Assert.ThrowsAsync<WebhookVerificationException>(
+            () => VerifySignedAsync(EventJson("google", "\"conference\":" + conference)));
+
+        Assert.Equal(WebhookVerificationReason.InvalidPayload, ex.Reason);
+    }
+
+    [Fact]
+    public async Task VerifyWebhookAsync_LeavesTheEventsOwnConferenceDataUntouched()
+    {
+        var evt = (await VerifySignedAsync(EventJson("google",
+            "\"conference\":{\"url\":\"https://x.test/j\",\"provider\":\"teams\",\"data\":{\"a\":1}},\"conferenceData\":{\"own\":true}"))).Events[0];
+
+        Assert.Equal("https://x.test/j", evt.Conference);
+        Assert.Equal(new[] { "own" }, evt.ConferenceData!.Keys.ToArray());
+        Assert.True(evt.ConferenceData["own"].GetBoolean());
+    }
+
+    [Fact]
+    public async Task VerifyWebhookAsync_AcceptsADeletedPlaceholderWithoutCalendarIdOrOriginal()
+    {
+        var evt = (await VerifySignedAsync("{\"provider\":\"microsoft\",\"id\":\"gone_1\",\"changeType\":\"deleted\"}", "microsoft")).Events[0];
+
+        Assert.Equal("deleted", evt.ChangeType);
+        Assert.Equal(string.Empty, evt.CalendarId);
+        Assert.Null(evt.Original);
+        Assert.Null(evt.Conference);
+    }
+
+    [Fact]
+    public void WebhookEvent_IsACalendarEvent()
+        => Assert.True(typeof(CalendarEvent).IsAssignableFrom(typeof(WebhookEvent)));
 }

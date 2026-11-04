@@ -353,46 +353,20 @@ class UnsubscribeWebhookResponse:
 
 
 @dataclass(frozen=True)
-class WebhookConference:
-    """Conference details on a :class:`WebhookEvent`.
-
-    Deliveries carry an object here, while ``events.list()`` returns the join URL as a
-    string in :attr:`CalendarEvent.conference`. ``provider`` is the conference provider as
-    the calendar provider reports it (e.g. ``"hangoutsMeet"``, ``"teams"``);
-    ``meeting_provider`` is the same value. ``data`` is the provider-specific payload.
-    """
-
-    url: str = ""
-    provider: str | None = None
-    meeting_provider: str | None = None
-    data: Mapping[str, Any] | None = None
-
-    @classmethod
-    def from_wire(cls, value: Any) -> WebhookConference | None:
-        if isinstance(value, Mapping):
-            data = value.get("data")
-            return cls(
-                url=value.get("url") or "",
-                provider=value.get("provider"),
-                meeting_provider=value.get("meetingProvider"),
-                data=data if isinstance(data, Mapping) else None,
-            )
-        if isinstance(value, str) and value:
-            return cls(url=value)
-        return None
-
-
-@dataclass(frozen=True)
 class WebhookEvent(CalendarEvent):
     """A changed event inside a :class:`WebhookDelivery`.
 
     ``change_type`` is ``"created"``, ``"updated"`` or ``"deleted"``. ``provider`` and
     ``calendar_id`` fall back to the delivery's own when the event omits them, as deleted
-    Microsoft, Apple and CalDAV events do; rely only on ``id``, ``provider`` and
-    ``change_type`` for a deleted event. ``conference`` is a :class:`WebhookConference`.
+    Microsoft, Apple and CalDAV events do in deliveries sent before Connect 1.6.1; rely only
+    on ``id``, ``provider``, ``calendar_id`` and ``change_type`` for a deleted event.
+
+    ``conference`` is whatever the delivery carried, unchanged. Deliveries send an object
+    (``url``, ``provider``, ``meetingProvider``, ``data``, with the wire keys as sent) where
+    ``events.list()`` returns the join URL as a string, and it is ``None`` when the delivery
+    omits it or sends null.
     """
 
-    conference: WebhookConference | None = None  # type: ignore[assignment]
     change_type: str | None = None
 
     @classmethod
@@ -407,11 +381,11 @@ class WebhookEvent(CalendarEvent):
         for key, fallback in (("provider", provider), ("calendarId", calendar_id), ("id", "")):
             if merged.get(key) is None:
                 merged[key] = fallback
-        merged["conference"] = None
         event = CalendarEvent.from_dict(merged)
-        values = {f.name: getattr(event, f.name) for f in fields(CalendarEvent)}
-        values["conference"] = WebhookConference.from_wire(data.get("conference"))
-        return cls(**values, change_type=data.get("changeType"))
+        return cls(
+            **{f.name: getattr(event, f.name) for f in fields(CalendarEvent)},
+            change_type=data.get("changeType"),
+        )
 
 
 @dataclass(frozen=True)

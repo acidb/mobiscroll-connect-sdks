@@ -114,7 +114,7 @@ dotnet add package Mobiscroll.Connect          # consume (in another project)
 | `src/Mobiscroll.Connect/Resources/Auth.cs` | OAuth flow: GenerateAuthUrl, GetTokenAsync, GetConnectionStatusAsync, DisconnectAsync, RevokeAsync |
 | `src/Mobiscroll.Connect/Resources/Calendars.cs` | ListAsync() |
 | `src/Mobiscroll.Connect/Resources/Events.cs` | ListAsync, CreateAsync, UpdateAsync, DeleteAsync; ISO 8601 date formatting |
-| `src/Mobiscroll.Connect/Resources/Webhooks.cs` | SubscribeWebhookAsync, UnsubscribeWebhookAsync, VerifyWebhookAsync |
+| `src/Mobiscroll.Connect/Resources/Webhooks.cs` | SubscribeWebhookAsync, UnsubscribeWebhookAsync, VerifyWebhookAsync (converts each event's `conference` object to `Conference` = url string and `ConferenceData` = REST shape before binding to `WebhookEvent : CalendarEvent`) |
 | `src/Mobiscroll.Connect/WebhookVerifier.cs` | `WebhookVerifier.VerifyWebhookSignature` (pure Ed25519 `v1a` check) + `WebhookVerificationOptions` |
 | `src/Mobiscroll.Connect/Internal/WebhookKeyStore.cs` | Process-wide webhook key cache (`Reset()` and `Clock` are test hooks) |
 | `src/Mobiscroll.Connect/Models/` | Request/response DTOs (TokenResponse, CalendarEvent, EventCreateData, WebhookSubscribeData, etc.) |

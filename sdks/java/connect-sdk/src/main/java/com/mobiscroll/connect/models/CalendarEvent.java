@@ -12,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mobiscroll.connect.Provider;
 
-/** A calendar event resource returned by the events endpoints. */
+/** A calendar event resource. Not final only so {@link WebhookEvent} can add the delivery's change type. */
 public class CalendarEvent {
 
     private final String id;

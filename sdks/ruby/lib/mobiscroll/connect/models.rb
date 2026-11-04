@@ -254,35 +254,16 @@ module Mobiscroll
       end
     end
 
-    # Conference details on a WebhookEvent (Events#list returns a join-URL String instead).
-    # `provider` is as the calendar provider reports it, e.g. 'hangoutsMeet'; `meeting_provider` equals it.
-    WebhookConference = Struct.new(:url, :provider, :meeting_provider, :data, keyword_init: true) do
-      def self.from_value(value)
-        return new(url: value) if value.is_a?(String) && !value.empty?
-        return nil unless value.is_a?(Hash)
-
-        data = value['data'] || value[:data]
-        new(
-          url: value['url'] || value[:url],
-          provider: value['provider'] || value[:provider],
-          meeting_provider: value['meetingProvider'] || value[:meetingProvider],
-          data: data.is_a?(Hash) ? data : nil
-        )
-      end
-    end
-
     # A changed event in a webhook delivery: every CalendarEvent field plus `change_type`
-    # ('created', 'updated' or 'deleted'); `conference` is a WebhookConference or nil. Deleted
-    # placeholders lack `calendar_id` and `original`; rely only on `id`, `provider`, `change_type`.
+    # ('created', 'updated' or 'deleted'). `conference` is the raw Hash as delivered (Events#list
+    # returns a join-URL String instead). Deleted placeholders lack `original` (and, in deliveries
+    # sent before Connect 1.6.1, `calendar_id`); rely only on `id`, `provider`, `calendar_id`,
+    # `change_type`.
     WebhookEvent = Struct.new(*CalendarEvent.members, :change_type, keyword_init: true) do
       def self.from_h(hash)
         return nil if hash.nil?
 
-        new(
-          **CalendarEvent.from_h(hash).to_h,
-          conference: WebhookConference.from_value(hash['conference'] || hash[:conference]),
-          change_type: hash['changeType'] || hash[:changeType]
-        )
+        new(**CalendarEvent.from_h(hash).to_h, change_type: hash['changeType'] || hash[:changeType])
       end
     end
 

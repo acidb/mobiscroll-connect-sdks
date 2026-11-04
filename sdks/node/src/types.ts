@@ -212,13 +212,26 @@ export type CalendarEventStatus = 'confirmed' | 'tentative' | 'cancelled';
  * For the plain join URL prefer {@link CalendarEvent.conference}.
  */
 export interface ConferenceData {
-  /** Conference system identifier as the provider reports it, e.g. `hangoutsMeet` or `google-meet` (Google), `teams` (Microsoft), `caldav` (Apple, CalDAV). */
-  provider?: string;
   /**
-   * On create or update, `true` generates a provider meeting link where supported (Google Meet,
-   * Microsoft Teams); `conference` and the other fields are then ignored.
+   * Conference system identifier. Google: the type Google reports (`hangoutsMeet`, `addOn`, or the legacy
+   * `eventHangout`, `eventNamedHangout`), or `google-meet` when it reports none. Microsoft: `teams`.
+   * Apple, CalDAV: `caldav`. Ignored on create and update.
+   */
+  provider?: string;
+  /** The join URL, the same value as the event's `conference`. Returned only; ignored on create and update. */
+  url?: string;
+  /**
+   * The conference data exactly as the calendar provider returns it: Google's `conferenceData`, Microsoft's
+   * `onlineMeeting`. Absent for Apple and CalDAV, and for Microsoft when the event has no `onlineMeeting`.
+   * Returned only; ignored on create and update.
+   */
+  original?: Record<string, unknown>;
+  /**
+   * On create or update, `true` generates a meeting link: Google Meet on Google, Teams on Microsoft. Google
+   * then ignores `conference`; Microsoft never writes `conference`; Apple and CalDAV ignore `autoGenerate`.
    */
   autoGenerate?: boolean;
+  /** The keys of `original`, repeated at the top level for compatibility. We suggest reading `url` and `original` instead: those are the fields that will be kept in the future. */
   [key: string]: unknown;
 }
 
@@ -229,8 +242,10 @@ export interface CalendarEvent {
   title: string;
   /** Event description or notes. */
   description?: string;
-  start: Date;
-  end: Date;
+  /** ISO 8601 date-time string, as returned by the API. */
+  start: string;
+  /** ISO 8601 date-time string, as returned by the API. */
+  end: string;
   allDay: boolean;
   recurringEventId?: string;
   color?: string;
@@ -250,33 +265,21 @@ export interface CalendarEvent {
 }
 
 /**
- * Conference details on a webhook delivery event. Deliveries carry an object here, while
- * `events.list()` returns the join URL as a string in {@link CalendarEvent.conference}.
- */
-export interface WebhookConference {
-  /** Conference join URL. */
-  url: string;
-  /** Conference provider as the calendar provider reports it, e.g. `hangoutsMeet`, `teams`. */
-  provider: string;
-  /** Same value as `provider`. */
-  meetingProvider: string;
-  /** Provider-specific conference payload. */
-  data?: Record<string, unknown>;
-}
-
-/**
- * An event in a webhook delivery. `start` and `end` are converted to `Date` by `verifyWebhook`.
+ * An event in a webhook delivery. `start` and `end` are ISO 8601 strings.
  *
- * Deleted Microsoft, Apple and CalDAV events arrive as placeholders without `calendarId` and
- * `original`; rely only on `id`, `provider` and `changeType` for a `deleted` event.
+ * Deleted Microsoft, Apple and CalDAV events arrive as placeholders without `original` (and, in
+ * deliveries sent before Connect 1.6.1, without `calendarId`); rely only on `id`, `provider`,
+ * `calendarId` and `changeType` for a `deleted` event.
+ *
+ * `conference` is declared as in {@link CalendarEvent}, but at runtime a delivery carries the raw
+ * object (`url`, `provider`, `meetingProvider`, `data`), not the join-URL string.
  */
 export interface WebhookEvent extends Omit<
   CalendarEvent,
-  'calendarId' | 'conference' | 'conferenceData' | 'lastModified' | 'original'
+  'calendarId' | 'lastModified' | 'original'
 > {
-  /** Absent on deleted placeholders. */
+  /** Absent only on deleted placeholders in deliveries sent before Connect 1.6.1. */
   calendarId?: string;
-  conference?: WebhookConference;
   /** ISO 8601 timestamp of the last modification; for a deleted placeholder, when the deletion was detected. */
   lastModified: string;
   /** Provider-native event; absent on deleted placeholders. */

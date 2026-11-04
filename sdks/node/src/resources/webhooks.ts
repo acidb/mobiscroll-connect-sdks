@@ -9,7 +9,6 @@ import {
   WebhookVerificationError,
 } from '../types';
 import { WEBHOOK_KEYS_PATH, WebhookKeyStore, verifyWebhookSignature } from '../webhookVerification';
-import { reviveEventDates } from '../eventDates';
 
 /**
  * Webhooks resource for calendar change notifications: subscribe, unsubscribe, and verify deliveries
@@ -81,7 +80,7 @@ export class Webhooks {
    *
    * @param payload - The raw request body, exactly as received; not a parsed object
    * @param headers - The request headers
-   * @returns The parsed delivery, with each event's `start` and `end` converted to `Date`
+   * @returns The parsed delivery; each event's `start` and `end` are ISO 8601 strings
    * @throws {WebhookVerificationError} When the delivery is not verified. Respond with `503` when
    * `reason` is `no_public_keys` (Connect retries) and with `401` otherwise (Connect does not retry)
    *
@@ -133,9 +132,6 @@ export class Webhooks {
     if (typeof delivery !== 'object' || delivery === null || Array.isArray(delivery)) {
       throw new WebhookVerificationError('Webhook payload is not a JSON object', 'invalid_payload');
     }
-    const parsed = delivery as WebhookDelivery;
-    return Array.isArray(parsed.events)
-      ? { ...parsed, events: parsed.events.map(reviveEventDates) }
-      : parsed;
+    return delivery as WebhookDelivery;
   }
 }

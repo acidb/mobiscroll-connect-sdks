@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace Mobiscroll.Connect.Models;
 
-/// <summary>A calendar event returned by the events endpoints.</summary>
+/// <summary>A calendar event. Not sealed: <see cref="WebhookEvent"/> extends it with the change type.</summary>
 public class CalendarEvent
 {
     public Provider Provider { get; set; }

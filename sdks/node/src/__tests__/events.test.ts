@@ -31,8 +31,8 @@ describe('Events Resource', () => {
         {
           id: '1',
           title: 'Event 1',
-          start: new Date('2023-01-01T10:00:00Z'),
-          end: new Date('2023-01-01T11:00:00Z'),
+          start: '2023-01-01T10:00:00Z',
+          end: '2023-01-01T11:00:00Z',
           allDay: false,
           provider: ProviderEnum.Google,
           calendarId: 'cal1',
@@ -75,45 +75,14 @@ describe('Events Resource', () => {
       expect(result).toEqual({ events: mockEvents });
     });
 
-    it('should convert ISO start/end strings from the wire to Date', async () => {
-      mockApiClient.get.mockResolvedValue({
-        data: {
-          events: [
-            {
-              id: '1',
-              title: 'Event 1',
-              start: '2023-01-01T10:00:00.000Z',
-              end: '2023-01-01T11:00:00.000Z',
-              allDay: false,
-              provider: 'google',
-              calendarId: 'cal1',
-              conference: 'https://meet.google.com/abc-defg-hij',
-              original: {},
-            },
-          ],
-          nextPageToken: 'next',
-        },
-        status: 200,
-        headers: {},
-      });
-
-      const result = await events.list();
-
-      expect(result.nextPageToken).toBe('next');
-      expect(result.events[0].start).toBeInstanceOf(Date);
-      expect(result.events[0].start.toISOString()).toBe('2023-01-01T10:00:00.000Z');
-      expect(result.events[0].end.getTime()).toBe(Date.parse('2023-01-01T11:00:00.000Z'));
-      expect(result.events[0].conference).toBe('https://meet.google.com/abc-defg-hij');
-    });
-
     it('should surface description, conferenceData and lastModified', async () => {
       const mockEvents: CalendarEvent[] = [
         {
           id: '1',
           title: 'Standup',
           description: 'Weekly team sync',
-          start: new Date('2023-01-01T10:00:00Z'),
-          end: new Date('2023-01-01T11:00:00Z'),
+          start: '2023-01-01T10:00:00Z',
+          end: '2023-01-01T11:00:00Z',
           allDay: false,
           provider: ProviderEnum.Google,
           calendarId: 'cal1',
@@ -121,9 +90,7 @@ describe('Events Resource', () => {
           conferenceData: {
             provider: 'google-meet',
             conferenceId: 'abc-defg-hij',
-            entryPoints: [
-              { entryPointType: 'video', uri: 'https://meet.google.com/abc-defg-hij' },
-            ],
+            entryPoints: [{ entryPointType: 'video', uri: 'https://meet.google.com/abc-defg-hij' }],
           },
           lastModified: '2026-03-10T13:36:08.000Z',
           original: {},
@@ -157,8 +124,8 @@ describe('Events Resource', () => {
       const mockResponse: CalendarEvent = {
         id: 'new-id',
         title: 'New Event',
-        start: new Date('2023-01-01T10:00:00Z'),
-        end: new Date('2023-01-01T11:00:00Z'),
+        start: '2023-01-01T10:00:00Z',
+        end: '2023-01-01T11:00:00Z',
         allDay: false,
         provider: ProviderEnum.Google,
         calendarId: 'cal1',
@@ -214,33 +181,6 @@ describe('Events Resource', () => {
         })
       );
     });
-
-    it('should convert ISO start/end strings in the response to Date', async () => {
-      mockApiClient.post.mockResolvedValue({
-        data: {
-          id: 'new-id',
-          title: 'New Event',
-          start: '2023-01-01T10:00:00.000Z',
-          end: '2023-01-01T11:00:00.000Z',
-          allDay: false,
-          provider: 'google',
-          calendarId: 'cal1',
-        },
-        status: 201,
-        headers: {},
-      });
-
-      const result = await events.create({
-        title: 'New Event',
-        start: '2023-01-01T10:00:00Z',
-        end: '2023-01-01T11:00:00Z',
-        calendarId: 'cal1',
-        provider: ProviderEnum.Google,
-      });
-
-      expect(result.start).toBeInstanceOf(Date);
-      expect(result.end.toISOString()).toBe('2023-01-01T11:00:00.000Z');
-    });
   });
 
   describe('update', () => {
@@ -255,8 +195,8 @@ describe('Events Resource', () => {
       const mockResponse: CalendarEvent = {
         id: 'event-id',
         title: 'Updated Event',
-        start: new Date('2023-01-01T10:00:00Z'),
-        end: new Date('2023-01-01T11:00:00Z'),
+        start: '2023-01-01T10:00:00Z',
+        end: '2023-01-01T11:00:00Z',
         allDay: false,
         provider: ProviderEnum.Google,
         calendarId: 'cal1',

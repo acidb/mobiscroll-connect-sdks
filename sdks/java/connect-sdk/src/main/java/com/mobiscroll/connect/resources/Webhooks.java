@@ -3,9 +3,14 @@ package com.mobiscroll.connect.resources;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mobiscroll.connect.ApiClient;
 import com.mobiscroll.connect.WebhookVerifier;
 import com.mobiscroll.connect.exceptions.MobiscrollConnectException;
@@ -114,13 +119,96 @@ public final class Webhooks {
         }
 
         try {
-            WebhookDelivery delivery = JsonMapperHolder.get().readValue(payload, WebhookDelivery.class);
+            ObjectMapper mapper = JsonMapperHolder.get();
+            JsonNode root = mapper.readTree(payload);
+            if (root instanceof ObjectNode) {
+                convertConferences((ObjectNode) root);
+            }
+            WebhookDelivery delivery = root == null ? null : mapper.treeToValue(root, WebhookDelivery.class);
             if (delivery == null) {
                 throw new WebhookVerificationException("Webhook payload is empty", Reason.INVALID_PAYLOAD);
             }
             return delivery;
         } catch (IOException e) {
             throw new WebhookVerificationException("Webhook payload is not valid JSON", Reason.INVALID_PAYLOAD);
+        }
+    }
+
+    /**
+     * Converts each event's {@code conference} object, as deliveries carry it, to what {@code CalendarEvent}
+     * holds: {@code conference} is the join URL and {@code conferenceData} the REST shape. Strings and
+     * {@code null} are left as they are, and an event's own non-null {@code conferenceData} is never replaced.
+     */
+    private static void convertConferences(ObjectNode delivery) {
+        JsonNode events = delivery.get("events");
+        if (events == null || !events.isArray()) {
+            return;
+        }
+        String deliveryProvider = textOrNull(delivery.get("provider"));
+        for (JsonNode node : events) {
+            if (!(node instanceof ObjectNode)) {
+                continue;
+            }
+            ObjectNode event = (ObjectNode) node;
+            JsonNode conference = event.get("conference");
+            if (conference == null || conference.isNull() || conference.isTextual()) {
+                continue;
+            }
+            if (!conference.isObject()) {
+                throw new WebhookVerificationException(
+                        "Webhook payload is not valid: conference must be a string or an object", Reason.INVALID_PAYLOAD);
+            }
+
+            String url = textOrNull(conference.get("url"));
+            if (url == null || url.isEmpty()) {
+                event.putNull("conference");
+            } else {
+                event.put("conference", url);
+            }
+            JsonNode existing = event.get("conferenceData");
+            if (existing != null && !existing.isNull()) {
+                continue;
+            }
+
+            String eventProvider = textOrNull(event.get("provider"));
+            String conferenceProvider = textOrNull(conference.get("provider"));
+            if (conferenceProvider == null || conferenceProvider.isEmpty()) {
+                conferenceProvider = inferConferenceProvider(
+                        eventProvider == null || eventProvider.isEmpty() ? deliveryProvider : eventProvider);
+            }
+
+            ObjectNode conferenceData = JsonNodeFactory.instance.objectNode();
+            if (conferenceProvider != null) {
+                conferenceData.put("provider", conferenceProvider);
+            }
+            JsonNode autoGenerate = conference.get("autoGenerate");
+            if (autoGenerate != null && autoGenerate.isBoolean()) {
+                conferenceData.put("autoGenerate", autoGenerate.booleanValue());
+            }
+            JsonNode data = conference.get("data");
+            if (data != null && data.isObject()) {
+                conferenceData.setAll((ObjectNode) data);
+            }
+            if (conferenceData.size() > 0) {
+                event.set("conferenceData", conferenceData);
+            }
+        }
+    }
+
+    private static String textOrNull(JsonNode node) {
+        return node != null && node.isTextual() ? node.textValue() : null;
+    }
+
+    private static String inferConferenceProvider(String calendarProvider) {
+        if (calendarProvider == null) {
+            return null;
+        }
+        switch (calendarProvider.toLowerCase(Locale.ROOT)) {
+            case "google": return "google-meet";
+            case "microsoft": return "teams";
+            case "apple":
+            case "caldav": return "caldav";
+            default: return null;
         }
     }
 

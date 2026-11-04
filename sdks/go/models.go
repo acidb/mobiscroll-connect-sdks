@@ -307,30 +307,16 @@ type WebhookDelivery struct {
 // WebhookEvent is a changed event in a WebhookDelivery: the usual
 // CalendarEvent fields plus the kind of change.
 //
-// Conference shadows the embedded CalendarEvent.Conference: deliveries carry
-// an object there, while the events endpoints return the join URL as a string.
-// Deleted Microsoft, Apple and CalDAV events arrive as placeholders without
-// CalendarID and Original; rely only on ID, Provider and ChangeType for a
-// deleted event.
+// Deliveries carry conference as an object; VerifyWebhook converts it, so
+// Conference is the join URL and ConferenceData the REST shape, as in
+// CalendarEvent. Deleted Microsoft, Apple and CalDAV events arrive as
+// placeholders without Original (and, in deliveries sent before Connect 1.6.1,
+// without CalendarID); rely only on ID, Provider, CalendarID and ChangeType for
+// a deleted event.
 type WebhookEvent struct {
 	CalendarEvent
-	// Conference is nil when the event has no conference.
-	Conference *WebhookConference `json:"conference,omitempty"`
 	// ChangeType is "created", "updated" or "deleted".
 	ChangeType string `json:"changeType,omitempty"`
-}
-
-// WebhookConference is the conference of a WebhookEvent.
-type WebhookConference struct {
-	// URL is the conference join URL.
-	URL string `json:"url"`
-	// Provider is the conference provider as the calendar provider reports
-	// it, e.g. "hangoutsMeet", "teams".
-	Provider string `json:"provider,omitempty"`
-	// MeetingProvider is the same value as Provider.
-	MeetingProvider string `json:"meetingProvider,omitempty"`
-	// Data is the provider-specific conference payload.
-	Data map[string]any `json:"data,omitempty"`
 }
 
 // WebhookDeliveryMetadata describes the subscription channel and batch of a
