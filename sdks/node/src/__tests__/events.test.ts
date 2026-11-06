@@ -89,8 +89,11 @@ describe('Events Resource', () => {
           conference: 'https://meet.google.com/abc-defg-hij',
           conferenceData: {
             provider: 'google-meet',
-            conferenceId: 'abc-defg-hij',
-            entryPoints: [{ entryPointType: 'video', uri: 'https://meet.google.com/abc-defg-hij' }],
+            url: 'https://meet.google.com/abc-defg-hij',
+            original: {
+              conferenceId: 'abc-defg-hij',
+              entryPoints: [{ entryPointType: 'video', uri: 'https://meet.google.com/abc-defg-hij' }],
+            },
           },
           lastModified: '2026-03-10T13:36:08.000Z',
           original: {},

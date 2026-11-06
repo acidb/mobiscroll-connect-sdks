@@ -11,7 +11,7 @@ public sealed class WebhookDelivery
     public Provider Provider { get; set; }
     public string UserId { get; set; } = string.Empty;
     public string CalendarId { get; set; } = string.Empty;
-    public List<WebhookEvent> Events { get; set; } = new();
+    public List<CalendarEvent> Events { get; set; } = new();
 
     /// <summary>"created" | "updated" | "deleted" | "mixed"</summary>
     public string? ChangeType { get; set; }
@@ -22,19 +22,10 @@ public sealed class WebhookDelivery
     public WebhookDeliveryMetadata Metadata { get; set; } = new();
 }
 
-/// <summary>
-/// A changed event in a <see cref="WebhookDelivery"/>: a <see cref="CalendarEvent"/> plus <see cref="ChangeType"/>.
-/// Deliveries carry <c>conference</c> as an object; <see cref="Resources.Webhooks.VerifyWebhookAsync(System.ReadOnlyMemory{byte}, IEnumerable{KeyValuePair{string, string}}, System.Threading.CancellationToken)"/>
-/// converts it, so <see cref="CalendarEvent.Conference"/> is the join URL and <see cref="CalendarEvent.ConferenceData"/>
-/// the REST shape. Deleted Microsoft, Apple and CalDAV events arrive as placeholders without
-/// <see cref="CalendarEvent.Original"/> (and, in deliveries sent before Connect 1.6.1, without
-/// <see cref="CalendarEvent.CalendarId"/>); rely only on <see cref="CalendarEvent.Id"/>,
-/// <see cref="CalendarEvent.Provider"/>, <see cref="CalendarEvent.CalendarId"/> and <see cref="ChangeType"/> for a deleted event.
-/// </summary>
+/// <summary>An event in a <see cref="WebhookDelivery"/>.</summary>
+[System.Obsolete("Use CalendarEvent, which has ChangeType for webhook deliveries. WebhookEvent will be removed in 2.0.0.")]
 public sealed class WebhookEvent : CalendarEvent
 {
-    /// <summary>"created" | "updated" | "deleted"</summary>
-    public string? ChangeType { get; set; }
 }
 
 /// <summary>The <c>metadata</c> object of a <see cref="WebhookDelivery"/>.</summary>

@@ -136,7 +136,7 @@ ResponseEntity<Void> webhook(@RequestBody byte[] body, @RequestHeader Map<String
 }
 ```
 
-Each event is a `WebhookEvent`, which is a `CalendarEvent` plus `getChangeType()`. A delivery carries `conference` as an object (`url`, `provider`, `meetingProvider`, `data`); `verifyWebhook()` converts it to the shape the events endpoints return: `getConference()` is the join URL string (`null` when the object has no non-empty `url`) and `getConferenceData()` is the REST shape (`provider`, `autoGenerate` when boolean, and the keys of `data` at the top level; `null` when empty). Deliveries from Connect 1.6.1 on carry `conferenceData` themselves, with `url` and `original`, and the SDK keeps it; for an earlier delivery the SDK builds it from the `conference` object, without `url` and `original`. A `conference` that is neither a string, an object nor `null` fails with `INVALID_PAYLOAD`.
+Each event is a `CalendarEvent` with `getChangeType()` set. `getConference()` is the join URL, and `getConferenceData()` is a `ConferenceData` (`getProvider()`, `getUrl()`, `getAutoGenerate()`, `getOriginal()`), as the events endpoints return. `WebhookEvent` is deprecated and will be removed in 2.0.0.
 
 The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process (shared by every client instance) as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side. `verifyWebhook()` blocks while the keys are fetched.
 

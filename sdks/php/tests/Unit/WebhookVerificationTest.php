@@ -12,7 +12,7 @@ use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use Mobiscroll\Connect\Exceptions\{MobiscrollConnectException, WebhookVerificationError};
-use Mobiscroll\Connect\{MobiscrollConnectClient, WebhookDelivery, WebhookEvent, WebhookKeyStore, WebhookVerifier};
+use Mobiscroll\Connect\{CalendarEvent, ConferenceData, MobiscrollConnectClient, WebhookDelivery, WebhookEvent, WebhookKeyStore, WebhookVerifier};
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
@@ -327,15 +327,15 @@ class WebhookVerificationTest extends TestCase
         $this->assertSame(1, $delivery->metadata->eventCount);
     }
 
-    public function testParsesADeliveryWithAConferenceObject(): void
+    public function testParsesADeliveryWithAConferenceUrl(): void
     {
         $delivery = $this->verify($this->createClient(), 'delivery: Google events with and without a conference');
 
         [$meeting, $lunch] = $delivery->events;
         $this->assertSame('https://meet.google.com/abc-defg-hij', $meeting->conference);
-        $this->assertIsArray($meeting->conferenceData);
-        $this->assertSame('hangoutsMeet', $meeting->conferenceData['provider'] ?? null);
-        $this->assertSame('abc-defg-hij', $meeting->conferenceData['conferenceId'] ?? null);
+        $this->assertInstanceOf(ConferenceData::class, $meeting->conferenceData);
+        $this->assertSame('hangoutsMeet', $meeting->conferenceData->provider);
+        $this->assertSame('abc-defg-hij', $meeting->conferenceData->original['conferenceId'] ?? null);
         $this->assertSame('2026-09-22T09:00:00+00:00', $meeting->start->format(DATE_ATOM));
         $this->assertSame('2026-09-21T09:58:12.000Z', $meeting->lastModified);
         $this->assertSame('updated', $meeting->changeType);
@@ -350,7 +350,8 @@ class WebhookVerificationTest extends TestCase
         $delivery = $this->verify($this->createClient(), 'delivery: Microsoft Teams event and a deleted placeholder');
 
         [$teams, $deleted] = $delivery->events;
-        $this->assertSame('teams', $teams->conferenceData['provider'] ?? null);
+        $this->assertSame('https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc', $teams->conference);
+        $this->assertSame('teams', $teams->conferenceData?->provider);
         $this->assertSame('deleted', $deleted->changeType);
         $this->assertSame($delivery->calendarId, $deleted->calendarId);
         $this->assertSame([], $deleted->original);
@@ -361,26 +362,25 @@ class WebhookVerificationTest extends TestCase
         $google = $this->verify($this->createClient(), 'delivery: 1.6.1 Google Meet event with conferenceData and a cancelled event with calendarId');
         [$meet, $cancelled] = $google->events;
         $this->assertSame('https://meet.google.com/abc-defg-hij', $meet->conference);
-        $this->assertSame('hangoutsMeet', $meet->conferenceData['provider'] ?? null);
-        $this->assertSame('https://meet.google.com/abc-defg-hij', $meet->conferenceData['url'] ?? null);
-        $this->assertSame('abc-defg-hij', $meet->conferenceData['original']['conferenceId'] ?? null);
-        $this->assertSame('abc-defg-hij', $meet->conferenceData['conferenceId'] ?? null);
+        $this->assertSame('hangoutsMeet', $meet->conferenceData?->provider);
+        $this->assertSame('https://meet.google.com/abc-defg-hij', $meet->conferenceData->url);
+        $this->assertSame('abc-defg-hij', $meet->conferenceData?->original['conferenceId'] ?? null);
         $this->assertSame('work@company.com', $cancelled->calendarId);
         $this->assertSame('cancelled', $cancelled->status);
 
         $microsoft = $this->verify($this->createClient(), 'delivery: 1.6.1 Microsoft Teams event with conferenceData and a deleted placeholder with calendarId');
         [$teams, $deleted] = $microsoft->events;
-        $this->assertSame('teams', $teams->conferenceData['provider'] ?? null);
+        $this->assertSame('teams', $teams->conferenceData?->provider);
         $this->assertSame(
             ['joinUrl' => 'https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc', 'conferenceId' => '123456789'],
-            $teams->conferenceData['original'] ?? null,
+            $teams->conferenceData->original,
         );
         $this->assertSame('AAMkAGI2Y2FsAAA=', $deleted->calendarId);
 
         $apple = $this->verify($this->createClient(), 'delivery: 1.6.1 Apple event with a URL as conference and a deleted placeholder with calendarId');
         [$booking, $removed] = $apple->events;
         $this->assertSame('https://example.com/room/42', $booking->conference);
-        $this->assertSame(['provider' => 'caldav', 'url' => 'https://example.com/room/42'], $booking->conferenceData);
+        $this->assertEquals(new ConferenceData('caldav', 'https://example.com/room/42'), $booking->conferenceData);
         $this->assertSame('https://caldav.icloud.com/1234567/calendars/work/', $removed->calendarId);
     }
 
@@ -389,7 +389,7 @@ class WebhookVerificationTest extends TestCase
      *
      * @param array<string, mixed> $event
      */
-    private function verifyEvent(array $event, string $deliveryProvider = 'google'): WebhookEvent
+    private function verifyEvent(array $event, string $deliveryProvider = 'google'): CalendarEvent
     {
         $body = (string)json_encode([
             'provider' => $deliveryProvider,
@@ -433,77 +433,6 @@ class WebhookVerificationTest extends TestCase
         ];
     }
 
-    public function testConferenceObjectBecomesTheUrlAndRestConferenceData(): void
-    {
-        $event = $this->verifyEvent(self::eventBody(['conference' => [
-            'url' => 'https://meet.google.com/abc',
-            'provider' => 'hangoutsMeet',
-            'meetingProvider' => 'hangoutsMeet',
-            'autoGenerate' => false,
-            'data' => ['conferenceId' => 'abc', 'entryPoints' => [['uri' => 'https://meet.google.com/abc']]],
-        ]]));
-
-        $this->assertSame('https://meet.google.com/abc', $event->conference);
-        $this->assertSame([
-            'provider' => 'hangoutsMeet',
-            'autoGenerate' => false,
-            'conferenceId' => 'abc',
-            'entryPoints' => [['uri' => 'https://meet.google.com/abc']],
-        ], $event->conferenceData);
-        $this->assertSame('updated', $event->changeType);
-    }
-
-    /**
-     * @return array<string, array{string, string}>
-     */
-    public static function inferredProviders(): array
-    {
-        return [
-            'google' => ['google', 'google-meet'],
-            'microsoft' => ['microsoft', 'teams'],
-            'apple' => ['apple', 'caldav'],
-            'caldav' => ['caldav', 'caldav'],
-        ];
-    }
-
-    #[DataProvider('inferredProviders')]
-    public function testConferenceProviderIsInferredFromTheEventProvider(string $provider, string $expected): void
-    {
-        $event = $this->verifyEvent(
-            self::eventBody(['conference' => ['url' => 'https://x.test/j', 'provider' => '']], $provider),
-            'google',
-        );
-
-        $this->assertSame('https://x.test/j', $event->conference);
-        $this->assertSame(['provider' => $expected], $event->conferenceData);
-    }
-
-    public function testConferenceProviderFallsBackToTheDeliveryProvider(): void
-    {
-        $event = $this->verifyEvent(
-            self::eventBody(['provider' => null, 'conference' => ['url' => 'https://x.test/j']]),
-            'microsoft',
-        );
-
-        $this->assertSame('microsoft', $event->provider);
-        $this->assertSame(['provider' => 'teams'], $event->conferenceData);
-    }
-
-    public function testConferenceObjectWithoutAUrlHasNullConference(): void
-    {
-        $autoOnly = $this->verifyEvent(self::eventBody(['conference' => ['autoGenerate' => true]]));
-        $this->assertNull($autoOnly->conference);
-        $this->assertSame(['provider' => 'google-meet', 'autoGenerate' => true], $autoOnly->conferenceData);
-
-        $emptyUrl = $this->verifyEvent(self::eventBody(['conference' => ['url' => '', 'data' => ['k' => 1]]], 'caldav'));
-        $this->assertNull($emptyUrl->conference);
-        $this->assertSame(['provider' => 'caldav', 'k' => 1], $emptyUrl->conferenceData);
-
-        $nonStringUrl = $this->verifyEvent(self::eventBody(['conference' => ['url' => 5, 'autoGenerate' => 'yes']], 'other'));
-        $this->assertNull($nonStringUrl->conference);
-        $this->assertNull($nonStringUrl->conferenceData);
-    }
-
     public function testStringConferenceIsUnchanged(): void
     {
         $event = $this->verifyEvent(self::eventBody(['conference' => 'https://meet.test/s']));
@@ -521,25 +450,25 @@ class WebhookVerificationTest extends TestCase
         }
     }
 
-    public function testNumericBooleanAndArrayConferenceIsInvalidPayload(): void
+    public function testNonStringConferenceIsInvalidPayload(): void
     {
         foreach ([5, true, [1, 2], ['a']] as $conference) {
             $this->expectReason(
                 WebhookVerificationError::INVALID_PAYLOAD,
-                fn (): WebhookEvent => $this->verifyEvent(self::eventBody(['conference' => $conference])),
+                fn (): CalendarEvent => $this->verifyEvent(self::eventBody(['conference' => $conference])),
             );
         }
     }
 
-    public function testConferenceDataOnTheEventIsLeftUntouched(): void
+    public function testConferenceDataIsParsedWithItsFourFields(): void
     {
         $event = $this->verifyEvent(self::eventBody([
-            'conference' => ['url' => 'https://x.test/j', 'provider' => 'teams', 'data' => ['a' => 1]],
-            'conferenceData' => ['own' => true],
+            'conference' => 'https://x.test/j',
+            'conferenceData' => ['provider' => 'teams', 'url' => 'https://x.test/j', 'autoGenerate' => true, 'original' => ['a' => 1]],
         ]));
 
         $this->assertSame('https://x.test/j', $event->conference);
-        $this->assertSame(['own' => true], $event->conferenceData);
+        $this->assertEquals(new ConferenceData('teams', 'https://x.test/j', true, ['a' => 1]), $event->conferenceData);
     }
 
     public function testDeletedPlaceholderWithoutCalendarIdOrOriginalVerifies(): void

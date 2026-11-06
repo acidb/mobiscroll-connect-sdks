@@ -51,7 +51,7 @@ func TestCalendarEvent_UnmarshalsDocumentedOptionalFields(t *testing.T) {
 		"title": "Standup",
 		"description": "Weekly team sync",
 		"conference": "https://meet.google.com/abc-defg-hij",
-		"conferenceData": {"provider": "google-meet", "conferenceId": "abc-defg-hij"},
+		"conferenceData": {"provider": "google-meet", "original": {"conferenceId": "abc-defg-hij"}},
 		"lastModified": "2026-03-10T13:36:08.000Z"
 	}`
 
@@ -62,8 +62,8 @@ func TestCalendarEvent_UnmarshalsDocumentedOptionalFields(t *testing.T) {
 	if e.Description != "Weekly team sync" {
 		t.Errorf("description: got %q", e.Description)
 	}
-	if got := e.ConferenceData["provider"]; got != "google-meet" {
-		t.Errorf("conferenceData.provider: got %v", got)
+	if e.ConferenceData == nil || e.ConferenceData.Provider != "google-meet" || e.ConferenceData.Original["conferenceId"] != "abc-defg-hij" {
+		t.Errorf("conferenceData: got %+v", e.ConferenceData)
 	}
 	if e.LastModified != "2026-03-10T13:36:08.000Z" {
 		t.Errorf("lastModified: got %q", e.LastModified)

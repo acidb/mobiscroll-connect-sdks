@@ -80,12 +80,13 @@ class EventsTest extends BaseTestCase
             'end' => '2024-06-01T09:15:00Z',
             'description' => 'Weekly team sync',
             'conference' => 'https://meet.google.com/abc-defg-hij',
-            'conferenceData' => ['provider' => 'google-meet', 'conferenceId' => 'abc-defg-hij'],
+            'conferenceData' => ['provider' => 'google-meet', 'url' => 'https://meet.google.com/abc-defg-hij', 'original' => ['conferenceId' => 'abc-defg-hij']],
             'lastModified' => '2026-03-10T13:36:08.000Z',
         ]);
 
         $this->assertEquals('Weekly team sync', $event->description);
-        $this->assertEquals('google-meet', $event->conferenceData['provider'] ?? null);
+        $this->assertEquals('google-meet', $event->conferenceData?->provider);
+        $this->assertEquals(['conferenceId' => 'abc-defg-hij'], $event->conferenceData?->original);
         $this->assertEquals('2026-03-10T13:36:08.000Z', $event->lastModified);
     }
 

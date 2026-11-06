@@ -136,6 +136,10 @@ type RecurrenceRule struct {
 
 // CalendarEvent is an event returned by the API. The field set mirrors the
 // Node SDK's response shape exactly.
+//
+// ChangeType is set only on events in a WebhookDelivery. Deleted Microsoft,
+// Apple and CalDAV events arrive there as placeholders without Original; rely
+// only on ID, Provider, CalendarID and ChangeType for them.
 type CalendarEvent struct {
 	Provider         Provider       `json:"provider"`
 	ID               string         `json:"id"`
@@ -150,18 +154,38 @@ type CalendarEvent struct {
 	Location         string         `json:"location,omitempty"`
 	Attendees        []Attendee     `json:"attendees,omitempty"`
 	Custom           map[string]any `json:"custom,omitempty"`
-	Conference       string         `json:"conference,omitempty"`
-	// ConferenceData carries provider-specific conference metadata; its keys vary
-	// per provider, so it is left unmapped. For the plain join URL use Conference.
-	ConferenceData map[string]any `json:"conferenceData,omitempty"`
-	Availability   string         `json:"availability,omitempty"`
-	Privacy        string         `json:"privacy,omitempty"`
-	Status         string         `json:"status,omitempty"`
+	// Conference is the join URL of the event's conference.
+	Conference string `json:"conference,omitempty"`
+	// ConferenceData is the conference details; see ConferenceData.
+	ConferenceData *ConferenceData `json:"conferenceData,omitempty"`
+	Availability   string          `json:"availability,omitempty"`
+	Privacy        string          `json:"privacy,omitempty"`
+	Status         string          `json:"status,omitempty"`
 	// LastModified is an ISO 8601 timestamp, e.g. "2026-03-10T13:36:08.000Z".
-	LastModified string                     `json:"lastModified,omitempty"`
-	Link         string                     `json:"link,omitempty"`
-	Original     json.RawMessage            `json:"original,omitempty"`
-	Additional   map[string]json.RawMessage `json:"-"`
+	LastModified string          `json:"lastModified,omitempty"`
+	Link         string          `json:"link,omitempty"`
+	Original     json.RawMessage `json:"original,omitempty"`
+	// ChangeType is "created", "updated" or "deleted"; set only on events in a
+	// WebhookDelivery.
+	ChangeType string                     `json:"changeType,omitempty"`
+	Additional map[string]json.RawMessage `json:"-"`
+}
+
+// ConferenceData is the conference of a CalendarEvent, with the same fields
+// on every provider.
+type ConferenceData struct {
+	// Provider is the conference system: "hangoutsMeet", "google-meet",
+	// "teams" or "caldav".
+	Provider string `json:"provider,omitempty"`
+	// URL is the join URL, the same value as CalendarEvent.Conference.
+	URL string `json:"url,omitempty"`
+	// AutoGenerate reports whether a meeting link was requested on create or
+	// update.
+	AutoGenerate *bool `json:"autoGenerate,omitempty"`
+	// Original is the conference data exactly as the calendar provider returns
+	// it: Google's conferenceData, Microsoft's onlineMeeting. Nil for Apple and
+	// CalDAV.
+	Original map[string]any `json:"original,omitempty"`
 }
 
 // EventListParams is the input to Events.List. All fields are optional.
@@ -293,10 +317,10 @@ type UnsubscribeWebhookParams struct {
 // WebhookDelivery is a verified webhook delivery sent by Mobiscroll Connect to
 // the project's webhook URL, as returned by Webhooks.VerifyWebhook.
 type WebhookDelivery struct {
-	Provider   Provider       `json:"provider"`
-	UserID     string         `json:"userId"`
-	CalendarID string         `json:"calendarId"`
-	Events     []WebhookEvent `json:"events"`
+	Provider   Provider        `json:"provider"`
+	UserID     string          `json:"userId"`
+	CalendarID string          `json:"calendarId"`
+	Events     []CalendarEvent `json:"events"`
 	// ChangeType is "created", "updated", "deleted" or "mixed"; empty when absent.
 	ChangeType string `json:"changeType,omitempty"`
 	// Timestamp is the ISO 8601 time Connect processed the change.
@@ -304,20 +328,11 @@ type WebhookDelivery struct {
 	Metadata  WebhookDeliveryMetadata `json:"metadata"`
 }
 
-// WebhookEvent is a changed event in a WebhookDelivery: the usual
-// CalendarEvent fields plus the kind of change.
+// WebhookEvent is an event in a WebhookDelivery.
 //
-// Deliveries carry conference as an object; VerifyWebhook converts it, so
-// Conference is the join URL and ConferenceData the REST shape, as in
-// CalendarEvent. Deleted Microsoft, Apple and CalDAV events arrive as
-// placeholders without Original (and, in deliveries sent before Connect 1.6.1,
-// without CalendarID); rely only on ID, Provider, CalendarID and ChangeType for
-// a deleted event.
-type WebhookEvent struct {
-	CalendarEvent
-	// ChangeType is "created", "updated" or "deleted".
-	ChangeType string `json:"changeType,omitempty"`
-}
+// Deprecated: Use CalendarEvent, which has ChangeType for webhook deliveries.
+// WebhookEvent will be removed in 2.0.0.
+type WebhookEvent = CalendarEvent
 
 // WebhookDeliveryMetadata describes the subscription channel and batch of a
 // WebhookDelivery.

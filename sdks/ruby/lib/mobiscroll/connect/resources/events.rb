@@ -10,6 +10,12 @@ module Mobiscroll
           @api_client = api_client
         end
 
+        # The wire (camelCase) spelling of an optional field is accepted too, as the Python SDK does.
+        WIRE_KEYS = {
+          allDay: :all_day, recurringEventId: :recurring_event_id, updateMode: :update_mode,
+          conferenceData: :conference_data
+        }.freeze
+
         def list(start: nil, end: nil, calendar_ids: nil, page_size: nil,
                  next_page_token: nil, single_events: nil)
           end_time = binding.local_variable_get(:end)
@@ -68,6 +74,7 @@ module Mobiscroll
         private
 
         def build_event_body(params)
+          params = params.to_h { |key, value| [WIRE_KEYS.fetch(key.to_sym, key.to_sym), value] }
           body = {}
           body['provider'] = params[:provider] if params.key?(:provider)
           body['calendarId'] = params[:calendar_id] if params.key?(:calendar_id)

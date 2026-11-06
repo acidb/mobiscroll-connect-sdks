@@ -74,7 +74,7 @@ public class SerializationTests
           "title": "Standup",
           "description": "Weekly team sync",
           "conference": "https://meet.google.com/abc-defg-hij",
-          "conferenceData": { "provider": "google-meet", "conferenceId": "abc-defg-hij" },
+          "conferenceData": { "provider": "google-meet", "url": "https://meet.google.com/abc-defg-hij", "original": { "conferenceId": "abc-defg-hij" } },
           "lastModified": "2026-03-10T13:36:08.000Z"
         }
         """;
@@ -84,7 +84,9 @@ public class SerializationTests
         Assert.NotNull(e);
         Assert.Equal("Weekly team sync", e!.Description);
         Assert.NotNull(e.ConferenceData);
-        Assert.Equal("google-meet", e.ConferenceData!["provider"].GetString());
+        Assert.Equal("google-meet", e.ConferenceData!.Provider);
+        Assert.Equal("https://meet.google.com/abc-defg-hij", e.ConferenceData.Url);
+        Assert.Equal("abc-defg-hij", e.ConferenceData.Original!["conferenceId"].GetString());
         Assert.Equal("2026-03-10T13:36:08.000Z", e.LastModified);
     }
 }

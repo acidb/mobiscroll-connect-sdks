@@ -204,12 +204,8 @@ export type CalendarEventPrivacy = 'public' | 'private' | 'confidential';
 export type CalendarEventStatus = 'confirmed' | 'tentative' | 'cancelled';
 
 /**
- * Provider-specific conference metadata, passed through from the upstream
- * provider as-is. Only `provider` is stable across providers — the remaining
- * keys differ per provider (Google returns `conferenceId`/`entryPoints`,
- * Microsoft returns `joinUrl`/`conferenceId`), so narrow them at the call site.
- *
- * For the plain join URL prefer {@link CalendarEvent.conference}.
+ * The conference of an event, with the same fields on every provider. The provider's own conference
+ * data (Google's `conferenceId`/`entryPoints`, Microsoft's `joinUrl`/`conferenceId`) is in `original`.
  */
 export interface ConferenceData {
   /**
@@ -231,8 +227,6 @@ export interface ConferenceData {
    * then ignores `conference`; Microsoft never writes `conference`; Apple and CalDAV ignore `autoGenerate`.
    */
   autoGenerate?: boolean;
-  /** The keys of `original`, repeated at the top level for compatibility. We suggest reading `url` and `original` instead: those are the fields that will be kept in the future. */
-  [key: string]: unknown;
 }
 
 export interface CalendarEvent {
@@ -252,40 +246,35 @@ export interface CalendarEvent {
   location?: string;
   attendees?: EventAttendee[];
   custom?: Record<string, unknown>;
+  /** The join URL of the event's conference. */
   conference?: string;
-  /** Provider-specific conference metadata; use it for details beyond `conference`. */
+  /** The conference details; see {@link ConferenceData}. */
   conferenceData?: ConferenceData;
   availability?: CalendarEventAvailability;
   privacy?: CalendarEventPrivacy;
   status?: CalendarEventStatus;
-  /** ISO 8601 timestamp of the last modification, e.g. `2026-03-10T13:36:08.000Z`. */
+  /**
+   * ISO 8601 timestamp of the last modification, e.g. `2026-03-10T13:36:08.000Z`. For a deleted event in a
+   * webhook delivery, when the deletion was detected.
+   */
   lastModified?: string;
   link?: string;
-  original: calendar_v3.Schema$Event | MicrosoftGraphEvent | VEvent;
+  /** Provider-native event. Absent on deleted Microsoft, Apple and CalDAV events in webhook deliveries. */
+  original?: calendar_v3.Schema$Event | MicrosoftGraphEvent | VEvent;
+  /**
+   * Set only on events in a webhook delivery: what happened to the event. Deleted Microsoft, Apple and
+   * CalDAV events arrive as placeholders; rely only on `id`, `provider`, `calendarId` and `changeType` for them.
+   */
+  changeType?: 'created' | 'updated' | 'deleted';
 }
 
 /**
- * An event in a webhook delivery. `start` and `end` are ISO 8601 strings.
+ * An event in a webhook delivery.
  *
- * Deleted Microsoft, Apple and CalDAV events arrive as placeholders without `original` (and, in
- * deliveries sent before Connect 1.6.1, without `calendarId`); rely only on `id`, `provider`,
- * `calendarId` and `changeType` for a `deleted` event.
- *
- * `conference` is declared as in {@link CalendarEvent}, but at runtime a delivery carries the raw
- * object (`url`, `provider`, `meetingProvider`, `data`), not the join-URL string.
+ * @deprecated Use {@link CalendarEvent}, which has `changeType` for webhook deliveries. `WebhookEvent`
+ * will be removed in 2.0.0.
  */
-export interface WebhookEvent extends Omit<
-  CalendarEvent,
-  'calendarId' | 'lastModified' | 'original'
-> {
-  /** Absent only on deleted placeholders in deliveries sent before Connect 1.6.1. */
-  calendarId?: string;
-  /** ISO 8601 timestamp of the last modification; for a deleted placeholder, when the deletion was detected. */
-  lastModified: string;
-  /** Provider-native event; absent on deleted placeholders. */
-  original?: CalendarEvent['original'];
-  changeType: 'created' | 'updated' | 'deleted';
-}
+export type WebhookEvent = CalendarEvent;
 
 export type RecurrenceFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 
@@ -580,7 +569,7 @@ export interface WebhookDelivery {
   provider: ProviderName;
   userId: string;
   calendarId: string;
-  events: WebhookEvent[];
+  events: CalendarEvent[];
   changeType?: 'created' | 'updated' | 'deleted' | 'mixed';
   /** ISO 8601 timestamp of when Connect processed the change. */
   timestamp: string;

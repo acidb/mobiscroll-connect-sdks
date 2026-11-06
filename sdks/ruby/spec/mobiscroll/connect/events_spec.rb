@@ -139,6 +139,24 @@ RSpec.describe Mobiscroll::Connect::Resources::Events do
     end
   end
 
+  describe 'wire-spelled fields' do
+    it 'sends conferenceData, allDay, recurringEventId and updateMode passed in camelCase' do
+      sent = nil
+      WebMock.stub_request(:put, "#{MockServer::BASE_URL}/event")
+             .with { |req| sent = JSON.parse(req.body) }
+             .to_return(status: 200, body: JSON.generate(event_fixture),
+                        headers: { 'Content-Type' => 'application/json' })
+
+      client.events.update(
+        provider: 'google', calendar_id: 'primary', event_id: 'e1',
+        conferenceData: { 'autoGenerate' => true }, allDay: true, recurringEventId: 'r1', updateMode: 'all'
+      )
+
+      expect(sent).to include('conferenceData' => { 'autoGenerate' => true }, 'allDay' => true,
+                              'recurringEventId' => 'r1', 'updateMode' => 'all')
+    end
+  end
+
   describe '#update' do
     it 'updates an event and returns the updated CalendarEvent' do
       updated = event_fixture.merge('title' => 'Updated Meeting')

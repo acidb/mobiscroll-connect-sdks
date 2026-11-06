@@ -12,7 +12,7 @@ public final class WebhookDelivery {
     private final Provider provider;
     private final String userId;
     private final String calendarId;
-    private final List<WebhookEvent> events;
+    private final List<CalendarEvent> events;
     private final String changeType;
     private final String timestamp;
     private final Metadata metadata;
@@ -22,7 +22,7 @@ public final class WebhookDelivery {
             @JsonProperty("provider") Provider provider,
             @JsonProperty("userId") String userId,
             @JsonProperty("calendarId") String calendarId,
-            @JsonProperty("events") List<WebhookEvent> events,
+            @JsonProperty("events") List<CalendarEvent> events,
             @JsonProperty("changeType") String changeType,
             @JsonProperty("timestamp") String timestamp,
             @JsonProperty("metadata") Metadata metadata) {
@@ -39,7 +39,7 @@ public final class WebhookDelivery {
     /** Your user id, as passed when the user connected. */
     public String getUserId() { return userId; }
     public String getCalendarId() { return calendarId; }
-    public List<WebhookEvent> getEvents() { return events; }
+    public List<CalendarEvent> getEvents() { return events; }
     /** {@code "created"}, {@code "updated"}, {@code "deleted"} or {@code "mixed"}; may be {@code null}. */
     public String getChangeType() { return changeType; }
     /** ISO 8601 timestamp of when Connect processed the change. */

@@ -58,11 +58,12 @@ class SerializationTest {
                 "{\"id\":\"evt-1\",\"provider\":\"google\",\"calendarId\":\"primary\",\"title\":\"Standup\"," +
                 "\"description\":\"Weekly team sync\"," +
                 "\"conference\":\"https://meet.google.com/abc-defg-hij\"," +
-                "\"conferenceData\":{\"provider\":\"google-meet\",\"conferenceId\":\"abc-defg-hij\"}," +
+                "\"conferenceData\":{\"provider\":\"google-meet\",\"original\":{\"conferenceId\":\"abc-defg-hij\"}}," +
                 "\"lastModified\":\"2026-03-10T13:36:08.000Z\"}",
                 CalendarEvent.class);
         assertThat(e.getDescription()).isEqualTo("Weekly team sync");
-        assertThat(e.getConferenceData()).containsEntry("provider", "google-meet");
+        assertThat(e.getConferenceData().getProvider()).isEqualTo("google-meet");
+        assertThat(e.getConferenceData().getOriginal()).containsEntry("conferenceId", "abc-defg-hij");
         assertThat(e.getLastModified()).isEqualTo("2026-03-10T13:36:08.000Z");
     }
 

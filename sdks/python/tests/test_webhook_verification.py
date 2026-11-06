@@ -16,6 +16,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from mobiscroll_connect import (
+    CalendarEvent,
+    ConferenceData,
     MobiscrollConnectClient,
     MobiscrollConnectError,
     WebhookEvent,
@@ -187,18 +189,18 @@ def test_fetches_keys_lazily_from_the_api_origin_and_parses_the_delivery(clock):
 
 
 @respx.mock
-def test_parses_a_delivery_with_a_conference_object(clock):
+def test_parses_a_delivery_with_a_conference_url(clock):
     respx.get(KEYS_URL).mock(return_value=keys_response([KEYS["active"]]))
     case = by_name("delivery: Google events with and without a conference")
 
     delivery = make_client().webhooks.verify_webhook(case["body"], case["headers"])
 
     meeting, lunch = delivery.events
-    assert isinstance(meeting.conference, dict)
-    assert meeting.conference["url"] == "https://meet.google.com/abc-defg-hij"
-    assert meeting.conference["provider"] == "hangoutsMeet"
-    assert meeting.conference["meetingProvider"] == "hangoutsMeet"
-    assert meeting.conference["data"]["conferenceId"] == "abc-defg-hij"
+    assert meeting.conference == "https://meet.google.com/abc-defg-hij"
+    assert meeting.conference_data is not None
+    assert meeting.conference_data.provider == "hangoutsMeet"
+    assert meeting.conference_data.original is not None
+    assert meeting.conference_data.original["conferenceId"] == "abc-defg-hij"
     assert meeting.start == datetime(2026, 9, 22, 9, 0, tzinfo=timezone.utc)
     assert meeting.end == datetime(2026, 9, 22, 10, 0, tzinfo=timezone.utc)
     assert meeting.last_modified == "2026-09-21T09:58:12.000Z"
@@ -218,7 +220,7 @@ def test_parses_a_deleted_placeholder_without_calendar_id(clock):
     delivery = make_client().webhooks.verify_webhook(case["body"], case["headers"])
 
     teams, deleted = delivery.events
-    assert isinstance(teams.conference, dict) and teams.conference["provider"] == "teams"
+    assert teams.conference == "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc"
     assert deleted.change_type == "deleted"
     assert deleted.calendar_id == delivery.calendar_id
     assert deleted.original == {}
@@ -235,18 +237,21 @@ def test_passes_the_api_1_6_1_conference_data_through_and_keeps_calendar_id_on_d
     meet, cancelled = verify(
         "delivery: 1.6.1 Google Meet event with conferenceData and a cancelled event with calendarId"
     ).events
-    assert meet.conference_data["provider"] == "hangoutsMeet"
-    assert meet.conference_data["url"] == "https://meet.google.com/abc-defg-hij"
-    assert meet.conference_data["original"]["conferenceId"] == "abc-defg-hij"
-    assert meet.conference_data["conferenceId"] == "abc-defg-hij"
+    assert meet.conference == "https://meet.google.com/abc-defg-hij"
+    assert meet.conference_data is not None
+    assert meet.conference_data.provider == "hangoutsMeet"
+    assert meet.conference_data.url == "https://meet.google.com/abc-defg-hij"
+    assert meet.conference_data.original is not None
+    assert meet.conference_data.original["conferenceId"] == "abc-defg-hij"
     assert cancelled.calendar_id == "work@company.com"
     assert cancelled.status == "cancelled"
 
     teams, deleted = verify(
         "delivery: 1.6.1 Microsoft Teams event with conferenceData and a deleted placeholder with calendarId"
     ).events
-    assert teams.conference_data["provider"] == "teams"
-    assert teams.conference_data["original"] == {
+    assert teams.conference_data is not None
+    assert teams.conference_data.provider == "teams"
+    assert teams.conference_data.original == {
         "joinUrl": "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc",
         "conferenceId": "123456789",
     }
@@ -255,18 +260,24 @@ def test_passes_the_api_1_6_1_conference_data_through_and_keeps_calendar_id_on_d
     booking, removed = verify(
         "delivery: 1.6.1 Apple event with a URL as conference and a deleted placeholder with calendarId"
     ).events
-    assert dict(booking.conference_data) == {"provider": "caldav", "url": "https://example.com/room/42"}
+    assert booking.conference_data == ConferenceData(provider="caldav", url="https://example.com/room/42")
     assert removed.calendar_id == "https://caldav.icloud.com/1234567/calendars/work/"
 
 
-def test_webhook_event_conference_present_absent_and_null():
+def test_webhook_event_is_a_deprecated_alias_of_calendar_event():
     base = {"id": "e1", "provider": "google", "calendarId": "c", "changeType": "updated"}
-    conference = {"url": "https://x", "provider": "teams", "meetingProvider": "teams"}
-    present = WebhookEvent.from_dict({**base, "conference": conference})
-    assert present.conference == conference
-    assert WebhookEvent.from_dict({**base, "conference": "https://y"}).conference == "https://y"
-    assert WebhookEvent.from_dict(base).conference is None
-    assert WebhookEvent.from_dict({**base, "conference": None}).conference is None
+    event = WebhookEvent.from_dict({**base, "conference": "https://y"})
+    assert WebhookEvent is CalendarEvent
+    assert event.change_type == "updated"
+    assert event.conference == "https://y"
+    assert CalendarEvent.from_dict(base).conference is None
+
+
+def test_calendar_event_fallbacks_fill_a_placeholder_without_calendar_id():
+    event = CalendarEvent.from_dict(
+        {"id": "e1", "changeType": "deleted"}, provider="microsoft", calendar_id="cal"
+    )
+    assert (event.provider, event.calendar_id, event.change_type) == ("microsoft", "cal", "deleted")
 
 
 @respx.mock

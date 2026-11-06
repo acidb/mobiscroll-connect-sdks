@@ -45,7 +45,8 @@ MobiscrollConnectClient        — public entry point; constructs and wires all 
 Config                         — readonly DTO: clientId, clientSecret, redirectUri, webhookPublicKey, webhookKeyCache
 WebhookVerifier                — static verifyWebhookSignature(): pure Ed25519 `v1a` check, no network
 WebhookKeyStore                — @internal process-wide webhook key cache (+ optional PSR-16 sharing)
-WebhookDelivery                — readonly DTO for a verified delivery; events are WebhookEvent (extends CalendarEvent + changeType). The delivery's `conference` object is converted in WebhookEvent::fromArray to `conference` = url string and `conferenceData` = REST shape (provider, autoGenerate, data keys at top level)
+WebhookDelivery                — readonly DTO for a verified delivery; events are CalendarEvent with changeType set, created as the deprecated WebhookEvent subclass (removed in 2.0.0)
+ConferenceData                 — readonly DTO: provider, url, autoGenerate, original (CalendarEvent::$conferenceData)
 TokenResponse                  — readonly DTO: access_token, token_type, expires_in, refresh_token
 CalendarEvent                  — readonly DTO for API event responses
 EventsListResponse             — readonly DTO wrapping []CalendarEvent + pagination
@@ -111,7 +112,7 @@ vendor/bin/phpunit tests/Unit/AuthTest.php   # single test file
 | `src/Resources/Webhooks.php`       | Webhook subscribe/unsubscribe + verifyWebhook                                 |
 | `src/WebhookVerifier.php`          | `verifyWebhookSignature` (pure Ed25519 `v1a` check via libsodium)             |
 | `src/WebhookKeyStore.php`          | Process-wide webhook key cache keyed by keys URL; optional PSR-16 sharing     |
-| `src/WebhookDelivery.php`          | Verified delivery DTO (+ `WebhookEvent`, `WebhookDeliveryMetadata`) |
+| `src/WebhookDelivery.php`          | Verified delivery DTO (+ `WebhookDeliveryMetadata`); `src/WebhookEvent.php` is the deprecated subclass |
 | `src/Exceptions/`                  | Exception hierarchy                                                           |
 | `tests/Unit/`                      | PHPUnit tests (Auth, Calendars, Events, Webhooks, WebhookVerification, ...)   |
 | `tests/Unit/fixtures/`             | `webhook-vectors.json`, shared by all seven SDKs                              |

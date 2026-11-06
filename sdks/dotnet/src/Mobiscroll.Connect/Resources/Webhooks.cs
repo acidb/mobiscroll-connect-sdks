@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Mobiscroll.Connect.Exceptions;
@@ -147,12 +146,7 @@ public sealed class Webhooks
         WebhookDelivery? delivery;
         try
         {
-            var root = JsonNode.Parse(payload.Span);
-            if (root is JsonObject deliveryObject)
-            {
-                ConvertConferences(deliveryObject);
-            }
-            delivery = root.Deserialize<WebhookDelivery>(ApiClient.JsonOptions);
+            delivery = JsonSerializer.Deserialize<WebhookDelivery>(payload.Span, ApiClient.JsonOptions);
         }
         catch (Exception ex) when (ex is JsonException or ArgumentException or NotSupportedException)
         {
@@ -171,85 +165,6 @@ public sealed class Webhooks
         };
         WebhookVerifier.Verify(payload.Span, headers, candidates, options);
     }
-
-    /// <summary>
-    /// Converts each event's <c>conference</c> object, as deliveries carry it, to what <see cref="CalendarEvent"/>
-    /// holds: <c>conference</c> is the join URL and <c>conferenceData</c> the REST shape. Strings and
-    /// <c>null</c> are left as they are, and an event's own non-null <c>conferenceData</c> is never replaced.
-    /// </summary>
-    /// <exception cref="JsonException"><c>conference</c> is neither a string, an object nor <c>null</c>.</exception>
-    private static void ConvertConferences(JsonObject delivery)
-    {
-        if (delivery["events"] is not JsonArray events)
-        {
-            return;
-        }
-        var deliveryProvider = (delivery["provider"] as JsonValue)?.TryGetValue<string>(out var dp) == true ? dp : null;
-        foreach (var node in events)
-        {
-            if (node is not JsonObject evt || !evt.TryGetPropertyValue("conference", out var conference) || conference is null)
-            {
-                continue;
-            }
-            if (conference is JsonValue value)
-            {
-                if (value.GetValueKind() == JsonValueKind.String)
-                {
-                    continue;
-                }
-                throw new JsonException("conference must be a string or an object");
-            }
-            if (conference is not JsonObject conferenceObject)
-            {
-                throw new JsonException("conference must be a string or an object");
-            }
-
-            var url = (conferenceObject["url"] as JsonValue)?.TryGetValue<string>(out var u) == true ? u : null;
-            evt["conference"] = string.IsNullOrEmpty(url) ? null : JsonValue.Create(url);
-            if (evt["conferenceData"] is not null)
-            {
-                continue;
-            }
-
-            var eventProvider = (evt["provider"] as JsonValue)?.TryGetValue<string>(out var ep) == true ? ep : null;
-            var conferenceProvider = (conferenceObject["provider"] as JsonValue)?.TryGetValue<string>(out var cp) == true ? cp : null;
-            if (string.IsNullOrEmpty(conferenceProvider))
-            {
-                conferenceProvider = InferConferenceProvider(string.IsNullOrEmpty(eventProvider) ? deliveryProvider : eventProvider);
-            }
-
-            var conferenceData = new JsonObject();
-            if (!string.IsNullOrEmpty(conferenceProvider))
-            {
-                conferenceData["provider"] = conferenceProvider;
-            }
-            if (conferenceObject["autoGenerate"] is JsonValue auto
-                && auto.GetValueKind() is JsonValueKind.True or JsonValueKind.False)
-            {
-                conferenceData["autoGenerate"] = auto.GetValue<bool>();
-            }
-            if (conferenceObject["data"] is JsonObject data)
-            {
-                foreach (var (key, item) in data)
-                {
-                    conferenceData[key] = item?.DeepClone();
-                }
-            }
-            if (conferenceData.Count > 0)
-            {
-                evt["conferenceData"] = conferenceData;
-            }
-        }
-    }
-
-    private static string? InferConferenceProvider(string? calendarProvider)
-        => calendarProvider?.ToLowerInvariant() switch
-        {
-            "google" => "google-meet",
-            "microsoft" => "teams",
-            "apple" or "caldav" => "caldav",
-            _ => null,
-        };
 
     private static WebhookVerificationException InvalidJson()
         => new("Webhook payload is not valid JSON", WebhookVerificationReason.InvalidPayload);

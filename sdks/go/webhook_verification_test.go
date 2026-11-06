@@ -471,7 +471,7 @@ func TestVerifyWebhook_ParsesTheFullDelivery(t *testing.T) {
 	}
 }
 
-func TestVerifyWebhook_ParsesADeliveryWithAConferenceObject(t *testing.T) {
+func TestVerifyWebhook_ParsesADeliveryWithAConferenceURL(t *testing.T) {
 	f := newWebhookFixture(t)
 	f.srv.Enqueue(keysResponse("max-age=3600", f.vectors.Keys.Active))
 	v := f.vectors.byName(t, "delivery: Google events with and without a conference")
@@ -484,7 +484,8 @@ func TestVerifyWebhook_ParsesADeliveryWithAConferenceObject(t *testing.T) {
 	if meeting.Conference != "https://meet.google.com/abc-defg-hij" {
 		t.Fatalf("unexpected conference: %q", meeting.Conference)
 	}
-	if meeting.ConferenceData["provider"] != "hangoutsMeet" || meeting.ConferenceData["conferenceId"] != "abc-defg-hij" {
+	if meeting.ConferenceData == nil || meeting.ConferenceData.Provider != "hangoutsMeet" ||
+		meeting.ConferenceData.Original["conferenceId"] != "abc-defg-hij" {
 		t.Fatalf("unexpected conference data: %+v", meeting.ConferenceData)
 	}
 	if meeting.Start == nil || !meeting.Start.Equal(time.Date(2026, 9, 22, 9, 0, 0, 0, time.UTC)) {
@@ -513,8 +514,9 @@ func TestVerifyWebhook_ParsesADeletedPlaceholderWithoutCalendarID(t *testing.T) 
 	if err != nil {
 		t.Fatalf("VerifyWebhook: %v", err)
 	}
-	if got := delivery.Events[0].ConferenceData["provider"]; got != "teams" {
-		t.Fatalf("unexpected conference data: %+v", delivery.Events[0].ConferenceData)
+	if teams := delivery.Events[0]; teams.Conference != "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc" ||
+		teams.ConferenceData == nil || teams.ConferenceData.Provider != "teams" {
+		t.Fatalf("unexpected conference: %q %+v", teams.Conference, teams.ConferenceData)
 	}
 	deleted := delivery.Events[1]
 	if deleted.ChangeType != "deleted" || deleted.CalendarID != "" || deleted.Original != nil {
@@ -534,16 +536,11 @@ func TestVerifyWebhook_KeepsTheAPI161ConferenceDataAndCalendarIDOnDeletedEvents(
 		}
 		return delivery
 	}
-	original := func(data map[string]any) map[string]any {
-		o, _ := data["original"].(map[string]any)
-		return o
-	}
-
 	google := verify("delivery: 1.6.1 Google Meet event with conferenceData and a cancelled event with calendarId")
 	meet := google.Events[0]
-	if meet.Conference != "https://meet.google.com/abc-defg-hij" || meet.ConferenceData["provider"] != "hangoutsMeet" ||
-		meet.ConferenceData["url"] != "https://meet.google.com/abc-defg-hij" || meet.ConferenceData["conferenceId"] != "abc-defg-hij" ||
-		original(meet.ConferenceData)["conferenceId"] != "abc-defg-hij" {
+	if meet.Conference != "https://meet.google.com/abc-defg-hij" || meet.ConferenceData == nil ||
+		meet.ConferenceData.Provider != "hangoutsMeet" || meet.ConferenceData.URL != "https://meet.google.com/abc-defg-hij" ||
+		meet.ConferenceData.Original["conferenceId"] != "abc-defg-hij" {
 		t.Fatalf("unexpected conference: %q %+v", meet.Conference, meet.ConferenceData)
 	}
 	if google.Events[1].CalendarID != "work@company.com" {
@@ -552,7 +549,8 @@ func TestVerifyWebhook_KeepsTheAPI161ConferenceDataAndCalendarIDOnDeletedEvents(
 
 	microsoft := verify("delivery: 1.6.1 Microsoft Teams event with conferenceData and a deleted placeholder with calendarId")
 	teams := microsoft.Events[0]
-	if teams.ConferenceData["provider"] != "teams" || original(teams.ConferenceData)["conferenceId"] != "123456789" {
+	if teams.ConferenceData == nil || teams.ConferenceData.Provider != "teams" ||
+		teams.ConferenceData.Original["conferenceId"] != "123456789" {
 		t.Fatalf("unexpected conference data: %+v", teams.ConferenceData)
 	}
 	if microsoft.Events[1].CalendarID != "AAMkAGI2Y2FsAAA=" {
@@ -561,8 +559,8 @@ func TestVerifyWebhook_KeepsTheAPI161ConferenceDataAndCalendarIDOnDeletedEvents(
 
 	apple := verify("delivery: 1.6.1 Apple event with a URL as conference and a deleted placeholder with calendarId")
 	booking := apple.Events[0]
-	if booking.Conference != "https://example.com/room/42" || len(booking.ConferenceData) != 2 ||
-		booking.ConferenceData["provider"] != "caldav" || booking.ConferenceData["url"] != "https://example.com/room/42" {
+	if booking.Conference != "https://example.com/room/42" ||
+		!reflect.DeepEqual(booking.ConferenceData, &mobiscroll.ConferenceData{Provider: "caldav", URL: "https://example.com/room/42"}) {
 		t.Fatalf("unexpected conference: %q %+v", booking.Conference, booking.ConferenceData)
 	}
 	if apple.Events[1].CalendarID != "https://caldav.icloud.com/1234567/calendars/work/" {
@@ -571,7 +569,7 @@ func TestVerifyWebhook_KeepsTheAPI161ConferenceDataAndCalendarIDOnDeletedEvents(
 }
 
 // verifySignedEvent signs a delivery holding one event with a fresh key and verifies it.
-func verifySignedEvent(t *testing.T, eventJSON, deliveryProvider string) (*mobiscroll.WebhookEvent, error) {
+func verifySignedEvent(t *testing.T, eventJSON, deliveryProvider string) (*mobiscroll.CalendarEvent, error) {
 	t.Helper()
 	f := newWebhookFixture(t)
 	signer := newTestSigner(t)
@@ -597,75 +595,7 @@ func conferenceEventJSON(provider, extra string) string {
 	return event + "}"
 }
 
-func TestVerifyWebhook_ConvertsAConferenceObjectToTheURLAndRESTConferenceData(t *testing.T) {
-	ev, err := verifySignedEvent(t, conferenceEventJSON("google",
-		`"conference":{"url":"https://meet.google.com/abc","provider":"hangoutsMeet","meetingProvider":"hangoutsMeet",`+
-			`"autoGenerate":false,"data":{"conferenceId":"abc","entryPoints":[{"uri":"https://meet.google.com/abc"}],"n":2}}`), "google")
-	if err != nil {
-		t.Fatalf("VerifyWebhook: %v", err)
-	}
-	if ev.Conference != "https://meet.google.com/abc" || ev.ChangeType != "updated" {
-		t.Fatalf("unexpected event: %+v", ev)
-	}
-	want := map[string]any{
-		"provider":     "hangoutsMeet",
-		"autoGenerate": false,
-		"conferenceId": "abc",
-		"entryPoints":  []any{map[string]any{"uri": "https://meet.google.com/abc"}},
-		"n":            float64(2),
-	}
-	if !reflect.DeepEqual(ev.ConferenceData, want) {
-		t.Fatalf("unexpected conference data: %#v", ev.ConferenceData)
-	}
-}
-
-func TestVerifyWebhook_InfersTheConferenceProviderFromTheEventProvider(t *testing.T) {
-	for provider, want := range map[string]string{"google": "google-meet", "microsoft": "teams", "apple": "caldav", "caldav": "caldav"} {
-		t.Run(provider, func(t *testing.T) {
-			ev, err := verifySignedEvent(t, conferenceEventJSON(provider, `"conference":{"url":"https://x.test/j","provider":""}`), "google")
-			if err != nil {
-				t.Fatalf("VerifyWebhook: %v", err)
-			}
-			if ev.Conference != "https://x.test/j" || !reflect.DeepEqual(ev.ConferenceData, map[string]any{"provider": want}) {
-				t.Fatalf("unexpected event: %+v", ev)
-			}
-		})
-	}
-}
-
-func TestVerifyWebhook_InfersTheConferenceProviderFromTheDeliveryWhenTheEventHasNone(t *testing.T) {
-	ev, err := verifySignedEvent(t, `{"id":"e1","title":"T","conference":{"url":"https://x.test/j"}}`, "microsoft")
-	if err != nil {
-		t.Fatalf("VerifyWebhook: %v", err)
-	}
-	if !reflect.DeepEqual(ev.ConferenceData, map[string]any{"provider": "teams"}) {
-		t.Fatalf("unexpected conference data: %#v", ev.ConferenceData)
-	}
-}
-
-func TestVerifyWebhook_AConferenceObjectWithoutAURLHasNoConference(t *testing.T) {
-	cases := []struct {
-		name, provider, conference string
-		want                       map[string]any
-	}{
-		{"autoGenerate only", "google", `{"autoGenerate":true}`, map[string]any{"provider": "google-meet", "autoGenerate": true}},
-		{"empty url", "caldav", `{"url":"","data":{"k":1}}`, map[string]any{"provider": "caldav", "k": float64(1)}},
-		{"non-string url", "google", `{"url":5,"autoGenerate":"yes"}`, map[string]any{"provider": "google-meet"}},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			ev, err := verifySignedEvent(t, conferenceEventJSON(c.provider, `"conference":`+c.conference), c.provider)
-			if err != nil {
-				t.Fatalf("VerifyWebhook: %v", err)
-			}
-			if ev.Conference != "" || !reflect.DeepEqual(ev.ConferenceData, c.want) {
-				t.Fatalf("unexpected event: %#v", ev)
-			}
-		})
-	}
-}
-
-func TestVerifyWebhook_LeavesAStringConferenceUnchanged(t *testing.T) {
+func TestVerifyWebhook_ReadsAStringConference(t *testing.T) {
 	ev, err := verifySignedEvent(t, conferenceEventJSON("google", `"conference":"https://meet.test/s"`), "google")
 	if err != nil {
 		t.Fatalf("VerifyWebhook: %v", err)
@@ -689,8 +619,8 @@ func TestVerifyWebhook_AcceptsANullOrAbsentConference(t *testing.T) {
 	}
 }
 
-func TestVerifyWebhook_RejectsAConferenceThatIsNotAStringOrObject(t *testing.T) {
-	for _, conference := range []string{"5", "true", "[1,2]", "[]"} {
+func TestVerifyWebhook_RejectsAConferenceThatIsNotAString(t *testing.T) {
+	for _, conference := range []string{"5", "true", "[1,2]", "[]", `{"url":"https://x.test/j"}`} {
 		t.Run(conference, func(t *testing.T) {
 			_, err := verifySignedEvent(t, conferenceEventJSON("google", `"conference":`+conference), "google")
 			requireReason(t, err, mobiscroll.WebhookInvalidPayload)
@@ -698,14 +628,22 @@ func TestVerifyWebhook_RejectsAConferenceThatIsNotAStringOrObject(t *testing.T) 
 	}
 }
 
-func TestVerifyWebhook_LeavesTheEventsOwnConferenceDataUntouched(t *testing.T) {
+func TestVerifyWebhook_ReadsConferenceDataWithItsFourFields(t *testing.T) {
 	ev, err := verifySignedEvent(t, conferenceEventJSON("google",
-		`"conference":{"url":"https://x.test/j","provider":"teams","data":{"a":1}},"conferenceData":{"own":true}`), "google")
+		`"conference":"https://x.test/j","conferenceData":{"provider":"teams","url":"https://x.test/j","autoGenerate":true,"original":{"a":1}}`), "google")
 	if err != nil {
 		t.Fatalf("VerifyWebhook: %v", err)
 	}
-	if ev.Conference != "https://x.test/j" || !reflect.DeepEqual(ev.ConferenceData, map[string]any{"own": true}) {
+	want := &mobiscroll.ConferenceData{Provider: "teams", URL: "https://x.test/j", AutoGenerate: mobiscroll.Ptr(true), Original: map[string]any{"a": float64(1)}}
+	if ev.Conference != "https://x.test/j" || !reflect.DeepEqual(ev.ConferenceData, want) {
 		t.Fatalf("unexpected event: %#v", ev)
+	}
+}
+
+func TestWebhookEvent_IsADeprecatedAliasOfCalendarEvent(t *testing.T) {
+	var ev mobiscroll.WebhookEvent = mobiscroll.CalendarEvent{ChangeType: "updated"} //nolint:staticcheck // the alias is what is tested
+	if ev.ChangeType != "updated" {
+		t.Fatalf("unexpected event: %+v", ev)
 	}
 }
 

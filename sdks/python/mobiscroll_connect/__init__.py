@@ -36,6 +36,7 @@ from .exceptions import (
 from .models import (
     Calendar,
     CalendarEvent,
+    ConferenceData,
     ConnectedAccount,
     ConnectionStatusResponse,
     DisconnectResponse,
@@ -62,6 +63,7 @@ __all__ = [
     "Calendar",
     "CalendarEvent",
     "CalendarPermissionError",
+    "ConferenceData",
     "Config",
     "ConnectedAccount",
     "ConnectionStatusResponse",

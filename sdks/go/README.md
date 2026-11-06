@@ -140,7 +140,7 @@ http.HandleFunc("/webhooks/mobiscroll", func(w http.ResponseWriter, r *http.Requ
 })
 ```
 
-Each event is a `WebhookEvent`, which is a `CalendarEvent` plus `ChangeType`. A delivery carries `conference` as an object (`url`, `provider`, `meetingProvider`, `data`); `VerifyWebhook` converts it to the shape the events endpoints return: `Conference` is the join URL string (empty when the object has no non-empty `url`) and `ConferenceData` is the REST shape (`provider`, `autoGenerate` when boolean, and the keys of `data` at the top level; nil when empty). Deliveries from Connect 1.6.1 on carry `conferenceData` themselves, with `url` and `original`, and the SDK keeps it; for an earlier delivery the SDK builds it from the `conference` object, without `url` and `original`. A `conference` that is neither a string, an object nor `null` fails with `WebhookInvalidPayload`.
+Each event is a `CalendarEvent` with `ChangeType` set. `Conference` is the join URL, and `ConferenceData` is a `*ConferenceData` (`Provider`, `URL`, `AutoGenerate`, `Original`), as the events endpoints return. A `conference` that is not a string fails with `WebhookInvalidPayload`. `WebhookEvent` is a deprecated alias of `CalendarEvent` and will be removed in 2.0.0.
 
 The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process, shared by every `Client`, as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side.
 

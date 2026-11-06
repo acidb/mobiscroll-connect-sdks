@@ -80,12 +80,18 @@ class TestCalendarEvent:
             "calendarId": "primary",
             "description": "Weekly team sync",
             "conference": "https://meet.google.com/abc-defg-hij",
-            "conferenceData": {"provider": "google-meet", "conferenceId": "abc-defg-hij"},
+            "conferenceData": {
+                "provider": "google-meet",
+                "url": "https://meet.google.com/abc-defg-hij",
+                "original": {"conferenceId": "abc-defg-hij"},
+            },
             "lastModified": "2026-03-10T13:36:08.000Z",
         })
         assert e.description == "Weekly team sync"
         assert e.conference_data is not None
-        assert e.conference_data["provider"] == "google-meet"
+        assert e.conference_data.provider == "google-meet"
+        assert e.conference_data.url == "https://meet.google.com/abc-defg-hij"
+        assert e.conference_data.original == {"conferenceId": "abc-defg-hij"}
         assert e.last_modified == "2026-03-10T13:36:08.000Z"
 
     def test_optional_extras_default_to_none(self):

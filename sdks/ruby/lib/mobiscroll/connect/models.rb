@@ -152,11 +152,34 @@ module Mobiscroll
       end
     end
 
-    # An event returned by the API. Field set mirrors the Node SDK exactly.
+    # The conference of an event, with the same fields on every provider: `provider`, `url` (the
+    # join URL), `auto_generate`, and `original`, the conference data exactly as the calendar
+    # provider returns it (Google's `conferenceData`, Microsoft's `onlineMeeting`; nil for Apple
+    # and CalDAV).
+    ConferenceData = Struct.new(:provider, :url, :auto_generate, :original, keyword_init: true) do
+      def self.from_h(hash)
+        return nil unless hash.is_a?(Hash)
+
+        auto_generate = hash.key?('autoGenerate') ? hash['autoGenerate'] : hash[:autoGenerate]
+        original = hash['original'] || hash[:original]
+        new(
+          provider: hash['provider'] || hash[:provider],
+          url: hash['url'] || hash[:url],
+          auto_generate: [true, false].include?(auto_generate) ? auto_generate : nil,
+          original: original.is_a?(Hash) ? original : nil
+        )
+      end
+    end
+
+    # An event returned by the API. Field set mirrors the Node SDK exactly. `change_type`
+    # ('created', 'updated' or 'deleted') is set only on events in a WebhookDelivery. Deleted
+    # Microsoft, Apple and CalDAV events arrive as placeholders without `original`; rely only on
+    # `id`, `provider`, `calendar_id` and `change_type` for them.
     CalendarEvent = Struct.new(
       :provider, :id, :calendar_id, :title, :description, :start, :end_time, :all_day,
       :recurring_event_id, :color, :location, :attendees, :custom, :conference,
       :conference_data, :availability, :privacy, :status, :last_modified, :link, :original,
+      :change_type,
       keyword_init: true
     ) do
       def self.from_h(hash)
@@ -180,13 +203,14 @@ module Mobiscroll
           attendees: attendees,
           custom: hash['custom'] || hash[:custom],
           conference: hash['conference'] || hash[:conference],
-          conference_data: hash['conferenceData'] || hash[:conferenceData],
+          conference_data: ConferenceData.from_h(hash['conferenceData'] || hash[:conferenceData]),
           availability: hash['availability'] || hash[:availability],
           privacy: hash['privacy'] || hash[:privacy],
           status: hash['status'] || hash[:status],
           last_modified: hash['lastModified'] || hash[:lastModified],
           link: hash['link'] || hash[:link],
-          original: hash['original'] || hash[:original]
+          original: hash['original'] || hash[:original],
+          change_type: hash['changeType'] || hash[:changeType]
         )
       end
     end
@@ -254,18 +278,9 @@ module Mobiscroll
       end
     end
 
-    # A changed event in a webhook delivery: every CalendarEvent field plus `change_type`
-    # ('created', 'updated' or 'deleted'). `conference` is the raw Hash as delivered (Events#list
-    # returns a join-URL String instead). Deleted placeholders lack `original` (and, in deliveries
-    # sent before Connect 1.6.1, `calendar_id`); rely only on `id`, `provider`, `calendar_id`,
-    # `change_type`.
-    WebhookEvent = Struct.new(*CalendarEvent.members, :change_type, keyword_init: true) do
-      def self.from_h(hash)
-        return nil if hash.nil?
-
-        new(**CalendarEvent.from_h(hash).to_h, change_type: hash['changeType'] || hash[:changeType])
-      end
-    end
+    # Deprecated alias of CalendarEvent, which carries `change_type` for webhook deliveries.
+    # It will be removed in 2.0.0.
+    WebhookEvent = CalendarEvent
 
     # `metadata` of a webhook delivery.
     WebhookDeliveryMetadata = Struct.new(:channel_id, :event_count, :is_initial_sync, keyword_init: true) do
@@ -295,7 +310,7 @@ module Mobiscroll
           provider: hash['provider'] || hash[:provider],
           user_id: hash['userId'] || hash[:userId],
           calendar_id: hash['calendarId'] || hash[:calendarId],
-          events: Array(hash['events'] || hash[:events]).filter_map { |e| WebhookEvent.from_h(e) if e.is_a?(Hash) },
+          events: Array(hash['events'] || hash[:events]).filter_map { |e| CalendarEvent.from_h(e) if e.is_a?(Hash) },
           change_type: hash['changeType'] || hash[:changeType],
           timestamp: hash['timestamp'] || hash[:timestamp],
           metadata: metadata.is_a?(Hash) ? WebhookDeliveryMetadata.from_h(metadata) : nil

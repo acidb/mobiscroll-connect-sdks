@@ -4,7 +4,12 @@ using System.Text.Json;
 
 namespace Mobiscroll.Connect.Models;
 
-/// <summary>A calendar event. Not sealed: <see cref="WebhookEvent"/> extends it with the change type.</summary>
+/// <summary>
+/// A calendar event. Not sealed: the deprecated <see cref="WebhookEvent"/> extends it.
+/// <see cref="ChangeType"/> is set only on events in a <see cref="WebhookDelivery"/>. Deleted Microsoft, Apple and
+/// CalDAV events arrive there as placeholders without <see cref="Original"/>; rely only on <see cref="Id"/>,
+/// <see cref="Provider"/>, <see cref="CalendarId"/> and <see cref="ChangeType"/> for them.
+/// </summary>
 public class CalendarEvent
 {
     public Provider Provider { get; set; }
@@ -23,13 +28,11 @@ public class CalendarEvent
     public string? Location { get; set; }
     public List<EventAttendee>? Attendees { get; set; }
     public Dictionary<string, JsonElement>? Custom { get; set; }
+    /// <summary>The join URL of the event's conference.</summary>
     public string? Conference { get; set; }
 
-    /// <summary>
-    /// Provider-specific conference metadata; use it for details beyond <see cref="Conference"/>.
-    /// Keys vary per provider, so the payload is left as raw <see cref="JsonElement"/> values.
-    /// </summary>
-    public Dictionary<string, JsonElement>? ConferenceData { get; set; }
+    /// <summary>The conference details; see <see cref="Models.ConferenceData"/>.</summary>
+    public ConferenceData? ConferenceData { get; set; }
 
     /// <summary>"busy" | "free"</summary>
     public string? Availability { get; set; }
@@ -47,4 +50,7 @@ public class CalendarEvent
 
     /// <summary>Raw provider event payload.</summary>
     public JsonElement? Original { get; set; }
+
+    /// <summary>"created" | "updated" | "deleted"; set only on events in a <see cref="WebhookDelivery"/>.</summary>
+    public string? ChangeType { get; set; }
 }

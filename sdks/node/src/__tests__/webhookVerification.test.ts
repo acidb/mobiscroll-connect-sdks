@@ -122,19 +122,18 @@ describe('Webhooks.verifyWebhook', () => {
     expect(delivery.userId).toBe('user_42');
   });
 
-  it('parses a delivery with a conference object and keeps start/end as ISO strings', async () => {
+  it('parses a delivery with a conference URL and keeps start/end as ISO strings', async () => {
     get.mockResolvedValue(keysResponse([vectors.keys.active]));
     const vector = byName('delivery: Google events with and without a conference');
 
     const delivery = await createClient().webhooks.verifyWebhook(vector.body, vector.headers);
 
     const [meeting, lunch] = delivery.events;
-    // The raw object as delivered; declared `string` like CalendarEvent.conference.
-    expect(meeting.conference).toEqual({
-      url: 'https://meet.google.com/abc-defg-hij',
+    expect(meeting.conference).toBe('https://meet.google.com/abc-defg-hij');
+    expect(meeting.conferenceData).toEqual({
       provider: 'hangoutsMeet',
-      meetingProvider: 'hangoutsMeet',
-      data: expect.objectContaining({ conferenceId: 'abc-defg-hij' }),
+      url: 'https://meet.google.com/abc-defg-hij',
+      original: expect.objectContaining({ conferenceId: 'abc-defg-hij' }),
     });
     expect(meeting.start).toBe('2026-09-22T09:00:00.000Z');
     expect(meeting.end).toBe('2026-09-22T10:00:00.000Z');
@@ -156,7 +155,8 @@ describe('Webhooks.verifyWebhook', () => {
     const delivery = await createClient().webhooks.verifyWebhook(vector.body, vector.headers);
 
     const [teams, deleted] = delivery.events;
-    expect((teams.conference as unknown as { provider: string }).provider).toBe('teams');
+    expect(teams.conference).toBe('https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc');
+    expect(teams.conferenceData?.provider).toBe('teams');
     expect(deleted.changeType).toBe('deleted');
     expect(deleted.calendarId).toBeUndefined();
     expect(deleted.original).toBeUndefined();
@@ -174,14 +174,12 @@ describe('Webhooks.verifyWebhook', () => {
       'delivery: 1.6.1 Google Meet event with conferenceData and a cancelled event with calendarId'
     );
     const [meet, cancelled] = google.events;
-    expect(meet.conferenceData).toEqual(
-      expect.objectContaining({
-        provider: 'hangoutsMeet',
-        url: 'https://meet.google.com/abc-defg-hij',
-        original: expect.objectContaining({ conferenceId: 'abc-defg-hij' }),
-        conferenceId: 'abc-defg-hij',
-      })
-    );
+    expect(meet.conference).toBe('https://meet.google.com/abc-defg-hij');
+    expect(meet.conferenceData).toEqual({
+      provider: 'hangoutsMeet',
+      url: 'https://meet.google.com/abc-defg-hij',
+      original: expect.objectContaining({ conferenceId: 'abc-defg-hij' }),
+    });
     expect(cancelled.calendarId).toBe('work@company.com');
     expect(cancelled.status).toBe('cancelled');
 
@@ -189,13 +187,11 @@ describe('Webhooks.verifyWebhook', () => {
       'delivery: 1.6.1 Microsoft Teams event with conferenceData and a deleted placeholder with calendarId'
     );
     const [teams, deleted] = microsoft.events;
-    expect(teams.conferenceData).toEqual(
-      expect.objectContaining({
-        provider: 'teams',
-        url: 'https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc',
-        original: { joinUrl: expect.any(String), conferenceId: '123456789' },
-      })
-    );
+    expect(teams.conferenceData).toEqual({
+      provider: 'teams',
+      url: 'https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc',
+      original: { joinUrl: expect.any(String), conferenceId: '123456789' },
+    });
     expect(deleted.calendarId).toBe('AAMkAGI2Y2FsAAA=');
     expect(deleted.original).toBeUndefined();
 
@@ -203,6 +199,7 @@ describe('Webhooks.verifyWebhook', () => {
       'delivery: 1.6.1 Apple event with a URL as conference and a deleted placeholder with calendarId'
     );
     const [booking, removed] = apple.events;
+    expect(booking.conference).toBe('https://example.com/room/42');
     expect(booking.conferenceData).toEqual({
       provider: 'caldav',
       url: 'https://example.com/room/42',
