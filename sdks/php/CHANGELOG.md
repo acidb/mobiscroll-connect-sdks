@@ -13,22 +13,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
 - `generateAuthUrl()` accepts a `theme` option (`'light'`, `'dark'` or `'auto'`) that sets the color scheme of the Connect pages.
 - `Calendar` objects now include `account` (the connected account the calendar belongs to) and `readOnly` (`true` when the connection cannot write to it).
+- `ConferenceData`, the type of `CalendarEvent::$conferenceData`, with `provider`, `url`, `autoGenerate` and `original`. `$conferenceData` was an array; read the provider's own keys, such as `entryPoints`, from `original`.
+- `CalendarEvent::$changeType` (`'created'`, `'updated'` or `'deleted'`), set on the events of a `verifyWebhook()` delivery. `WebhookEvent` is now deprecated and will be removed in 2.0.0; type against `CalendarEvent`. `new WebhookEvent(...)` now takes the arguments of the `CalendarEvent` constructor.
 
 ### Fixed
 
-- `verifyWebhook()` accepts deliveries whose events include a conference. Before, it rejected the whole delivery with reason `invalid_payload`.
-- On those events:
-  - `$conference` is the join URL, or `null` when the delivered object has no `url`.
-  - `$conferenceData` is the REST shape returned by `events()->list()`: the delivery's own `conferenceData` (Connect 1.6.1 and later), or for an earlier delivery, one built from the delivered `conference` object.
-- A `conference` that is neither a string, an object nor `null` fails with reason `invalid_payload`.
-- `verifyWebhook()`, documentation only (no change in behaviour): the doc comments of `verifyWebhook()` and `WebhookVerificationError` said to answer a failed verification with a `4xx`. They now say:
-  - `503` when `reason` is `no_public_keys`: the public keys could not be loaded, and Connect retries the delivery.
-  - `401` for every other reason: Connect does not retry.
-  - The README example already answered this way.
-  - If your handler answers a `4xx` for `no_public_keys`, Connect drops that delivery; answer `503` instead.
+- `verifyWebhook()` accepts deliveries whose events include a conference, with `$conference` as the join URL. It rejected the whole delivery with reason `invalid_payload`, because Connect sent `conference` as an object before 1.6.1.
+- Doc comments of `verifyWebhook()` and `WebhookVerificationError`, no code change: answer a failed verification with `503` when the reason is `no_public_keys`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.
 - `events()->create()` and `events()->update()` now return the written event. They threw `ServerError` on every successful write, because they expected the event inside an `event` field.
 - The default `scope` of `generateAuthUrl()` is now `'read-write'`. It was `'calendar'`, which is not a Connect scope; Connect treated it as `read-write`, so the authorization behaves the same.
-- Documentation only: the doc comments of `create()` and `update()` now list the fields the API accepts: `attendees` as email strings, `conference`, `conferenceData` (`autoGenerate`), `recurrence`, `custom`, `availability`, `privacy` and `status`.
+- Doc comments of `create()` and `update()`, no code change: they now list the fields the API accepts: `attendees` as email strings, `conference`, `conferenceData` (`autoGenerate`), `recurrence`, `custom`, `availability`, `privacy` and `status`.
 
 ## [1.6.0] — 2026-10-08
 

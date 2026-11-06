@@ -13,20 +13,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
 - `generateAuthUrl()` accepts a `theme` option (`'light'`, `'dark'` or `'auto'`) that sets the color scheme of the Connect pages.
 - `ConferenceData` declares `url` and `original`, which the API returns from 1.6.1.
+- `CalendarEvent.changeType` (`'created'`, `'updated'` or `'deleted'`), set on the events of a `verifyWebhook()` delivery. `WebhookEvent` is now a deprecated alias of `CalendarEvent` and will be removed in 2.0.0.
 
 ### Fixed
 
-- `verifyWebhook()` return type (types only, no change at runtime):
-  - `start` and `end` are typed `string`, the ISO 8601 strings the SDK returns. They were typed `Date`, so calling `Date` methods on them threw.
-  - `lastModified` is always present.
-  - `original` is optional: deleted Microsoft, Apple and CalDAV events arrive without it.
-  - `calendarId` is optional: deleted Microsoft, Apple and CalDAV events in deliveries sent before Connect 1.6.1 arrive without it.
-- `verifyWebhook()`, documentation only (no change in behaviour): the doc comments of `verifyWebhook()` and `WebhookVerificationError` said to answer a failed verification with a `4xx`. They now say:
-  - `503` when `reason` is `no_public_keys`: the public keys could not be loaded, and Connect retries the delivery.
-  - `401` for every other reason: Connect does not retry.
-  - The README example already answered this way.
-  - If your handler answers a `4xx` for `no_public_keys`, Connect drops that delivery; answer `503` instead.
-- `start` and `end` on `CalendarEvent` from `events.list()`, `events.create()` and `events.update()` are typed `string` too, for the same reason.
+- `CalendarEvent.conference` in a `verifyWebhook()` delivery is now the join URL string, as declared. It was the delivered object at runtime, because Connect sent `conference` as an object before 1.6.1.
+- `ConferenceData` no longer declares an index signature for provider keys such as `entryPoints`. From Connect 1.6.1 those keys are only in `ConferenceData.original`.
+- `start` and `end` on `CalendarEvent` are typed `string`, the ISO 8601 strings the SDK returns from `events.list()`, `events.create()`, `events.update()` and `verifyWebhook()`. They were typed `Date`, so calling `Date` methods on them threw.
+- `CalendarEvent.original` is typed optional: deleted Microsoft, Apple and CalDAV events in a `verifyWebhook()` delivery arrive without it.
+- Doc comments of `verifyWebhook()` and `WebhookVerificationError`, no code change: answer a failed verification with `503` when the reason is `no_public_keys`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.
 - The `EventCreateData` and `EventUpdateData` types were missing `conference` (a meeting URL) and `conferenceData`, so TypeScript rejected `{ autoGenerate: true }` in an object literal. The SDK already sent both fields at runtime.
 - The `Calendar` type was missing `account` (the connected account the calendar belongs to) and `readOnly` (`true` when the connection cannot write to it). Both were already present at runtime.
 

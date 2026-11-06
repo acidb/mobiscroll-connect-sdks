@@ -14,16 +14,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `generate_auth_url()` accepts a `theme` option (`"light"`, `"dark"` or `"auto"`) that sets the color scheme of the Connect pages, on the sync and async clients.
 - `Calendar` objects now include `account` (the connected account the calendar belongs to) and `read_only` (`True` when the connection cannot write to it).
 - `events.create()` and `events.update()` send a `conference_data` key as `conferenceData`, so `{"autoGenerate": True}` creates a meeting link. `conference` takes a meeting URL.
+- `ConferenceData`, the type of `CalendarEvent.conference_data`, with `provider`, `url`, `auto_generate` and `original`. `conference_data` was a plain mapping; read the provider's own keys, such as `entryPoints`, from `original`.
+- `CalendarEvent.change_type` (`"created"`, `"updated"` or `"deleted"`), set on the events of a `verify_webhook()` delivery. `WebhookEvent` is now a deprecated alias of `CalendarEvent` and will be removed in 2.0.0.
 
 ### Fixed
 
+- `CalendarEvent.conference` in a `verify_webhook()` delivery is now the join URL string, as annotated. It was the delivered dict, because Connect sent `conference` as an object before 1.6.1.
 - `events.create()` and `events.update()` now return the written event, on the sync and async clients. They raised `ServerError` on every successful write, because they expected the event inside an `event` field.
 - The default `scope` of `generate_auth_url()` is now `"read-write"`, on the sync and async clients. It was `"calendar"`, which is not a Connect scope; Connect treated it as `read-write`, so the authorization behaves the same.
-- `verify_webhook()`, documentation only (no change in behaviour): the doc comments of `verify_webhook()` and `WebhookVerificationError` said to answer a failed verification with a `4xx`. They now say:
-  - `503` when `reason` is `"no_public_keys"`: the public keys could not be loaded, and Connect retries the delivery.
-  - `401` for every other reason: Connect does not retry.
-  - The README example already answered this way.
-  - If your handler answers a `4xx` for `"no_public_keys"`, Connect drops that delivery; answer `503` instead.
+- Doc comments of `verify_webhook()` and `WebhookVerificationError`, no code change: answer a failed verification with `503` when the reason is `"no_public_keys"`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.
 
 ## [1.6.0] — 2026-10-08
 
