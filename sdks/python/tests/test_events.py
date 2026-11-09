@@ -87,11 +87,7 @@ EVENT_RESPONSE = {
     "provider": "google", "id": "evt-1", "calendarId": "primary", "title": "x",
     "start": "2024-06-15T10:00:00.000Z", "end": "2024-06-15T11:00:00.000Z", "allDay": False,
     "conference": "https://meet.google.com/abc-defg-hij",
-    "conferenceData": {
-        "provider": "hangoutsMeet",
-        "url": "https://meet.google.com/abc-defg-hij",
-        "original": {"conferenceId": "abc-defg-hij"},
-    },
+    "conferenceData": {"provider": "hangoutsMeet", "conferenceId": "abc-defg-hij"},
 }
 
 

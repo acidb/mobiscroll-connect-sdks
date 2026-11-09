@@ -89,11 +89,8 @@ describe('Events Resource', () => {
           conference: 'https://meet.google.com/abc-defg-hij',
           conferenceData: {
             provider: 'google-meet',
-            url: 'https://meet.google.com/abc-defg-hij',
-            original: {
-              conferenceId: 'abc-defg-hij',
-              entryPoints: [{ entryPointType: 'video', uri: 'https://meet.google.com/abc-defg-hij' }],
-            },
+            conferenceId: 'abc-defg-hij',
+            entryPoints: [{ entryPointType: 'video', uri: 'https://meet.google.com/abc-defg-hij' }],
           },
           lastModified: '2026-03-10T13:36:08.000Z',
           original: {},
@@ -111,6 +108,36 @@ describe('Events Resource', () => {
       expect(event.description).toBe('Weekly team sync');
       expect(event.conferenceData?.provider).toBe('google-meet');
       expect(event.lastModified).toBe('2026-03-10T13:36:08.000Z');
+    });
+
+    it('keeps fields this SDK version does not know', async () => {
+      mockApiClient.get.mockResolvedValue({
+        data: {
+          events: [
+            {
+              id: '1',
+              title: 'Standup',
+              start: '2023-01-01T10:00:00Z',
+              end: '2023-01-01T11:00:00Z',
+              allDay: false,
+              provider: 'zoho',
+              calendarId: 'cal1',
+              original: {},
+              futureField: 'x',
+            },
+          ],
+          pageSize: 1,
+          futureListField: 5,
+        },
+        status: 200,
+        headers: {},
+      });
+
+      const result = await events.list();
+
+      expect(result.events[0].id).toBe('1');
+      expect(result.events[0].provider).toBe('zoho');
+      expect((result.events[0] as unknown as Record<string, unknown>).futureField).toBe('x');
     });
   });
 

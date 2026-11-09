@@ -11,6 +11,12 @@ public enum Provider
     Microsoft,
     Apple,
     CalDav,
+
+    /// <summary>
+    /// A provider value this SDK version does not know, sent by a newer Connect. Responses and webhook
+    /// deliveries read it as <c>Unknown</c> instead of failing. The API rejects it in a request.
+    /// </summary>
+    Unknown,
 }
 
 public static class ProviderExtensions
@@ -32,6 +38,15 @@ public static class ProviderExtensions
         "caldav" => Provider.CalDav,
         _ => throw new ArgumentException($"Unknown provider value '{value}'", nameof(value)),
     };
+
+    internal static Provider FromResponseString(string value) => value switch
+    {
+        "google" => Provider.Google,
+        "microsoft" => Provider.Microsoft,
+        "apple" => Provider.Apple,
+        "caldav" => Provider.CalDav,
+        _ => Provider.Unknown,
+    };
 }
 
 internal sealed class ProviderJsonConverter : JsonConverter<Provider>
@@ -40,11 +55,11 @@ internal sealed class ProviderJsonConverter : JsonConverter<Provider>
     {
         var value = reader.GetString()
             ?? throw new JsonException("Expected string for Provider");
-        return ProviderExtensions.FromWireString(value);
+        return ProviderExtensions.FromResponseString(value);
     }
 
     public override void Write(Utf8JsonWriter writer, Provider value, JsonSerializerOptions options)
     {
-        writer.WriteStringValue(value.ToWireString());
+        writer.WriteStringValue(value == Provider.Unknown ? "unknown" : value.ToWireString());
     }
 }

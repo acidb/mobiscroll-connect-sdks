@@ -44,7 +44,7 @@ ApiClient                          OkHttp wrapper
   └── AtomicReference<CompletableFuture<TokenResponse>> inflight
                                     CAS-based dedup of concurrent refreshes
 
-Provider                            enum {GOOGLE, MICROSOFT, APPLE, CALDAV}
+Provider                            enum {GOOGLE, MICROSOFT, APPLE, CALDAV}; JSON reads an unknown value as null (fromJson), fromWire still throws
                                     wire form lowercase via @JsonValue/@JsonCreator
 MobiscrollConnectConfig             immutable config + Builder
 WebhookVerifier                     static verifyWebhookSignature (pure Ed25519 v1a check)
@@ -106,7 +106,7 @@ cd minimal-app && mvn spring-boot:run          # run the Spring Boot demo
 | `connect-sdk/src/main/java/com/mobiscroll/connect/resources/Auth.java` | OAuth flow |
 | `connect-sdk/src/main/java/com/mobiscroll/connect/resources/Calendars.java` | List calendars |
 | `connect-sdk/src/main/java/com/mobiscroll/connect/resources/Events.java` | Events CRUD |
-| `connect-sdk/src/main/java/com/mobiscroll/connect/resources/Webhooks.java` | subscribe / unsubscribe / `verifyWebhook` (deserializes the delivery directly; events are `CalendarEvent` with `getChangeType()`; `WebhookEvent` is `@Deprecated`, removed in 2.0.0) |
+| `connect-sdk/src/main/java/com/mobiscroll/connect/resources/Webhooks.java` | subscribe / unsubscribe / `verifyWebhook` (converts each event's `conference` object to `conference` = url string and `conferenceData` = REST shape before binding to `WebhookEvent extends CalendarEvent`) |
 | `connect-sdk/src/main/java/com/mobiscroll/connect/WebhookVerifier.java` | `verifyWebhookSignature` (pure Ed25519 `v1a` check, JDK crypto) |
 | `connect-sdk/src/main/java/com/mobiscroll/connect/internal/WebhookKeyStore.java` | Process-wide webhook key cache + test clock hook |
 | `connect-sdk/src/main/java/com/mobiscroll/connect/models/*.java` | Request/response DTOs |

@@ -8,7 +8,7 @@ and tolerate missing optional fields.
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
@@ -119,40 +119,8 @@ class EventAttendee:
 
 
 @dataclass(frozen=True)
-class ConferenceData:
-    """The conference of an event, with the same fields on every provider.
-
-    ``provider`` is the conference system (``hangoutsMeet``, ``google-meet``, ``teams``, ``caldav``),
-    ``url`` the join URL, ``auto_generate`` whether a meeting link was requested, and ``original``
-    the conference data exactly as the calendar provider returns it (Google's ``conferenceData``,
-    Microsoft's ``onlineMeeting``); ``None`` for Apple and CalDAV.
-    """
-
-    provider: str | None = None
-    url: str | None = None
-    auto_generate: bool | None = None
-    original: Mapping[str, Any] | None = None
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> ConferenceData:
-        original = data.get("original")
-        auto_generate = data.get("autoGenerate")
-        return cls(
-            provider=data.get("provider"),
-            url=data.get("url"),
-            auto_generate=auto_generate if isinstance(auto_generate, bool) else None,
-            original=original if isinstance(original, Mapping) else None,
-        )
-
-
-@dataclass(frozen=True)
 class CalendarEvent:
-    """An event from any calendar provider.
-
-    ``change_type`` (``"created"``, ``"updated"`` or ``"deleted"``) is set only on events in a
-    :class:`WebhookDelivery`. Deleted Microsoft, Apple and CalDAV events arrive as placeholders:
-    rely only on ``id``, ``provider``, ``calendar_id`` and ``change_type`` for them.
-    """
+    """An event from any calendar provider."""
 
     provider: str
     id: str
@@ -173,31 +141,11 @@ class CalendarEvent:
     link: str | None = None
     original: Mapping[str, Any] = field(default_factory=dict)
     description: str | None = None
-    conference_data: ConferenceData | None = None
+    conference_data: Mapping[str, Any] | None = None
     last_modified: str | None = None
-    change_type: str | None = None
 
     @classmethod
-    def from_dict(
-        cls,
-        data: Mapping[str, Any],
-        *,
-        provider: str | None = None,
-        calendar_id: str | None = None,
-    ) -> CalendarEvent:
-        """Build an event from its wire form.
-
-        ``provider`` and ``calendar_id`` are fallbacks for an event that omits them, as deleted
-        placeholders in webhook deliveries sent before Connect 1.6.1 do. Without a fallback a
-        missing ``provider``, ``id`` or ``calendarId`` raises ``ValueError``.
-        """
-        if provider is not None or calendar_id is not None:
-            merged = dict(data)
-            for key, fallback in (("provider", provider), ("calendarId", calendar_id), ("id", "")):
-                if merged.get(key) is None and fallback is not None:
-                    merged[key] = fallback
-            data = merged
-        conference_data_raw = data.get("conferenceData")
+    def from_dict(cls, data: Mapping[str, Any]) -> CalendarEvent:
         attendees_raw = data.get("attendees")
         attendees: list[EventAttendee] | None = None
         if isinstance(attendees_raw, list):
@@ -226,13 +174,8 @@ class CalendarEvent:
             link=data.get("link"),
             original=data.get("original", {}) or {},
             description=data.get("description"),
-            conference_data=(
-                ConferenceData.from_dict(conference_data_raw)
-                if isinstance(conference_data_raw, Mapping)
-                else None
-            ),
+            conference_data=data.get("conferenceData"),
             last_modified=data.get("lastModified"),
-            change_type=data.get("changeType"),
         )
 
 
@@ -409,9 +352,41 @@ class UnsubscribeWebhookResponse:
         )
 
 
-#: Deprecated alias of :class:`CalendarEvent`, which carries ``change_type`` for webhook
-#: deliveries. It will be removed in 2.0.0.
-WebhookEvent = CalendarEvent
+@dataclass(frozen=True)
+class WebhookEvent(CalendarEvent):
+    """A changed event inside a :class:`WebhookDelivery`.
+
+    ``change_type`` is ``"created"``, ``"updated"`` or ``"deleted"``. ``provider`` and
+    ``calendar_id`` fall back to the delivery's own when the event omits them, as deleted
+    Microsoft, Apple and CalDAV events do in deliveries sent before Connect 1.6.1; rely only
+    on ``id``, ``provider``, ``calendar_id`` and ``change_type`` for a deleted event.
+
+    ``conference`` is whatever the delivery carried, unchanged. Deliveries send an object
+    (``url``, ``provider``, ``meetingProvider``, ``data``, with the wire keys as sent) where
+    ``events.list()`` returns the join URL as a string, and it is ``None`` when the delivery
+    omits it or sends null.
+    """
+
+    conference: Mapping[str, Any] | None = None  # type: ignore[assignment]
+    change_type: str | None = None
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        *,
+        provider: str = "",
+        calendar_id: str = "",
+    ) -> WebhookEvent:
+        merged = dict(data)
+        for key, fallback in (("provider", provider), ("calendarId", calendar_id), ("id", "")):
+            if merged.get(key) is None:
+                merged[key] = fallback
+        event = CalendarEvent.from_dict(merged)
+        return cls(
+            **{f.name: getattr(event, f.name) for f in fields(CalendarEvent)},
+            change_type=data.get("changeType"),
+        )
 
 
 @dataclass(frozen=True)
@@ -440,7 +415,7 @@ class WebhookDelivery:
     provider: str
     user_id: str
     calendar_id: str
-    events: list[CalendarEvent] = field(default_factory=list)
+    events: list[WebhookEvent] = field(default_factory=list)
     change_type: str | None = None
     timestamp: str = ""
     metadata: WebhookDeliveryMetadata = field(default_factory=WebhookDeliveryMetadata)
@@ -456,7 +431,7 @@ class WebhookDelivery:
             user_id=data.get("userId") or "",
             calendar_id=calendar_id,
             events=[
-                CalendarEvent.from_dict(e, provider=provider, calendar_id=calendar_id)
+                WebhookEvent.from_dict(e, provider=provider, calendar_id=calendar_id)
                 for e in events_raw
                 if isinstance(e, Mapping)
             ],

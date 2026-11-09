@@ -276,16 +276,18 @@ RSpec.describe 'Webhook verification' do
       expect(reason_of { create_client.webhooks.verify_webhook(body, headers) }).to eq('invalid_payload')
     end
 
-    it 'parses a delivery with a conference URL' do
+    it 'parses a delivery with a conference object' do
       WebMock.stub_request(:get, keys_url).to_return(keys_response([keys['active']]))
       case_ = vector('delivery: Google events with and without a conference')
 
       delivery = create_client.webhooks.verify_webhook(case_['body'], case_['headers'])
 
       meeting, lunch = delivery.events
-      expect(meeting.conference).to eq('https://meet.google.com/abc-defg-hij')
-      expect(meeting.conference_data.provider).to eq('hangoutsMeet')
-      expect(meeting.conference_data.original['conferenceId']).to eq('abc-defg-hij')
+      expect(meeting.conference).to be_a(Hash)
+      expect(meeting.conference['url']).to eq('https://meet.google.com/abc-defg-hij')
+      expect(meeting.conference['provider']).to eq('hangoutsMeet')
+      expect(meeting.conference['meetingProvider']).to eq('hangoutsMeet')
+      expect(meeting.conference['data']['conferenceId']).to eq('abc-defg-hij')
       expect(meeting.start).to eq('2026-09-22T09:00:00.000Z')
       expect(meeting.change_type).to eq('updated')
       expect(lunch.conference).to be_nil
@@ -299,7 +301,7 @@ RSpec.describe 'Webhook verification' do
 
       teams, deleted = create_client.webhooks.verify_webhook(case_['body'], case_['headers']).events
 
-      expect(teams.conference).to eq('https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc')
+      expect(teams.conference['provider']).to eq('teams')
       expect(deleted.change_type).to eq('deleted')
       expect(deleted.calendar_id).to be_nil
       expect(deleted.original).to be_nil
@@ -315,18 +317,18 @@ RSpec.describe 'Webhook verification' do
       meet, cancelled = verify.call(
         'delivery: 1.6.1 Google Meet event with conferenceData and a cancelled event with calendarId'
       ).events
-      expect(meet.conference).to eq('https://meet.google.com/abc-defg-hij')
-      expect(meet.conference_data.provider).to eq('hangoutsMeet')
-      expect(meet.conference_data.url).to eq('https://meet.google.com/abc-defg-hij')
-      expect(meet.conference_data.original['conferenceId']).to eq('abc-defg-hij')
+      expect(meet.conference_data['provider']).to eq('hangoutsMeet')
+      expect(meet.conference_data['url']).to eq('https://meet.google.com/abc-defg-hij')
+      expect(meet.conference_data['original']['conferenceId']).to eq('abc-defg-hij')
+      expect(meet.conference_data['conferenceId']).to eq('abc-defg-hij')
       expect(cancelled.calendar_id).to eq('work@company.com')
       expect(cancelled.status).to eq('cancelled')
 
       teams, deleted = verify.call(
         'delivery: 1.6.1 Microsoft Teams event with conferenceData and a deleted placeholder with calendarId'
       ).events
-      expect(teams.conference_data.provider).to eq('teams')
-      expect(teams.conference_data.original).to eq(
+      expect(teams.conference_data['provider']).to eq('teams')
+      expect(teams.conference_data['original']).to eq(
         'joinUrl' => 'https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc', 'conferenceId' => '123456789'
       )
       expect(deleted.calendar_id).to eq('AAMkAGI2Y2FsAAA=')
@@ -334,20 +336,36 @@ RSpec.describe 'Webhook verification' do
       booking, removed = verify.call(
         'delivery: 1.6.1 Apple event with a URL as conference and a deleted placeholder with calendarId'
       ).events
-      expect(booking.conference_data).to eq(
-        Mobiscroll::Connect::ConferenceData.new(provider: 'caldav', url: 'https://example.com/room/42')
-      )
+      expect(booking.conference_data).to eq('provider' => 'caldav', 'url' => 'https://example.com/room/42')
       expect(removed.calendar_id).to eq('https://caldav.icloud.com/1234567/calendars/work/')
     end
 
-    it 'keeps WebhookEvent as a deprecated alias of CalendarEvent' do
+    it 'accepts fields and a provider value this SDK version does not know' do
+      WebMock.stub_request(:get, keys_url).to_return(keys_response([keys['active']]))
+      verify = lambda do |name|
+        case_ = vector(name)
+        create_client.webhooks.verify_webhook(case_['body'], case_['headers'])
+      end
+
+      extra = verify.call('delivery: 1.6.1 Google event with fields this SDK version does not know')
+      expect(extra.events.first.id).to eq('evt_meet_1')
+      expect(extra.events.first.conference_data['url']).to eq('https://meet.google.com/abc-defg-hij')
+      expect(extra.metadata.event_count).to eq(1)
+
+      zoho = verify.call('delivery: 1.6.1 provider value this SDK version does not know')
+      expect(zoho.provider).to eq('zoho')
+      expect(zoho.events.first.id).to eq('evt_zoho_1')
+      expect(zoho.events.first.provider).to eq('zoho')
+    end
+
+    it 'maps a present, absent or null conference' do
       base = { 'id' => 'e1', 'provider' => 'google', 'changeType' => 'updated' }
 
-      event = Mobiscroll::Connect::WebhookEvent.from_h(base.merge('conference' => 'https://y'))
-      expect(Mobiscroll::Connect::WebhookEvent).to be(Mobiscroll::Connect::CalendarEvent)
-      expect(event.change_type).to eq('updated')
-      expect(event.conference).to eq('https://y')
-      expect(Mobiscroll::Connect::CalendarEvent.from_h(base).conference).to be_nil
+      conference = { 'url' => 'https://x', 'provider' => 'teams', 'meetingProvider' => 'teams' }
+      present = Mobiscroll::Connect::WebhookEvent.from_h(base.merge('conference' => conference))
+      expect(present.conference).to eq(conference)
+      expect(Mobiscroll::Connect::WebhookEvent.from_h(base).conference).to be_nil
+      expect(Mobiscroll::Connect::WebhookEvent.from_h(base.merge('conference' => nil)).conference).to be_nil
     end
   end
 end

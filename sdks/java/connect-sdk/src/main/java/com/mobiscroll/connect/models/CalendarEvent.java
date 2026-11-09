@@ -12,13 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mobiscroll.connect.Provider;
 
-/**
- * A calendar event resource. Not final only so the deprecated {@link WebhookEvent} can extend it.
- *
- * <p>{@link #getChangeType()} is set only on events in a {@link WebhookDelivery}. Deleted Microsoft, Apple and
- * CalDAV events arrive there as placeholders without {@code original}; rely only on {@link #getId()},
- * {@link #getProvider()}, {@link #getCalendarId()} and {@link #getChangeType()} for them.
- */
+/** A calendar event resource. Not final only so {@link WebhookEvent} can add the delivery's change type. */
 public class CalendarEvent {
 
     private final String id;
@@ -43,11 +37,10 @@ public class CalendarEvent {
     private final String link;
     private final JsonNode original;
     private final String description;
-    private final ConferenceData conferenceData;
+    /** Provider-specific conference metadata; keys vary per provider. */
+    private final Map<String, Object> conferenceData;
     /** ISO 8601 timestamp of the last modification. */
     private final String lastModified;
-    /** {@code "created"}, {@code "updated"} or {@code "deleted"}; set only in webhook deliveries. */
-    private final String changeType;
     private final Map<String, Object> additional = new HashMap<>();
 
     @JsonCreator
@@ -71,9 +64,8 @@ public class CalendarEvent {
             @JsonProperty("link") String link,
             @JsonProperty("original") JsonNode original,
             @JsonProperty("description") String description,
-            @JsonProperty("conferenceData") ConferenceData conferenceData,
-            @JsonProperty("lastModified") String lastModified,
-            @JsonProperty("changeType") String changeType) {
+            @JsonProperty("conferenceData") Map<String, Object> conferenceData,
+            @JsonProperty("lastModified") String lastModified) {
         this.id = id;
         this.provider = provider;
         this.calendarId = calendarId;
@@ -95,7 +87,6 @@ public class CalendarEvent {
         this.description = description;
         this.conferenceData = conferenceData;
         this.lastModified = lastModified;
-        this.changeType = changeType;
     }
 
     public String getId() { return id; }
@@ -111,7 +102,6 @@ public class CalendarEvent {
     public String getColor() { return color; }
     public List<Attendee> getAttendees() { return attendees; }
     public Map<String, Object> getCustom() { return custom; }
-    /** The join URL of the event's conference. */
     public String getConference() { return conference; }
     public String getAvailability() { return availability; }
     public String getPrivacy() { return privacy; }
@@ -120,12 +110,10 @@ public class CalendarEvent {
     public JsonNode getOriginal() { return original; }
     /** Event description or notes. */
     public String getDescription() { return description; }
-    /** The conference details; see {@link ConferenceData}. */
-    public ConferenceData getConferenceData() { return conferenceData; }
+    /** Provider-specific conference metadata; use it for details beyond {@link #getConference()}. */
+    public Map<String, Object> getConferenceData() { return conferenceData; }
     /** ISO 8601 timestamp of the last modification, e.g. {@code 2026-03-10T13:36:08.000Z}. */
     public String getLastModified() { return lastModified; }
-    /** {@code "created"}, {@code "updated"} or {@code "deleted"}; set only on events in a {@link WebhookDelivery}. */
-    public String getChangeType() { return changeType; }
 
     @JsonAnyGetter
     public Map<String, Object> getAdditional() { return additional; }

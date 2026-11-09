@@ -21,7 +21,6 @@ public enum Provider {
         return wire;
     }
 
-    @JsonCreator
     public static Provider fromWire(String value) {
         if (value == null) {
             return null;
@@ -32,5 +31,22 @@ public enum Provider {
             }
         }
         throw new IllegalArgumentException("Unknown provider: " + value);
+    }
+
+    /**
+     * Reads a provider from an API response or a webhook delivery. A value this SDK version does not
+     * know, sent by a newer Connect, is read as {@code null} instead of failing the whole response.
+     */
+    @JsonCreator
+    static Provider fromJson(String value) {
+        if (value == null) {
+            return null;
+        }
+        for (Provider p : values()) {
+            if (p.wire.equalsIgnoreCase(value)) {
+                return p;
+            }
+        }
+        return null;
     }
 }

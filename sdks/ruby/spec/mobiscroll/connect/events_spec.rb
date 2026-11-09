@@ -34,6 +34,18 @@ RSpec.describe Mobiscroll::Connect::Resources::Events do
       expect(result.events.first.end_time).to eq('2024-01-15T11:00:00Z')
     end
 
+    it 'ignores fields this SDK version does not know' do
+      MockServer.stub_json(:get, '/events', {
+                             'events' => [event_fixture.merge('provider' => 'zoho', 'futureField' => 'x')],
+                             'pageSize' => 50,
+                             'futureListField' => 5
+                           })
+
+      result = client.events.list
+      expect(result.events.first.provider).to eq('zoho')
+      expect(result.events.first.title).to eq('Team Meeting')
+    end
+
     it 'encodes calendar_ids as a JSON query param' do
       stub = WebMock.stub_request(:get, "#{MockServer::BASE_URL}/events")
                     .with(query: hash_including('calendarIds' => '{"google":["primary"]}'))

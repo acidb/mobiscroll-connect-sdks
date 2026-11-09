@@ -19,6 +19,22 @@ class SerializationTest {
         assertThat(p).isEqualTo(Provider.GOOGLE);
     }
 
+    @Test void providerReadsAValueThisSdkVersionDoesNotKnowAsNull() throws Exception {
+        assertThat(mapper.readValue("\"zoho\"", Provider.class)).isNull();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> Provider.fromWire("zoho"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test void eventsListResponseIgnoresFieldsThisSdkVersionDoesNotKnow() throws Exception {
+        com.mobiscroll.connect.models.EventsListResponse r = com.mobiscroll.connect.internal.JsonMapperHolder.get().readValue(
+                "{\"events\":[{\"id\":\"evt-1\",\"provider\":\"zoho\",\"calendarId\":\"cal-1\",\"title\":\"Planning\"," +
+                "\"futureField\":\"x\"}],\"pageSize\":1,\"futureListField\":5}",
+                com.mobiscroll.connect.models.EventsListResponse.class);
+        assertThat(r.getEvents()).hasSize(1);
+        assertThat(r.getEvents().get(0).getId()).isEqualTo("evt-1");
+        assertThat(r.getEvents().get(0).getProvider()).isNull();
+    }
+
     @Test void providerSerialisesToLowercaseString() throws Exception {
         String json = mapper.writeValueAsString(Provider.MICROSOFT);
         assertThat(json).isEqualTo("\"microsoft\"");
@@ -58,12 +74,11 @@ class SerializationTest {
                 "{\"id\":\"evt-1\",\"provider\":\"google\",\"calendarId\":\"primary\",\"title\":\"Standup\"," +
                 "\"description\":\"Weekly team sync\"," +
                 "\"conference\":\"https://meet.google.com/abc-defg-hij\"," +
-                "\"conferenceData\":{\"provider\":\"google-meet\",\"original\":{\"conferenceId\":\"abc-defg-hij\"}}," +
+                "\"conferenceData\":{\"provider\":\"google-meet\",\"conferenceId\":\"abc-defg-hij\"}," +
                 "\"lastModified\":\"2026-03-10T13:36:08.000Z\"}",
                 CalendarEvent.class);
         assertThat(e.getDescription()).isEqualTo("Weekly team sync");
-        assertThat(e.getConferenceData().getProvider()).isEqualTo("google-meet");
-        assertThat(e.getConferenceData().getOriginal()).containsEntry("conferenceId", "abc-defg-hij");
+        assertThat(e.getConferenceData()).containsEntry("provider", "google-meet");
         assertThat(e.getLastModified()).isEqualTo("2026-03-10T13:36:08.000Z");
     }
 

@@ -49,7 +49,7 @@ ApiClient                      — HttpClient wrapper; Bearer auth; 401 → toke
 MobiscrollConnectConfig        — sealed DTO: ClientId, ClientSecret, RedirectUri, WebhookPublicKey
 WebhookVerifier (static)       — VerifyWebhookSignature: pure Ed25519 `v1a` check (NSec.Cryptography / libsodium)
 WebhookKeyStore (internal)     — process-wide webhook key cache per keys URL
-Provider (enum)                — Google, Microsoft, Apple, CalDav; serialised via ProviderJsonConverter
+Provider (enum)                — Google, Microsoft, Apple, CalDav, Unknown (last, so the others keep their values); serialised via ProviderJsonConverter
 QueryStringBuilder (internal)  — builds URL query strings; booleans → "true"/"false" strings
 ServiceCollectionExtensions    — AddMobiscrollConnect() for ASP.NET Core DI
 Models/                        — request/response DTOs (sealed records/classes)
@@ -87,7 +87,7 @@ static readonly JsonSerializerOptions JsonOptions = new()
 };
 ```
 
-`ProviderJsonConverter` maps `Provider.Google ↔ "google"`, `Provider.Microsoft ↔ "microsoft"`, etc. `CalendarEvent` and `Calendar` include an `Original` (`JsonElement`) field for unmapped provider-specific data.
+`ProviderJsonConverter` maps `Provider.Google ↔ "google"`, `Provider.Microsoft ↔ "microsoft"`, etc. It reads a value it does not know as `Provider.Unknown` (a newer Connect must not fail a whole response or delivery) and writes `Unknown` as `"unknown"`; the public `FromWireString` and `ToWireString` still throw for it. `CalendarEvent` and `Calendar` include an `Original` (`JsonElement`) field for unmapped provider-specific data.
 
 ---
 
@@ -114,7 +114,7 @@ dotnet add package Mobiscroll.Connect          # consume (in another project)
 | `src/Mobiscroll.Connect/Resources/Auth.cs` | OAuth flow: GenerateAuthUrl, GetTokenAsync, GetConnectionStatusAsync, DisconnectAsync, RevokeAsync |
 | `src/Mobiscroll.Connect/Resources/Calendars.cs` | ListAsync() |
 | `src/Mobiscroll.Connect/Resources/Events.cs` | ListAsync, CreateAsync, UpdateAsync, DeleteAsync; ISO 8601 date formatting |
-| `src/Mobiscroll.Connect/Resources/Webhooks.cs` | SubscribeWebhookAsync, UnsubscribeWebhookAsync, VerifyWebhookAsync (deserializes the delivery directly; events are `CalendarEvent` with `ChangeType`; `WebhookEvent` is `[Obsolete]`, removed in 2.0.0) |
+| `src/Mobiscroll.Connect/Resources/Webhooks.cs` | SubscribeWebhookAsync, UnsubscribeWebhookAsync, VerifyWebhookAsync (converts each event's `conference` object to `Conference` = url string and `ConferenceData` = REST shape before binding to `WebhookEvent : CalendarEvent`) |
 | `src/Mobiscroll.Connect/WebhookVerifier.cs` | `WebhookVerifier.VerifyWebhookSignature` (pure Ed25519 `v1a` check) + `WebhookVerificationOptions` |
 | `src/Mobiscroll.Connect/Internal/WebhookKeyStore.cs` | Process-wide webhook key cache (`Reset()` and `Clock` are test hooks) |
 | `src/Mobiscroll.Connect/Models/` | Request/response DTOs (TokenResponse, CalendarEvent, EventCreateData, WebhookSubscribeData, etc.) |

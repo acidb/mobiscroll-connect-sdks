@@ -10,13 +10,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.mobiscroll.connect.Provider;
 
 /**
- * An event in a {@link WebhookDelivery}.
+ * A changed calendar event in a {@link WebhookDelivery}: a {@link CalendarEvent} plus {@link #getChangeType()}.
  *
- * @deprecated Use {@link CalendarEvent}, which has {@link CalendarEvent#getChangeType()} for webhook deliveries.
- *             {@code WebhookEvent} will be removed in 2.0.0.
+ * <p>Deliveries carry {@code conference} as an object. {@code verifyWebhook} converts it, so
+ * {@link #getConference()} is the join URL and {@link #getConferenceData()} the REST shape.
+ *
+ * <p>Deleted Microsoft, Apple and CalDAV events arrive as placeholders without {@code original} (and, in
+ * deliveries sent before Connect 1.6.1, without {@code calendarId}); rely only on {@link #getId()},
+ * {@link #getProvider()}, {@link #getCalendarId()} and {@link #getChangeType()} for a deleted event.
  */
-@Deprecated
 public final class WebhookEvent extends CalendarEvent {
+
+    /** {@code "created"}, {@code "updated"} or {@code "deleted"}. */
+    private final String changeType;
 
     @JsonCreator
     public WebhookEvent(
@@ -39,11 +45,15 @@ public final class WebhookEvent extends CalendarEvent {
             @JsonProperty("link") String link,
             @JsonProperty("original") JsonNode original,
             @JsonProperty("description") String description,
-            @JsonProperty("conferenceData") ConferenceData conferenceData,
+            @JsonProperty("conferenceData") Map<String, Object> conferenceData,
             @JsonProperty("lastModified") String lastModified,
             @JsonProperty("changeType") String changeType) {
         super(id, provider, calendarId, recurringEventId, title, location, start, end, allDay, color, attendees,
                 custom, conference, availability, privacy, status, link, original, description, conferenceData,
-                lastModified, changeType);
+                lastModified);
+        this.changeType = changeType;
     }
+
+    /** {@code "created"}, {@code "updated"} or {@code "deleted"}. */
+    public String getChangeType() { return changeType; }
 }

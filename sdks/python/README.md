@@ -236,7 +236,7 @@ def mobiscroll_webhook():
 
 On the async client, `await client.webhooks.verify_webhook(await request.body(), request.headers)`.
 
-Each event is a `CalendarEvent` with `change_type` set. `conference` is the join URL, and `conference_data` is a `ConferenceData` (`provider`, `url`, `auto_generate`, `original`), as `events.list()` returns. `WebhookEvent` is a deprecated alias of `CalendarEvent` and will be removed in 2.0.0.
+Each event's `conference` is exactly what the delivery carried, not the join-URL string `events.list()` returns: a dict with the keys `url`, `provider`, `meetingProvider` and `data` (as sent, camelCase), or `None` when the delivery omits it or sends null. `WebhookEvent.conference` is annotated `Mapping[str, Any] | None` accordingly. `conference_data` is the delivery's `conferenceData` (Connect 1.6.1 and later), the same object `events.list()` returns, passed through unchanged.
 
 The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process (shared by every client instance) as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side.
 

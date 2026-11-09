@@ -29,6 +29,27 @@ public class SerializationTests
     }
 
     [Fact]
+    public void Provider_ReadsAValueThisSdkVersionDoesNotKnowAsUnknown()
+    {
+        Assert.Equal(Provider.Unknown, JsonSerializer.Deserialize<Provider>("\"zoho\"", ApiClient.JsonOptions));
+        Assert.Equal("\"unknown\"", JsonSerializer.Serialize(Provider.Unknown, ApiClient.JsonOptions));
+        Assert.Throws<ArgumentException>(() => ProviderExtensions.FromWireString("zoho"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Provider.Unknown.ToWireString());
+    }
+
+    [Fact]
+    public void EventsListResponse_IgnoresFieldsThisSdkVersionDoesNotKnow()
+    {
+        var response = JsonSerializer.Deserialize<EventsListResponse>(
+            """{"events":[{"id":"evt-1","provider":"zoho","calendarId":"cal-1","title":"Planning","futureField":"x"}],"pageSize":1,"futureListField":5}""",
+            ApiClient.JsonOptions)!;
+
+        Assert.Single(response.Events);
+        Assert.Equal("evt-1", response.Events[0].Id);
+        Assert.Equal(Provider.Unknown, response.Events[0].Provider);
+    }
+
+    [Fact]
     public void TokenResponse_RoundTripsSnakeCaseFields()
     {
         var json = """{"access_token":"at","token_type":"Bearer","expires_in":3600,"refresh_token":"rt"}""";
@@ -74,7 +95,7 @@ public class SerializationTests
           "title": "Standup",
           "description": "Weekly team sync",
           "conference": "https://meet.google.com/abc-defg-hij",
-          "conferenceData": { "provider": "google-meet", "url": "https://meet.google.com/abc-defg-hij", "original": { "conferenceId": "abc-defg-hij" } },
+          "conferenceData": { "provider": "google-meet", "conferenceId": "abc-defg-hij" },
           "lastModified": "2026-03-10T13:36:08.000Z"
         }
         """;
@@ -84,9 +105,7 @@ public class SerializationTests
         Assert.NotNull(e);
         Assert.Equal("Weekly team sync", e!.Description);
         Assert.NotNull(e.ConferenceData);
-        Assert.Equal("google-meet", e.ConferenceData!.Provider);
-        Assert.Equal("https://meet.google.com/abc-defg-hij", e.ConferenceData.Url);
-        Assert.Equal("abc-defg-hij", e.ConferenceData.Original!["conferenceId"].GetString());
+        Assert.Equal("google-meet", e.ConferenceData!["provider"].GetString());
         Assert.Equal("2026-03-10T13:36:08.000Z", e.LastModified);
     }
 }

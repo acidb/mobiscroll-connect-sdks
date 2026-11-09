@@ -80,18 +80,12 @@ class TestCalendarEvent:
             "calendarId": "primary",
             "description": "Weekly team sync",
             "conference": "https://meet.google.com/abc-defg-hij",
-            "conferenceData": {
-                "provider": "google-meet",
-                "url": "https://meet.google.com/abc-defg-hij",
-                "original": {"conferenceId": "abc-defg-hij"},
-            },
+            "conferenceData": {"provider": "google-meet", "conferenceId": "abc-defg-hij"},
             "lastModified": "2026-03-10T13:36:08.000Z",
         })
         assert e.description == "Weekly team sync"
         assert e.conference_data is not None
-        assert e.conference_data.provider == "google-meet"
-        assert e.conference_data.url == "https://meet.google.com/abc-defg-hij"
-        assert e.conference_data.original == {"conferenceId": "abc-defg-hij"}
+        assert e.conference_data["provider"] == "google-meet"
         assert e.last_modified == "2026-03-10T13:36:08.000Z"
 
     def test_optional_extras_default_to_none(self):
@@ -118,6 +112,16 @@ class TestEventsListResponse:
         r = EventsListResponse.from_dict({})
         assert len(r) == 0
         assert r.has_more is False
+
+    def test_ignores_fields_this_sdk_version_does_not_know(self):
+        r = EventsListResponse.from_dict({
+            "events": [
+                {"provider": "zoho", "id": "1", "calendarId": "primary", "futureField": "x"},
+            ],
+            "pageSize": 1,
+            "futureListField": 5,
+        })
+        assert [(e.id, e.provider) for e in r] == [("1", "zoho")]
 
 
 class TestConnectionStatusResponse:

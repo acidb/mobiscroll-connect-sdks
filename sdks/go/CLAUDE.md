@@ -103,7 +103,7 @@ cd minimal-app && go run .                         # run the demo (needs env var
 | `auth.go` | `authService`: OAuth flow + connection status + disconnect + revoke |
 | `calendars.go` | `calendarsService.List` |
 | `events.go` | `eventsService.List/Create/Update/Delete`; JSON-encoded `calendarIds` |
-| `webhooks.go` | `webhooksService.SubscribeWebhook/UnsubscribeWebhook/VerifyWebhook` (decodes the delivery directly into `CalendarEvent` with `ChangeType`; `WebhookEvent` is a deprecated alias, removed in 2.0.0) |
+| `webhooks.go` | `webhooksService.SubscribeWebhook/UnsubscribeWebhook/VerifyWebhook` (rewrites each event's `conference` object to `Conference` = url string and `ConferenceData` = REST shape before decoding into `WebhookEvent`, which embeds `CalendarEvent`) |
 | `webhook_verification.go` | `VerifyWebhookSignature` (pure Ed25519 `v1a` check) + `webhookKeyStore` (process-wide key cache) |
 | `export_test.go` | Test-only hooks: `ResetWebhookKeyStores`, `SetWebhookClock` |
 | `testdata/webhook-vectors.json` | Signature vectors from the Connect server's signer, shared by all seven SDKs |

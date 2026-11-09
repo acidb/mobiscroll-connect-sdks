@@ -22,7 +22,7 @@ class EventWritesTest extends BaseTestCase
         'end' => '2026-03-20T09:30:00.000Z',
         'allDay' => false,
         'conference' => 'https://meet.google.com/abc-defg-hij',
-        'conferenceData' => ['provider' => 'hangoutsMeet', 'url' => 'https://meet.google.com/abc-defg-hij', 'original' => ['conferenceId' => 'abc-defg-hij']],
+        'conferenceData' => ['provider' => 'hangoutsMeet', 'conferenceId' => 'abc-defg-hij'],
     ];
 
     /**

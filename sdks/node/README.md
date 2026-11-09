@@ -179,7 +179,7 @@ app.post('/webhooks/mobiscroll', express.raw({ type: 'application/json' }), asyn
 });
 ```
 
-Each event is a `CalendarEvent` with `changeType` set. `start` and `end` are ISO 8601 strings, `conference` is the join URL, and `conferenceData` is a `ConferenceData` (`provider`, `url`, `autoGenerate`, `original`), as `events.list()` returns. `WebhookEvent` is a deprecated alias of `CalendarEvent` and will be removed in 2.0.0.
+Each event's `start` and `end` are ISO 8601 strings. `conference` is exactly what the delivery carried: a `WebhookConference` object with `url`, `provider`, `meetingProvider` and `data`, not the join-URL string `events.list()` returns; it is `undefined` when the delivery omits it. `conferenceData` is the delivery's `conferenceData` (Connect 1.6.1 and later), the same object `events.list()` returns, passed through unchanged.
 
 The public keys are fetched from `https://connect.mobiscroll.com/.well-known/webhook-keys` on the first delivery and cached for the whole process as the endpoint's `Cache-Control` allows. If no signature matches, the keys are fetched again (at most once a minute) before the delivery is rejected, so key rotations need no action on your side.
 

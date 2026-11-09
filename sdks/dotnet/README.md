@@ -286,7 +286,7 @@ app.MapPost("/webhooks/mobiscroll", async (HttpRequest request, MobiscrollConnec
 });
 ```
 
-Each event is a `CalendarEvent` with `ChangeType` set. `Conference` is the join URL, and `ConferenceData` is a `ConferenceData` (`Provider`, `Url`, `AutoGenerate`, `Original`), as `Events.ListAsync()` returns. A `conference` that is not a string fails with `InvalidPayload`. `WebhookEvent` is obsolete and will be removed in 2.0.0.
+Each event is a `WebhookEvent`, which is a `CalendarEvent` plus `ChangeType`. A delivery carries `conference` as an object (`url`, `provider`, `meetingProvider`, `data`); `VerifyWebhookAsync` converts it to the shape `Events.ListAsync()` returns: `Conference` is the join URL string (`null` when the object has no non-empty `url`) and `ConferenceData` is the REST shape (`provider`, `autoGenerate` when boolean, and the keys of `data` at the top level; `null` when empty). Deliveries from Connect 1.6.1 on carry `conferenceData` themselves, with `url` and `original`, and the SDK keeps it; for an earlier delivery the SDK builds it from the `conference` object, without `url` and `original`. A `conference` that is neither a string, an object nor `null` fails with `InvalidPayload`.
 
 The body can be a `byte[]`, `ReadOnlyMemory<byte>` or `string`. The headers can be ASP.NET Core's `IHeaderDictionary`, `HttpHeaders`, or any dictionary of header names to values; names are matched in any casing.
 

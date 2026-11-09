@@ -80,13 +80,12 @@ class EventsTest extends BaseTestCase
             'end' => '2024-06-01T09:15:00Z',
             'description' => 'Weekly team sync',
             'conference' => 'https://meet.google.com/abc-defg-hij',
-            'conferenceData' => ['provider' => 'google-meet', 'url' => 'https://meet.google.com/abc-defg-hij', 'original' => ['conferenceId' => 'abc-defg-hij']],
+            'conferenceData' => ['provider' => 'google-meet', 'conferenceId' => 'abc-defg-hij'],
             'lastModified' => '2026-03-10T13:36:08.000Z',
         ]);
 
         $this->assertEquals('Weekly team sync', $event->description);
-        $this->assertEquals('google-meet', $event->conferenceData?->provider);
-        $this->assertEquals(['conferenceId' => 'abc-defg-hij'], $event->conferenceData?->original);
+        $this->assertEquals('google-meet', $event->conferenceData['provider'] ?? null);
         $this->assertEquals('2026-03-10T13:36:08.000Z', $event->lastModified);
     }
 
@@ -152,6 +151,30 @@ class EventsTest extends BaseTestCase
         $this->assertCount(0, $response->events);
         $this->assertEquals(50, $response->pageSize);
         $this->assertNull($response->nextPageToken);
+    }
+
+    public function testEventsListResponseIgnoresFieldsThisSdkVersionDoesNotKnow(): void
+    {
+        $response = EventsListResponse::fromArray([
+            'events' => [
+                [
+                    'provider' => 'zoho',
+                    'id' => 'evt-1',
+                    'calendarId' => 'cal-1',
+                    'title' => 'Planning',
+                    'start' => '2026-11-04T09:00:00.000Z',
+                    'end' => '2026-11-04T10:00:00.000Z',
+                    'allDay' => false,
+                    'futureField' => 'x',
+                ],
+            ],
+            'pageSize' => 1,
+            'futureListField' => 5,
+        ]);
+
+        $this->assertCount(1, $response->events);
+        $this->assertSame('evt-1', $response->events[0]->id);
+        $this->assertSame('zoho', $response->events[0]->provider);
     }
 
     public function testEventListParamsBuildCorrectQueryViaReflection(): void

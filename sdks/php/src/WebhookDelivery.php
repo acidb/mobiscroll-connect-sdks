@@ -11,7 +11,7 @@ class WebhookDelivery
 {
     /**
      * @param string $provider 'google', 'microsoft', 'apple' or 'caldav'
-     * @param CalendarEvent[] $events
+     * @param WebhookEvent[] $events
      * @param string|null $changeType 'created', 'updated', 'deleted' or 'mixed'
      * @param string $timestamp ISO 8601 timestamp of when Connect processed the change
      */
