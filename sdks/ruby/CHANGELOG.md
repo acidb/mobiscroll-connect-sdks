@@ -8,19 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `auth.revoke(token = nil)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens (the whole grant).
-  - Without an argument it revokes the stored refresh token, or the access token when there is none, then clears the stored credentials.
-  - It does not disconnect calendar accounts or stop webhooks; call `disconnect` first to remove a user entirely.
+- `auth.revoke(token = nil)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens.
 - `generate_auth_url` accepts a `theme:` option (`'light'`, `'dark'` or `'auto'`) that sets the color scheme of the Connect pages.
 - `Calendar` objects now include `account` (the connected account the calendar belongs to) and `read_only` (`true` when the connection cannot write to it).
 - `events.create` and `events.update` now send `status`, and `conference_data:` as `conferenceData` (for example `{ 'autoGenerate' => true }`).
 - `events.create` and `events.update` also accept the API's spelling of `conference_data:`, `all_day:`, `recurring_event_id:` and `update_mode:` (`conferenceData:`, `allDay:`, `recurringEventId:`, `updateMode:`). Those keys were silently left out of the request.
-- `ConferenceData`, the type of `CalendarEvent#conference_data`, with `provider`, `url`, `auto_generate` and `original`. `conference_data` was a Hash; read the provider's own keys, such as `entryPoints`, from `original`.
-- `CalendarEvent#change_type` (`'created'`, `'updated'` or `'deleted'`), set on the events of a `verify_webhook` delivery. `WebhookEvent` is now a deprecated alias of `CalendarEvent` and will be removed in 2.0.0.
 
 ### Fixed
 
-- `CalendarEvent#conference` in a `verify_webhook` delivery is now the join URL string. It was the delivered Hash, because Connect sent `conference` as an object before 1.6.1.
 - `events.create` and `events.update` now send `attendees` as email strings, as the API expects; an `Attendee` or a Hash is reduced to its email.
 - `events.create` and `events.update` no longer send `color`, which the API does not accept on writes.
 - Doc comments of `verify_webhook` and `WebhookVerificationError`, no code change: answer a failed verification with `503` when the reason is `'no_public_keys'`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.

@@ -8,18 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `Auth().Revoke(ctx, token)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens (the whole grant).
-  - With an empty `token` it revokes the stored refresh token, or the access token when there is none, then clears the stored credentials.
-  - It does not disconnect calendar accounts or stop webhooks; call `Disconnect` first to remove a user entirely.
+- `Auth().Revoke(ctx, token)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens.
 - `AuthURLParams.Theme` (`"light"`, `"dark"` or `"auto"`) sets the color scheme of the Connect pages.
 - `Calendar` objects now include `Account` (the connected account the calendar belongs to) and `ReadOnly` (`true` when the connection cannot write to it).
 - `EventCreateData` and `EventUpdateData` now include `Conference` (a meeting URL) and `ConferenceData` (`*EventConferenceData`; `AutoGenerate: mobiscroll.Ptr(true)` creates a meeting link).
-- `ConferenceData`, the type of `CalendarEvent.ConferenceData` (`*ConferenceData`), with `Provider`, `URL`, `AutoGenerate` and `Original`. `CalendarEvent.ConferenceData` was a `map[string]any`; read the provider's own keys, such as `entryPoints`, from `Original`.
-- `CalendarEvent.ChangeType` (`"created"`, `"updated"` or `"deleted"`), set on the events of a `VerifyWebhook` delivery. `WebhookEvent` is now a deprecated alias of `CalendarEvent` and will be removed in 2.0.0.
 
 ### Fixed
 
-- `VerifyWebhook` accepts deliveries whose events include a conference, with `Conference` as the join URL. It rejected the whole delivery with reason `invalid_payload`, because Connect sent `conference` as an object before 1.6.1.
+- `VerifyWebhook` accepts deliveries whose events include a conference: `Conference` is the join URL of the delivered `conference` object, and `ConferenceData` is the delivery's `conferenceData`, or one built from that object when the delivery has none. It rejected the whole delivery with reason `invalid_payload`, because a delivery carries `conference` as an object.
 - Doc comments of `VerifyWebhook` and `WebhookVerificationError`, no code change: answer a failed verification with `503` when the reason is `WebhookNoPublicKeys`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.
 
 ## [1.6.0] — 2026-10-08

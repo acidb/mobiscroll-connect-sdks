@@ -8,18 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `auth().revoke()` and `auth().revoke(String token)` for `POST /api/oauth/revoke`: revoke the user's Connect access and refresh tokens (the whole grant).
-  - The overload without arguments revokes the stored refresh token, or the access token when there is none, then clears the stored credentials.
-  - It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
+- `auth().revoke()` and `auth().revoke(String token)` for `POST /api/oauth/revoke`: revoke the user's Connect access and refresh tokens.
 - `AuthUrlParams.builder().theme(...)` (`"light"`, `"dark"` or `"auto"`) sets the color scheme of the Connect pages.
 - `Calendar` objects now include `getAccount()` (the connected account the calendar belongs to) and `getReadOnly()` (`true` when the connection cannot write to it).
 - The `EventCreateData` and `EventUpdateData` builders now include `conference(String)` (a meeting URL) and `conferenceData(EventConferenceData)` (`autoGenerate(true)` creates a meeting link).
-- `ConferenceData`, the type of `CalendarEvent.getConferenceData()`, with `getProvider()`, `getUrl()`, `getAutoGenerate()` and `getOriginal()`. `getConferenceData()` returned a `Map<String, Object>`; read the provider's own keys, such as `entryPoints`, from `getOriginal()`.
-- `CalendarEvent.getChangeType()` (`"created"`, `"updated"` or `"deleted"`), set on the events of a `verifyWebhook()` delivery. `WebhookDelivery.getEvents()` now returns `List<CalendarEvent>`, and `WebhookEvent` is deprecated and will be removed in 2.0.0.
 
 ### Fixed
 
-- `verifyWebhook()` accepts deliveries whose events include a conference, with `getConference()` as the join URL. It rejected the whole delivery with reason `INVALID_PAYLOAD`, because Connect sent `conference` as an object before 1.6.1.
+- `verifyWebhook()` accepts deliveries whose events include a conference: `getConference()` is the join URL of the delivered `conference` object, and `getConferenceData()` is the delivery's `conferenceData`, or one built from that object when the delivery has none. It rejected the whole delivery with reason `INVALID_PAYLOAD`, because a delivery carries `conference` as an object.
+- A `provider` value this SDK version does not know, sent by a newer Connect, is read as `null` by `getProvider()`. It failed the whole `events().list()` response or `verifyWebhook()` delivery. `Provider.fromWire()` still throws for it.
 - Doc comments of `verifyWebhook()` and `WebhookVerificationException`, no code change: answer a failed verification with `503` when the reason is `NO_PUBLIC_KEYS`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.
 
 ## [1.6.0] — 2026-10-08

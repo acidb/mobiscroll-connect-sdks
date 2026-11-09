@@ -8,17 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `auth()->revoke(?string $token = null)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens (the whole grant).
-  - Without an argument it revokes the stored refresh token, or the access token when there is none, then clears the stored credentials.
-  - It does not disconnect calendar accounts or stop webhooks; call `disconnect()` first to remove a user entirely.
+- `auth()->revoke(?string $token = null)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens.
 - `generateAuthUrl()` accepts a `theme` option (`'light'`, `'dark'` or `'auto'`) that sets the color scheme of the Connect pages.
 - `Calendar` objects now include `account` (the connected account the calendar belongs to) and `readOnly` (`true` when the connection cannot write to it).
-- `ConferenceData`, the type of `CalendarEvent::$conferenceData`, with `provider`, `url`, `autoGenerate` and `original`. `$conferenceData` was an array; read the provider's own keys, such as `entryPoints`, from `original`.
-- `CalendarEvent::$changeType` (`'created'`, `'updated'` or `'deleted'`), set on the events of a `verifyWebhook()` delivery. `WebhookEvent` is now deprecated and will be removed in 2.0.0; type against `CalendarEvent`. `new WebhookEvent(...)` now takes the arguments of the `CalendarEvent` constructor.
 
 ### Fixed
 
-- `verifyWebhook()` accepts deliveries whose events include a conference, with `$conference` as the join URL. It rejected the whole delivery with reason `invalid_payload`, because Connect sent `conference` as an object before 1.6.1.
+- `verifyWebhook()` accepts deliveries whose events include a conference: `$conference` is the join URL of the delivered `conference` object, and `$conferenceData` is the delivery's `conferenceData`, or one built from that object when the delivery has none. It rejected the whole delivery with reason `invalid_payload`, because a delivery carries `conference` as an object.
 - Doc comments of `verifyWebhook()` and `WebhookVerificationError`, no code change: answer a failed verification with `503` when the reason is `no_public_keys`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.
 - `events()->create()` and `events()->update()` now return the written event. They threw `ServerError` on every successful write, because they expected the event inside an `event` field.
 - The default `scope` of `generateAuthUrl()` is now `'read-write'`. It was `'calendar'`, which is not a Connect scope; Connect treated it as `read-write`, so the authorization behaves the same.
