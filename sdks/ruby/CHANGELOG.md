@@ -4,21 +4,17 @@ All notable changes to the Mobiscroll Connect Ruby SDK (RubyGems: `mobiscroll-co
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK's major.minor always matches the Connect API's (for example API 1.5.x → SDK 1.5.x): each release bumps only the patch, including releases with breaking changes. Patch numbers are independent per SDK, so this file covers the Ruby SDK only.
 
-## [1.6.1] — 2026-10-22
-
-### Added
-
-- `auth.revoke(token = nil)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens.
-- `generate_auth_url` accepts a `theme:` option (`'light'`, `'dark'` or `'auto'`) that sets the color scheme of the Connect pages.
-- `Calendar` objects now include `account` (the connected account the calendar belongs to) and `read_only` (`true` when the connection cannot write to it).
-- `events.create` and `events.update` now send `status`, and `conference_data:` as `conferenceData` (for example `{ 'autoGenerate' => true }`).
-- `events.create` and `events.update` also accept the API's spelling of `conference_data:`, `all_day:`, `recurring_event_id:` and `update_mode:` (`conferenceData:`, `allDay:`, `recurringEventId:`, `updateMode:`). Those keys were silently left out of the request.
+## [1.6.1] — 2026-11-10
 
 ### Fixed
 
+- We added the missing `auth.revoke(token = nil)` for `POST /api/oauth/revoke`: it revokes the user's Connect access and refresh tokens.
+- We fixed `generate_auth_url` not accepting `theme:`. It now accepts `'light'`, `'dark'` or `'auto'`, which sets the color scheme of the Connect pages.
+- We added the missing `account` (the connected account the calendar belongs to) and `read_only` (`true` when the connection cannot write to it) to `Calendar` objects.
+- We fixed `events.create` and `events.update` leaving out `status` and `conference_data:`. They now send `status`, and `conference_data:` as `conferenceData` (for example `{ 'autoGenerate' => true }`).
+- We fixed `events.create` and `events.update` silently leaving out `conferenceData:`, `allDay:`, `recurringEventId:` and `updateMode:`, the API's spelling of `conference_data:`, `all_day:`, `recurring_event_id:` and `update_mode:`. They now accept both spellings.
 - `events.create` and `events.update` now send `attendees` as email strings, as the API expects; an `Attendee` or a Hash is reduced to its email.
 - `events.create` and `events.update` no longer send `color`, which the API does not accept on writes.
-- Doc comments of `verify_webhook` and `WebhookVerificationError`, no code change: answer a failed verification with `503` when the reason is `'no_public_keys'`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.
 
 ## [1.6.0] — 2026-10-08
 

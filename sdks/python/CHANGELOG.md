@@ -4,21 +4,17 @@ All notable changes to the Mobiscroll Connect Python SDK (PyPI: `mobiscroll-conn
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK's major.minor always matches the Connect API's (for example API 1.5.x → SDK 1.5.x): each release bumps only the patch, including releases with breaking changes. Patch numbers are independent per SDK, so this file covers the Python SDK only.
 
-## [1.6.1] — 2026-10-22
-
-### Added
-
-- `auth.revoke(token=None)` for `POST /api/oauth/revoke`, on the sync and async clients: revokes the user's Connect access and refresh tokens.
-- `generate_auth_url()` accepts a `theme` option (`"light"`, `"dark"` or `"auto"`) that sets the color scheme of the Connect pages, on the sync and async clients.
-- `Calendar` objects now include `account` (the connected account the calendar belongs to) and `read_only` (`True` when the connection cannot write to it).
-- `events.create()` and `events.update()` send a `conference_data` key as `conferenceData`, so `{"autoGenerate": True}` creates a meeting link. `conference` takes a meeting URL.
+## [1.6.1] — 2026-11-10
 
 ### Fixed
 
+- We added the missing `auth.revoke(token=None)` for `POST /api/oauth/revoke`, on the sync and async clients: it revokes the user's Connect access and refresh tokens.
+- We fixed `generate_auth_url()` not accepting `theme`, on the sync and async clients. It now accepts `"light"`, `"dark"` or `"auto"`, which sets the color scheme of the Connect pages.
+- We added the missing `account` (the connected account the calendar belongs to) and `read_only` (`True` when the connection cannot write to it) to `Calendar` objects.
+- We added the missing `conference_data` key to `events.create()` and `events.update()`, which send it as `conferenceData`, so `{"autoGenerate": True}` creates a meeting link. `conference` takes a meeting URL.
 - `WebhookEvent.conference` is annotated `Mapping[str, Any] | None`, the dict a `verify_webhook()` delivery carries (`url`, `provider`, `meetingProvider`, `data`). It was annotated `str | None`.
 - `events.create()` and `events.update()` now return the written event, on the sync and async clients. They raised `ServerError` on every successful write, because they expected the event inside an `event` field.
 - The default `scope` of `generate_auth_url()` is now `"read-write"`, on the sync and async clients. It was `"calendar"`, which is not a Connect scope; Connect treated it as `read-write`, so the authorization behaves the same.
-- Doc comments of `verify_webhook()` and `WebhookVerificationError`, no code change: answer a failed verification with `503` when the reason is `"no_public_keys"`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.
 
 ## [1.6.0] — 2026-10-08
 

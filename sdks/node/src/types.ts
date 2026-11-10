@@ -215,7 +215,8 @@ export interface ConferenceData {
   /**
    * Conference system identifier. Google: the type Google reports (`hangoutsMeet`, `addOn`, or the legacy
    * `eventHangout`, `eventNamedHangout`), or `google-meet` when it reports none. Microsoft: `teams`.
-   * Apple, CalDAV: `caldav`. Ignored on create and update.
+   * Apple, CalDAV: named by the host of the event's URL (`hangoutsMeet`, `teams`, `zoom` or `webex`), `unknown` for any
+   * other URL. Ignored on create and update.
    */
   provider?: string;
   /** The join URL, the same value as the event's `conference`. Returned only; ignored on create and update. */
@@ -271,7 +272,7 @@ export interface CalendarEvent {
 export interface WebhookConference {
   /** The join URL. */
   url?: string;
-  /** Conference system identifier, e.g. `hangoutsMeet`, `google-meet`, `teams` or `caldav`. */
+  /** Conference system identifier, e.g. `hangoutsMeet`, `google-meet`, `teams`, `zoom`, `webex` or `unknown`. */
   provider?: string;
   /** The same value as `provider`. */
   meetingProvider?: string;
@@ -282,13 +283,10 @@ export interface WebhookConference {
 /**
  * An event in a webhook delivery. `start` and `end` are ISO 8601 strings.
  *
- * Deleted Microsoft, Apple and CalDAV events arrive as placeholders without `original` (and, in deliveries sent
- * before Connect 1.6.1, without `calendarId`); rely only on `id`, `provider`, `calendarId` and `changeType` for a
- * `deleted` event.
+ * Deleted Microsoft, Apple and CalDAV events arrive as placeholders without `original`; rely only on `id`,
+ * `provider`, `calendarId` and `changeType` for a `deleted` event.
  */
-export interface WebhookEvent extends Omit<CalendarEvent, 'calendarId' | 'lastModified' | 'original' | 'conference'> {
-  /** Absent only on deleted Microsoft, Apple and CalDAV events in deliveries sent before Connect 1.6.1. */
-  calendarId?: string;
+export interface WebhookEvent extends Omit<CalendarEvent, 'lastModified' | 'original' | 'conference'> {
   /** ISO 8601 timestamp of the last modification; for a deleted placeholder, when the deletion was detected. */
   lastModified: string;
   /** Provider-native event; absent on deleted placeholders. */

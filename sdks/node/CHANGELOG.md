@@ -4,22 +4,17 @@ All notable changes to the Mobiscroll Connect Node.js SDK (npm: `@mobiscroll/con
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK's major.minor always matches the Connect API's (for example API 1.5.x → SDK 1.5.x): each release bumps only the patch, including releases with breaking changes. Patch numbers are independent per SDK, so this file covers the Node.js SDK only.
 
-## [1.6.1] — 2026-10-22
-
-### Added
-
-- `auth.revoke(token?)` for `POST /api/oauth/revoke`: revokes the user's Connect access and refresh tokens.
-- `generateAuthUrl()` accepts a `theme` option (`'light'`, `'dark'` or `'auto'`) that sets the color scheme of the Connect pages.
-- `ConferenceData` declares `url` and `original`, which the API returns from 1.6.1.
+## [1.6.1] — 2026-11-10
 
 ### Fixed
 
+- We added the missing `auth.revoke(token?)` for `POST /api/oauth/revoke`: it revokes the user's Connect access and refresh tokens.
+- We fixed `generateAuthUrl()` not accepting `theme`. It now accepts `'light'`, `'dark'` or `'auto'`, which sets the color scheme of the Connect pages.
+- We added the missing `url` and `original` to the `ConferenceData` type; the API returns both from 1.6.1.
 - `WebhookEvent.conference` is typed `WebhookConference`, the object a `verifyWebhook()` delivery carries (`url`, `provider`, `meetingProvider`, `data`). It was typed `string`.
 - `start` and `end` on `CalendarEvent` and `WebhookEvent` are typed `string`, the ISO 8601 strings the SDK returns from `events.list()`, `events.create()`, `events.update()` and `verifyWebhook()`. They were typed `Date`, so calling `Date` methods on them threw.
 - `WebhookEvent.original` is typed optional: deleted Microsoft, Apple and CalDAV events in a `verifyWebhook()` delivery arrive without it.
-- `WebhookEvent.calendarId` is typed optional: deleted Microsoft, Apple and CalDAV events in a `verifyWebhook()` delivery sent before Connect 1.6.1 arrive without it.
 - `WebhookEvent.lastModified` is typed as always present: every event in a `verifyWebhook()` delivery has it.
-- Doc comments of `verifyWebhook()` and `WebhookVerificationError`, no code change: answer a failed verification with `503` when the reason is `no_public_keys`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.
 - The `EventCreateData` and `EventUpdateData` types were missing `conference` (a meeting URL) and `conferenceData`, so TypeScript rejected `{ autoGenerate: true }` in an object literal. The SDK already sent both fields at runtime.
 - The `Calendar` type was missing `account` (the connected account the calendar belongs to) and `readOnly` (`true` when the connection cannot write to it). Both were already present at runtime.
 

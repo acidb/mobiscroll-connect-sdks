@@ -4,20 +4,16 @@ All notable changes to the Mobiscroll Connect Java SDK (Maven Central: `com.mobi
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK's major.minor always matches the Connect API's (for example API 1.5.x → SDK 1.5.x): each release bumps only the patch, including releases with breaking changes. Patch numbers are independent per SDK, so this file covers the Java SDK only.
 
-## [1.6.1] — 2026-10-22
-
-### Added
-
-- `auth().revoke()` and `auth().revoke(String token)` for `POST /api/oauth/revoke`: revoke the user's Connect access and refresh tokens.
-- `AuthUrlParams.builder().theme(...)` (`"light"`, `"dark"` or `"auto"`) sets the color scheme of the Connect pages.
-- `Calendar` objects now include `getAccount()` (the connected account the calendar belongs to) and `getReadOnly()` (`true` when the connection cannot write to it).
-- The `EventCreateData` and `EventUpdateData` builders now include `conference(String)` (a meeting URL) and `conferenceData(EventConferenceData)` (`autoGenerate(true)` creates a meeting link).
+## [1.6.1] — 2026-11-10
 
 ### Fixed
 
+- We added the missing `auth().revoke()` and `auth().revoke(String token)` for `POST /api/oauth/revoke`: they revoke the user's Connect access and refresh tokens.
+- We fixed `AuthUrlParams` not accepting a theme. `AuthUrlParams.builder().theme(...)` now accepts `"light"`, `"dark"` or `"auto"`, which sets the color scheme of the Connect pages.
+- We added the missing `getAccount()` (the connected account the calendar belongs to) and `getReadOnly()` (`true` when the connection cannot write to it) to `Calendar` objects.
+- We added the missing `conference(String)` (a meeting URL) and `conferenceData(EventConferenceData)` (`autoGenerate(true)` creates a meeting link) to the `EventCreateData` and `EventUpdateData` builders.
 - `verifyWebhook()` accepts deliveries whose events include a conference: `getConference()` is the join URL of the delivered `conference` object, and `getConferenceData()` is the delivery's `conferenceData`, or one built from that object when the delivery has none. It rejected the whole delivery with reason `INVALID_PAYLOAD`, because a delivery carries `conference` as an object.
-- A `provider` value this SDK version does not know, sent by a newer Connect, is read as `null` by `getProvider()`. It failed the whole `events().list()` response or `verifyWebhook()` delivery. `Provider.fromWire()` still throws for it.
-- Doc comments of `verifyWebhook()` and `WebhookVerificationException`, no code change: answer a failed verification with `503` when the reason is `NO_PUBLIC_KEYS`, so Connect retries the delivery, and with `401` for every other reason. They said to answer with a `4xx`, and Connect drops a delivery answered with a `4xx`.
+- A `provider` value this SDK version does not know, sent by a newer Connect, is read as `null` by `getProvider()`. It failed the whole `events().list()` response or `verifyWebhook()` delivery. `Provider.fromWire()` throws for it.
 
 ## [1.6.0] — 2026-10-08
 
