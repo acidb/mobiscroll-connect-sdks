@@ -88,6 +88,18 @@ scripts/release.sh <sdk> <version>   # bumps version files, commits, tags, pushe
 
 The matching `.github/workflows/release-<sdk>.yml` workflow (added once the GitHub repo is set up) picks up the tag and publishes to the registry.
 
+**⛔ Publishing Node by hand (when the workflow fails with `EOTP`).** Mobiscroll developers' `~/.npmrc` maps the `@mobiscroll` scope to `https://npm.mobiscroll.com`, the private Verdaccio registry, and the scope mapping wins over `--registry`. A plain `npm publish` therefore uploads `@mobiscroll/connect-sdk` there, not to npmjs (this happened with 1.6.1). From a checkout of the `node-v<version>` tag, in `sdks/node`:
+
+```bash
+npm whoami --registry https://registry.npmjs.org      # if E401: npm login --registry https://registry.npmjs.org
+npm ci && npm run build
+npm publish --access public --@mobiscroll:registry=https://registry.npmjs.org --otp=<code>
+```
+
+Do not run `npm i` or `npm audit fix` there; they rewrite `package-lock.json`. On `npm.mobiscroll.com`, `@mobiscroll/connect-sdk` is only a proxy of npmjs (`mobiscroll-npm/Server/Config/config-aws.yaml`), so a version published there by mistake should be removed with `npm unpublish @mobiscroll/connect-sdk@<version> --@mobiscroll:registry=https://npm.mobiscroll.com` once npmjs has it.
+
+**Java: `central-publishing-maven-plugin` must be 0.12.0 or later.** With Maven 3.10 (the GitHub runners since November 2026), 0.11.x puts `maven-metadata-local.xml` and `_remote.repositories` into the Central bundle, and Central rejects it with "Bundle has content that does NOT have a .pom file". To check a bundle without publishing, run the deploy with a dummy `central` server in a throwaway `settings.xml` and `-Dgpg.skip=true`: the upload fails, and `connect-sdk/target/central-publishing/central-bundle.zip` must hold only `com/mobiscroll/connect-sdk/<version>/` files.
+
 **Where versions live** (the bump script handles all of these):
 - Node: `sdks/node/package.json` → `version`
 - Python: **two places** — `sdks/python/pyproject.toml` (`version = "X"`) AND `sdks/python/mobiscroll_connect/__init__.py` (`__version__ = "X"`). Keep them in sync.
