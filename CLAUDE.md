@@ -56,7 +56,8 @@ All seven SDKs implement the **same public surface** against the same backend. W
 2. Replicate the change in the other six. Per-SDK CLAUDE.md files dictate idiomatic style — don't fight them.
 3. Update each SDK's README/CHANGELOG separately if user-visible.
 4. **⛔ Mandatory web changelog.** Whenever an SDK `CHANGELOG.md` gets a new version entry (or the SDK change is otherwise done), add one `ChangeLogModelConnect` entry per changed SDK plus its `SummaryDictionary` entry (`{Artifact}:{Version}`, e.g. `NodeSdk:1.6.1`) to `../mobiscroll-web/BusinessLayer/Util/ChangeLogData.cs`, then run `cd ../mobiscroll-web/MobiscrollFront && node scripts/sync-releases-from-csharp.mjs --dry-run` and, if the dry run looks right, again without `--dry-run`. Same change set, not deferred to release. Style and summary rules: `mobiscroll-connect/CLAUDE.md` → _Changelog style_ and `mobiscroll-web/CLAUDE.md` → _Connect release summaries_.
-5. Single PR is preferred for a synchronized cross-SDK change. The path-filtered CI runs all seven jobs in parallel.
+5. **⛔ MCP pack.** The MCP server (`../mobiscroll-web/MobiscrollMCPServer`) documents every SDK method, type, client option, error class and `since` version, and nothing updates it automatically. After any change to an SDK's public surface or behaviour, update the hand-written facts it affects (`scripts/connect/lib/{canonical,models,guides,taxonomy,sources}.ts`), run `npm run generate:connect` there and the tests, and commit the regenerated `data/connect/`. The generator reads signatures and types from these SDK sources itself; if something does not appear, check the per-language extractor. Steps and rules: `mobiscroll-connect/CLAUDE.md` → _Propagating API changes_, step 5.
+6. Single PR is preferred for a synchronized cross-SDK change. The path-filtered CI runs all seven jobs in parallel.
 
 ## Releases
 
@@ -82,6 +83,8 @@ All seven SDKs implement the **same public surface** against the same backend. W
 ```bash
 scripts/release.sh <sdk> <version>   # bumps version files, commits, tags, pushes
 ```
+
+**⛔ Release reminder — the MCP is separate.** An SDK release does not update or deploy the MCP server. When you prepare or run a release, tell the user in the same message that the MCP pack still has to be regenerated after the tags exist (`cd ../mobiscroll-web/MobiscrollMCPServer && npm run generate:connect`; the pack names untagged versions in `manifest.notes`) and then deployed on its own. Never skip the reminder, and never deploy the MCP as part of the release.
 
 The matching `.github/workflows/release-<sdk>.yml` workflow (added once the GitHub repo is set up) picks up the tag and publishes to the registry.
 
