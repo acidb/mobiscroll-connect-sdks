@@ -26,7 +26,7 @@
  *   - <!-- Events --> text           the entry's component, one of COMPONENTS: required in every entry; the comment is
  *                                    invisible in the rendered Markdown and in the GitHub release notes
  *
- * and sdks/node/summary-1.7.0.md: one "### title" and one short sentence per topic. An entry can wrap onto the next
+ * and sdks/node/summary-1.7.0.md: one "### title" and a paragraph of two or three sentences per topic. An entry can wrap onto the next
  * lines; a blank line, a heading or the next entry ends it.
  */
 import fs from 'node:fs';
@@ -247,10 +247,16 @@ export function parseSummary(text, file) {
   endParagraph();
 
   if (!summary.length) {
-    fail(file + ': no summary (one ### title and one short sentence per topic)');
+    fail(file + ': no summary (one ### title and a paragraph of two or three sentences per topic)');
   }
   return summary.join('\n');
 }
+
+/** The summary: a paragraph of 2 to 3 sentences (at most 60 words) per topic, at most 200 words in all. */
+const MIN_SENTENCES = 2;
+const MAX_SENTENCES = 3;
+const MAX_TOPIC_WORDS = 60;
+const MAX_WORDS = 200;
 
 const plain = (html) =>
   html
@@ -268,19 +274,19 @@ const words = (html) =>
     .filter(Boolean);
 
 /**
- * The summary rules (mobiscroll-web/CLAUDE.md -> Connect release summaries): one <h3> per topic with one short sentence,
- * under 100 words, and no sentence and no run of five words shared with an entry of the card.
+ * The summary rules (mobiscroll-web/CLAUDE.md -> Connect release summaries): one <h3> per topic with a paragraph of two or
+ * three sentences (like Mobiscroll UI 6.2.0), at most 200 words in all, and no sentence and no run of five words shared with an entry of the card.
  */
 export function checkSummary(summary, entries, file) {
   const parts = summary.split('\n');
   parts.forEach((part, i) => {
     const expected = i % 2 === 0 ? '<h3>' : '<p>';
     if (!part.startsWith(expected)) {
-      fail(file + ': the summary has one <h3> title and one <p> sentence per topic, nothing else (" ' + part.slice(0, 40) + ' ")');
+      fail(file + ': the summary has one <h3> title and one <p> paragraph per topic, nothing else (" ' + part.slice(0, 40) + ' ")');
     }
   });
   if (parts.length % 2) {
-    fail(file + ': a summary title without its sentence');
+    fail(file + ': a summary title without its paragraph');
   }
   parts
     .filter((part) => part.startsWith('<p>'))
@@ -288,13 +294,27 @@ export function checkSummary(summary, entries, file) {
       const sentences = plain(part)
         .trim()
         .split(/(?<=[.!?])\s+(?=\S)/);
-      if (sentences.length > 1) {
-        fail(file + ': a summary topic has one short sentence, this has ' + sentences.length + ': ' + plain(part).trim());
+      if (sentences.length < MIN_SENTENCES || sentences.length > MAX_SENTENCES) {
+        fail(
+          file +
+            ': a summary topic has ' +
+            MIN_SENTENCES +
+            ' to ' +
+            MAX_SENTENCES +
+            ' sentences, this has ' +
+            sentences.length +
+            ': ' +
+            plain(part).trim(),
+        );
+      }
+      const length = words(part).length;
+      if (length > MAX_TOPIC_WORDS) {
+        fail(file + ': a summary topic has at most ' + MAX_TOPIC_WORDS + ' words, this has ' + length + ': ' + plain(part).trim());
       }
     });
   const total = words(summary).length;
-  if (total >= 100) {
-    fail(file + ': the summary has ' + total + ' words, keep it under 100');
+  if (total > MAX_WORDS) {
+    fail(file + ': the summary has ' + total + ' words, keep it to ' + MAX_WORDS + ' at most');
   }
 
   const runs = new Set();
@@ -340,7 +360,7 @@ function createCard(sdk, args, releaseNotes) {
   const summaryFile = path.join(dir, 'summary-' + parsed.version + '.md');
   const summaryText = readFile(summaryFile);
   if (summaryText === null) {
-    fail('no sdks/' + sdk + '/summary-' + parsed.version + '.md (one ### title and one short sentence per topic)');
+    fail('no sdks/' + sdk + '/summary-' + parsed.version + '.md (one ### title and a paragraph of two or three sentences per topic)');
   }
   const summaryName = path.relative(process.cwd(), summaryFile);
   const summary = parseSummary(summaryText, summaryName);
@@ -404,7 +424,7 @@ function run() {
   });
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     run();
   } catch (e) {

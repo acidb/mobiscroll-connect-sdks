@@ -87,11 +87,13 @@ const ENTRIES = [
 ];
 
 test('checkSummary: the summary rules', () => {
-  checkSummary('<h3>Lookup</h3>\n<p>Events can be read by ID.</p>', ENTRIES, 's.md');
+  checkSummary('<h3>Lookup</h3>\n<p>Events can be read by ID. Missing ones are left out.</p>', ENTRIES, 's.md');
   const stops = (summary, pattern) => fails(() => checkSummary(summary, ENTRIES, 's.md'), pattern);
-  stops('<h3>Lookup</h3>\n<p>Events can be read. By ID too.</p>', /one short sentence/);
-  stops('<h3>Lookup</h3>\n<p>The list accepts eventIds and returns only those events.</p>', /repeats an entry/);
-  stops('<h3>Lookup</h3>', /without its sentence/);
+  stops('<h3>Lookup</h3>\n<p>Events can be read by ID.</p>', /2 to 3 sentences/);
+  stops('<h3>Lookup</h3>\n<p>One. Two. Three. Four.</p>', /2 to 3 sentences/);
+  stops('<h3>Lookup</h3>\n<p>One. ' + 'Word '.repeat(60).trim() + '.</p>', /at most 60 words/);
+  stops('<h3>Lookup</h3>\n<p>Events can be read by ID. The list accepts eventIds and returns only those events.</p>', /repeats an entry/);
+  stops('<h3>Lookup</h3>', /without its paragraph/);
 });
 
 test('inlineHtml', () => {
