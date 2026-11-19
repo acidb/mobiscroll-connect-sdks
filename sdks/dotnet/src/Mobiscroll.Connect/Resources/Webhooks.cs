@@ -24,6 +24,14 @@ public sealed class Webhooks
     /// Subscribe to webhook notifications for a calendar. The server auto-generates
     /// <see cref="WebhookSubscribeData.ChannelId"/> when it is omitted. Pass the calendar's real ID from
     /// <see cref="Calendars.ListAsync"/>; an alias such as <c>primary</c> creates a duplicate subscription.
+    /// <para>
+    /// <see cref="WebhookSubscribeData.SingleEvents"/> <c>= false</c> creates the channel in series mode: for a
+    /// Google calendar, a changed recurring series is delivered as its master event instead of every
+    /// occurrence. <c>true</c> delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master
+    /// in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the
+    /// project's setting applies. <see cref="WebhookSubscribeResponse.SingleEvents"/> is the mode the channel
+    /// was created with (<c>false</c> is series mode).
+    /// </para>
     /// </summary>
     /// <exception cref="MobiscrollConnectException">
     /// A <see cref="WebhookSubscribeData.ChannelId"/> you supplied is already in use by another user (HTTP 409).

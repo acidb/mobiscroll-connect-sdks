@@ -139,6 +139,82 @@ describe('Events Resource', () => {
       expect(result.events[0].provider).toBe('zoho');
       expect((result.events[0] as unknown as Record<string, unknown>).futureField).toBe('x');
     });
+
+    describe('eventIds, includeCancelled and info', () => {
+      beforeEach(() => {
+        mockApiClient.get.mockResolvedValue({
+          data: { events: [] },
+          status: 200,
+          headers: {},
+        });
+      });
+
+      const queryOf = () => {
+        const path = mockApiClient.get.mock.calls[0][0] as string;
+        return new URLSearchParams(path.split('?')[1]);
+      };
+
+      it('sends eventIds JSON-encoded in the query string', async () => {
+        const eventIds: EventListParams['eventIds'] = {
+          google: { 'ana@example.com': ['abc123', 'def456'] },
+          microsoft: { AAMk: ['x1'] },
+        };
+
+        await events.list({ eventIds });
+
+        expect(mockApiClient.get).toHaveBeenCalledWith(
+          `/events?${new URLSearchParams({ eventIds: JSON.stringify(eventIds) }).toString()}`
+        );
+        expect(JSON.parse(queryOf().get('eventIds') as string)).toEqual(eventIds);
+      });
+
+      it('sends eventIds together with singleEvents=false', async () => {
+        await events.list({
+          eventIds: { google: { 'ana@example.com': ['abc123'] } },
+          singleEvents: false,
+        });
+
+        const query = queryOf();
+        expect(query.get('singleEvents')).toBe('false');
+        expect(JSON.parse(query.get('eventIds') as string)).toEqual({
+          google: { 'ana@example.com': ['abc123'] },
+        });
+        expect(query.has('calendarIds')).toBe(false);
+      });
+
+      it('sends includeCancelled=true and includeCancelled=false', async () => {
+        await events.list({ includeCancelled: true });
+        await events.list({ includeCancelled: false });
+
+        expect(mockApiClient.get).toHaveBeenNthCalledWith(1, '/events?includeCancelled=true');
+        expect(mockApiClient.get).toHaveBeenNthCalledWith(2, '/events?includeCancelled=false');
+      });
+
+      it('does not send includeCancelled or eventIds when they are undefined', async () => {
+        await events.list({ singleEvents: true, includeCancelled: undefined, eventIds: undefined });
+
+        expect(mockApiClient.get).toHaveBeenCalledWith('/events?singleEvents=true');
+      });
+
+      it('returns info from the response', async () => {
+        mockApiClient.get.mockResolvedValue({
+          data: {
+            events: [],
+            info: { google: 'No connected account can read calendar ana@example.com' },
+          },
+          status: 200,
+          headers: {},
+        });
+
+        const result = await events.list({
+          eventIds: { google: { 'ana@example.com': ['abc123'] } },
+        });
+
+        expect(result.info).toEqual({
+          google: 'No connected account can read calendar ana@example.com',
+        });
+      });
+    });
   });
 
   describe('create', () => {

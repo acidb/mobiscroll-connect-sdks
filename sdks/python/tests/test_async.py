@@ -1,4 +1,5 @@
 import json
+from urllib.parse import parse_qs, urlparse
 
 import httpx
 import pytest
@@ -187,3 +188,74 @@ async def test_async_create_and_update_return_the_bare_event(async_client):
     })
     assert created.id == "evt-1"
     assert updated.title == "y"
+
+
+@respx.mock
+async def test_async_list_events_event_ids_include_cancelled_and_info(async_client):
+    route = respx.get("https://connect.mobiscroll.com/api/events").mock(
+        return_value=httpx.Response(200, json={
+            "events": [],
+            "info": {"google": "No connected account can read calendar ana@example.com"},
+        })
+    )
+    event_ids = {"google": {"ana@example.com": ["abc123"]}}
+    r = await async_client.events.list(
+        event_ids=event_ids, single_events=False, include_cancelled=False
+    )
+    params = parse_qs(urlparse(str(route.calls.last.request.url)).query)
+    assert json.loads(params["eventIds"][0]) == event_ids
+    assert params["singleEvents"] == ["false"]
+    assert params["includeCancelled"] == ["false"]
+    assert r.info == {"google": "No connected account can read calendar ana@example.com"}
+
+
+@respx.mock
+async def test_async_list_events_unset_not_sent_and_info_absent(async_client):
+    route = respx.get("https://connect.mobiscroll.com/api/events").mock(
+        return_value=httpx.Response(200, json={"events": []})
+    )
+    r = await async_client.events.list(include_cancelled=None, event_ids=None)
+    assert route.calls.last.request.url.query == b""
+    assert r.info is None
+
+
+@respx.mock
+async def test_async_iter_all_passes_event_ids_and_include_cancelled(async_client):
+    route = respx.get("https://connect.mobiscroll.com/api/events").mock(
+        return_value=httpx.Response(200, json={
+            "events": [{"provider": "google", "id": "1", "calendarId": "c"}],
+        })
+    )
+    ids = [e.id async for e in async_client.events.iter_all(
+        event_ids={"google": {"c": ["1"]}}, include_cancelled=True
+    )]
+    assert ids == ["1"]
+    params = parse_qs(urlparse(str(route.calls.last.request.url)).query)
+    assert json.loads(params["eventIds"][0]) == {"google": {"c": ["1"]}}
+    assert params["includeCancelled"] == ["true"]
+
+
+@respx.mock
+async def test_async_subscribe_webhook_single_events(async_client):
+    BODY = {
+        "success": True,
+        "provider": "google",
+        "subscription": {"channelId": "chan-1", "resourceId": "res-1"},
+        "serverWebhookUrl": "https://connect.mobiscroll.com/api/webhook-callback",
+        "channelId": "chan-1",
+    }
+    route = respx.post("https://connect.mobiscroll.com/api/subscribe-webhook").mock(
+        side_effect=[
+            httpx.Response(200, json={**BODY, "singleEvents": False}),
+            httpx.Response(200, json=BODY),
+        ]
+    )
+    response = await async_client.webhooks.subscribe_webhook(
+        "google", "work@company.com", single_events=False
+    )
+    assert json.loads(route.calls.last.request.content)["singleEvents"] is False
+    assert response.single_events is False
+
+    response = await async_client.webhooks.subscribe_webhook("google", "work@company.com")
+    assert route.calls.last.request.content == b'{"provider":"google","calendarId":"work@company.com"}'
+    assert response.single_events is None

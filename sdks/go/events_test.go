@@ -2,7 +2,9 @@ package mobiscroll_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -48,6 +50,145 @@ func TestEvents_ListEncodesCalendarIDsAndQuery(t *testing.T) {
 		if !strings.Contains(req.Path, want) {
 			t.Errorf("path missing %q: %s", want, req.Path)
 		}
+	}
+}
+
+func newListTestClient(t *testing.T, body string) (*mobiscroll.Client, *testsupport.MockServer) {
+	t.Helper()
+	srv := testsupport.NewMockServer(t)
+	srv.EnqueueJSON(body)
+	c := mobiscroll.NewClient("id", "secret", "https://app/cb",
+		mobiscroll.WithBaseURL(srv.URL+"/api"),
+	)
+	c.SetCredentials(&mobiscroll.TokenResponse{AccessToken: "at"})
+	return c, srv
+}
+
+func TestEvents_ListEncodesEventIDsAsJSON(t *testing.T) {
+	c, srv := newListTestClient(t, `{"events":[]}`)
+
+	eventIDs := map[mobiscroll.Provider]map[string][]string{
+		mobiscroll.ProviderGoogle:    {"ana@example.com": {"abc123", "def456"}},
+		mobiscroll.ProviderMicrosoft: {"AAMk": {"x1"}},
+	}
+	if _, err := c.Events().List(context.Background(), &mobiscroll.EventListParams{EventIDs: eventIDs}); err != nil {
+		t.Fatalf("List: %v", err)
+	}
+
+	u, _ := url.Parse(srv.Requests()[0].Path)
+	var got map[string]map[string][]string
+	if err := json.Unmarshal([]byte(u.Query().Get("eventIds")), &got); err != nil {
+		t.Fatalf("eventIds is not JSON: %v", err)
+	}
+	want := map[string]map[string][]string{
+		"google":    {"ana@example.com": {"abc123", "def456"}},
+		"microsoft": {"AAMk": {"x1"}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("eventIds = %v, want %v", got, want)
+	}
+}
+
+func TestEvents_ListEventIDsWithSingleEventsFalse(t *testing.T) {
+	c, srv := newListTestClient(t, `{"events":[]}`)
+
+	_, err := c.Events().List(context.Background(), &mobiscroll.EventListParams{
+		EventIDs:     map[mobiscroll.Provider]map[string][]string{mobiscroll.ProviderGoogle: {"ana@example.com": {"abc123"}}},
+		SingleEvents: mobiscroll.Ptr(false),
+	})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+
+	u, _ := url.Parse(srv.Requests()[0].Path)
+	q := u.Query()
+	if q.Get("singleEvents") != "false" {
+		t.Errorf("singleEvents = %q, want false", q.Get("singleEvents"))
+	}
+	if got := q.Get("eventIds"); got != `{"google":{"ana@example.com":["abc123"]}}` {
+		t.Errorf("eventIds = %s", got)
+	}
+	if q.Has("calendarIds") {
+		t.Errorf("calendarIds must not be sent: %s", u.RawQuery)
+	}
+}
+
+func TestEvents_ListSendsEmptyEventIDsAsEmptyObject(t *testing.T) {
+	c, srv := newListTestClient(t, `{"events":[]}`)
+
+	_, err := c.Events().List(context.Background(), &mobiscroll.EventListParams{
+		EventIDs: map[mobiscroll.Provider]map[string][]string{},
+	})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+
+	u, _ := url.Parse(srv.Requests()[0].Path)
+	if !u.Query().Has("eventIds") || u.Query().Get("eventIds") != "{}" {
+		t.Errorf("an empty eventIds must be sent as {}, got query %q", u.RawQuery)
+	}
+}
+
+func TestEvents_ListSendsIncludeCancelledOnlyWhenSet(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		value *bool
+		want  string // empty: not sent
+	}{
+		{"true", mobiscroll.Ptr(true), "true"},
+		{"false", mobiscroll.Ptr(false), "false"},
+		{"unset", nil, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, srv := newListTestClient(t, `{"events":[]}`)
+			_, err := c.Events().List(context.Background(), &mobiscroll.EventListParams{
+				SingleEvents:     mobiscroll.Ptr(true),
+				IncludeCancelled: tc.value,
+				EventIDs:         nil,
+			})
+			if err != nil {
+				t.Fatalf("List: %v", err)
+			}
+			path := srv.Requests()[0].Path
+			u, _ := url.Parse(path)
+			if tc.want == "" {
+				if u.Query().Has("includeCancelled") || u.Query().Has("eventIds") {
+					t.Errorf("includeCancelled/eventIds must not be sent: %s", path)
+				}
+				if path != "/api/events?singleEvents=true" {
+					t.Errorf("unexpected path: %s", path)
+				}
+				return
+			}
+			if got := u.Query().Get("includeCancelled"); got != tc.want {
+				t.Errorf("includeCancelled = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestEvents_ListReadsInfo(t *testing.T) {
+	c, _ := newListTestClient(t, `{"events":[],"info":{"google":"No connected account can read calendar ana@example.com"}}`)
+	resp, err := c.Events().List(context.Background(), &mobiscroll.EventListParams{
+		EventIDs: map[mobiscroll.Provider]map[string][]string{mobiscroll.ProviderGoogle: {"ana@example.com": {"abc123"}}},
+	})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	want := map[mobiscroll.Provider]string{mobiscroll.ProviderGoogle: "No connected account can read calendar ana@example.com"}
+	if !reflect.DeepEqual(resp.Info, want) {
+		t.Errorf("Info = %v, want %v", resp.Info, want)
+	}
+}
+
+func TestEvents_ListInfoIsNilWhenAbsent(t *testing.T) {
+	c, _ := newListTestClient(t, `{"events":[]}`)
+	resp, err := c.Events().List(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if resp.Info != nil {
+		t.Errorf("Info = %v, want nil", resp.Info)
 	}
 }
 

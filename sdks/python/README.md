@@ -122,6 +122,15 @@ if response.has_more:
     )
 ```
 
+`include_cancelled=True` also returns the deleted occurrences of series that still exist, as events with `status == "cancelled"` (with `single_events=True`, the default). `event_ids` returns only the given events: at most 40 ids per request, given per provider and calendar id, and not combinable with `calendar_ids`. With `single_events=False` each id returns the event itself, in the order of the ids, without a time window; with `single_events=True` it returns what the list returns for that id between `start` and `end`. Ids that no longer exist are left out. `response.info`, when present, maps a provider name to a message about a provider that could not be read, or about calendars no connected account can read; it is `None` otherwise.
+
+```python
+response = client.events.list(
+    event_ids={"google": {"ana@example.com": ["abc123", "def456"]}},
+    single_events=False,
+)
+```
+
 ### Iterate all pages
 
 ```python
@@ -212,6 +221,14 @@ client.webhooks.unsubscribe_webhook(
     "google",
     subscription.channel_id,
     resource_id=subscription.subscription.resource_id,
+)
+```
+
+`single_events=False` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `True` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `subscription.single_events` is the mode the channel was created with, or `None` when the response does not carry it.
+
+```python
+subscription = client.webhooks.subscribe_webhook(
+    "google", "work@company.com", single_events=False
 )
 ```
 

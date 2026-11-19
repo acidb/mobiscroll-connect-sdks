@@ -30,6 +30,8 @@ class Events:
         page_size: int | None = None,
         next_page_token: str | None = None,
         single_events: bool | None = None,
+        include_cancelled: bool | None = None,
+        event_ids: Mapping[str, Mapping[str, Iterable[str]]] | None = None,
     ) -> EventsListResponse:
         """List events.
 
@@ -38,6 +40,37 @@ class Events:
             {"google": ["primary"], "microsoft": ["calendar-id-1"]}
 
         ``page_size`` is capped at 1000 server-side.
+
+        ``single_events`` (default ``True``) expands recurring events into their
+        occurrences within ``start`` and ``end``; ``False`` returns each series once, as
+        its master event.
+
+        ``include_cancelled``: with ``single_events=True``, also returns the deleted
+        occurrences of series that still exist, as events with ``status == "cancelled"``.
+        Default ``False``. Ignored with ``single_events=False``. Applies to the normal list
+        and to ``event_ids``.
+
+        ``event_ids`` returns only these events, given as event ids per provider and
+        calendar id, and sent JSON-encoded like ``calendar_ids``::
+
+            {"google": {"ana@example.com": ["abc123", "def456"]}}
+
+        At most 40 ids per request (more is rejected with a ``ValidationError``). Cannot be
+        combined with ``calendar_ids`` (``ValidationError``) and is not available with the
+        ``free-busy`` scope (HTTP 403, an ``AuthenticationError``).
+
+        With ``single_events=False``, each event itself comes back (a series' master, or an
+        occurrence), in the order of the ids, without a time window. With
+        ``single_events=True`` (default), each id returns what the list returns for it
+        inside ``start`` and ``end``: the occurrences of a series, never its master, or a
+        single event when it overlaps the window. Missing or deleted ids are left out,
+        without an error.
+
+        A ``next_page_token`` from such a request is only valid with the same ``event_ids``,
+        ``single_events``, ``include_cancelled``, ``start`` and ``end``.
+
+        The response's ``info`` carries the providers that failed and the calendars no
+        connected account can read.
         """
         query = build_list_events_query(
             start=start,
@@ -46,6 +79,8 @@ class Events:
             page_size=page_size,
             next_page_token=next_page_token,
             single_events=single_events,
+            include_cancelled=include_cancelled,
+            event_ids=event_ids,
         )
         data = self._api.get("events", params=query or None)
         return EventsListResponse.from_dict(data if isinstance(data, Mapping) else {})
@@ -58,6 +93,8 @@ class Events:
         calendar_ids: Mapping[str, Iterable[str]] | None = None,
         page_size: int | None = None,
         single_events: bool | None = None,
+        include_cancelled: bool | None = None,
+        event_ids: Mapping[str, Mapping[str, Iterable[str]]] | None = None,
     ) -> Iterator[CalendarEvent]:
         """Yield every event across all pages, transparently following
         ``next_page_token``. Callers don't need to manage pagination state."""
@@ -70,6 +107,8 @@ class Events:
                 page_size=page_size,
                 next_page_token=token,
                 single_events=single_events,
+                include_cancelled=include_cancelled,
+                event_ids=event_ids,
             )
             yield from page.events
             if not page.next_page_token:

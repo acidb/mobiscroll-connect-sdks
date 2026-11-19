@@ -18,13 +18,38 @@ export class Events {
   /**
    * List calendar events
    *
-   * @param params - List parameters (start, end, calendarIds, etc.)
+   * `singleEvents` (default `true`) expands recurring events into occurrences; `false` returns the
+   * series masters. `includeCancelled` also returns deleted occurrences, as events with
+   * `status: 'cancelled'`, with `singleEvents: true`. `eventIds` returns only the given events,
+   * at most 40 ids, and cannot be combined with `calendarIds`. `info` on the response carries the
+   * providers that failed and the calendars no connected account can read.
+   *
+   * @param params - List parameters (start, end, calendarIds, eventIds, singleEvents, includeCancelled, etc.)
+   * @returns The events of this page, the page size, `nextPageToken` when more events follow, and `info` when set
+   *
+   * @example
+   * ```typescript
+   * // Fetch two events by id, each as the event itself (a series' master, or an occurrence)
+   * const result = await client.events.list({
+   *   eventIds: { google: { 'ana@example.com': ['abc123', 'def456'] } },
+   *   singleEvents: false,
+   * });
+   * ```
    */
   async list(params?: EventListParams): Promise<EventsListResponse> {
     const queryParams = new URLSearchParams();
 
     if (params) {
-      const { pageSize, start, end, calendarIds, nextPageToken, singleEvents } = params;
+      const {
+        pageSize,
+        start,
+        end,
+        calendarIds,
+        nextPageToken,
+        singleEvents,
+        includeCancelled,
+        eventIds,
+      } = params;
 
       if (pageSize) queryParams.append('pageSize', pageSize.toString());
       if (start) queryParams.append('start', start instanceof Date ? start.toISOString() : start);
@@ -32,6 +57,9 @@ export class Events {
       if (calendarIds) queryParams.append('calendarIds', JSON.stringify(calendarIds));
       if (nextPageToken) queryParams.append('nextPageToken', nextPageToken);
       if (singleEvents !== undefined) queryParams.append('singleEvents', singleEvents.toString());
+      if (includeCancelled !== undefined)
+        queryParams.append('includeCancelled', includeCancelled.toString());
+      if (eventIds) queryParams.append('eventIds', JSON.stringify(eventIds));
     }
 
     const query = queryParams.toString();

@@ -64,6 +64,71 @@ func TestWebhooks_SubscribeWebhookSendsJSONBodyAndParsesResponse(t *testing.T) {
 	}
 }
 
+func TestWebhooks_SubscribeWebhookSendsSingleEventsFalse(t *testing.T) {
+	srv := testsupport.NewMockServer(t)
+	srv.EnqueueJSON(`{"success":true,"provider":"google","channelId":"chan1","singleEvents":false}`)
+	c := mobiscroll.NewClient("id", "secret", "https://app/cb", mobiscroll.WithBaseURL(srv.URL+"/api"))
+	c.SetCredentials(&mobiscroll.TokenResponse{AccessToken: "at"})
+
+	resp, err := c.Webhooks().SubscribeWebhook(context.Background(), &mobiscroll.SubscribeWebhookParams{
+		Provider:     mobiscroll.ProviderGoogle,
+		CalendarID:   "work@company.com",
+		SingleEvents: mobiscroll.Ptr(false),
+	})
+	if err != nil {
+		t.Fatalf("SubscribeWebhook: %v", err)
+	}
+	if body := string(srv.Requests()[0].Body); !strings.Contains(body, `"singleEvents":false`) {
+		t.Errorf("body must carry singleEvents:false, got %s", body)
+	}
+	if resp.SingleEvents == nil || *resp.SingleEvents {
+		t.Errorf("response SingleEvents = %v, want pointer to false", resp.SingleEvents)
+	}
+}
+
+func TestWebhooks_SubscribeWebhookSendsSingleEventsTrue(t *testing.T) {
+	srv := testsupport.NewMockServer(t)
+	srv.EnqueueJSON(`{"success":true,"singleEvents":true}`)
+	c := mobiscroll.NewClient("id", "secret", "https://app/cb", mobiscroll.WithBaseURL(srv.URL+"/api"))
+	c.SetCredentials(&mobiscroll.TokenResponse{AccessToken: "at"})
+
+	resp, err := c.Webhooks().SubscribeWebhook(context.Background(), &mobiscroll.SubscribeWebhookParams{
+		Provider:     mobiscroll.ProviderGoogle,
+		CalendarID:   "work@company.com",
+		SingleEvents: mobiscroll.Ptr(true),
+	})
+	if err != nil {
+		t.Fatalf("SubscribeWebhook: %v", err)
+	}
+	if body := string(srv.Requests()[0].Body); !strings.Contains(body, `"singleEvents":true`) {
+		t.Errorf("body must carry singleEvents:true, got %s", body)
+	}
+	if resp.SingleEvents == nil || !*resp.SingleEvents {
+		t.Errorf("response SingleEvents = %v, want pointer to true", resp.SingleEvents)
+	}
+}
+
+func TestWebhooks_SubscribeWebhookOmitsUnsetSingleEvents(t *testing.T) {
+	srv := testsupport.NewMockServer(t)
+	srv.EnqueueJSON(`{"success":true,"provider":"google"}`)
+	c := mobiscroll.NewClient("id", "secret", "https://app/cb", mobiscroll.WithBaseURL(srv.URL+"/api"))
+	c.SetCredentials(&mobiscroll.TokenResponse{AccessToken: "at"})
+
+	resp, err := c.Webhooks().SubscribeWebhook(context.Background(), &mobiscroll.SubscribeWebhookParams{
+		Provider:   mobiscroll.ProviderGoogle,
+		CalendarID: "work@company.com",
+	})
+	if err != nil {
+		t.Fatalf("SubscribeWebhook: %v", err)
+	}
+	if body := string(srv.Requests()[0].Body); body != `{"provider":"google","calendarId":"work@company.com"}` {
+		t.Errorf("unexpected body: %s", body)
+	}
+	if resp.SingleEvents != nil {
+		t.Errorf("response SingleEvents = %v, want nil (unknown)", *resp.SingleEvents)
+	}
+}
+
 func TestWebhooks_SubscribeWebhookNilParams(t *testing.T) {
 	c := mobiscroll.NewClient("id", "secret", "https://app/cb")
 	if _, err := c.Webhooks().SubscribeWebhook(context.Background(), nil); err == nil {

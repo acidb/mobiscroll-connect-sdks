@@ -159,6 +159,19 @@ if (response.NextPageToken is not null)
 }
 ```
 
+`IncludeCancelled = true` also returns the deleted occurrences of series that still exist, as events with `Status = "cancelled"` (with `SingleEvents = true`, the default). `EventIds` returns only the given events: at most 40 IDs per request, given per provider and calendar ID, and not combinable with `CalendarIds`. With `SingleEvents = false` each ID returns the event itself, in the order of the IDs, without a time window; with `SingleEvents = true` it returns what the list returns for that ID between `Start` and `End`. IDs that no longer exist are left out. `response.Info`, when not `null`, maps a provider wire string to a message about a provider that could not be read, or about calendars no connected account can read.
+
+```csharp
+EventsListResponse response = await client.Events.ListAsync(new EventListParams
+{
+    EventIds = new Dictionary<string, Dictionary<string, List<string>>>
+    {
+        ["google"] = new() { ["ana@example.com"] = new() { "abc123", "def456" } },
+    },
+    SingleEvents = false,
+});
+```
+
 #### Create an event
 
 ```csharp
@@ -254,6 +267,17 @@ WebhookUnsubscribeResponse result = await client.Webhooks.UnsubscribeWebhookAsyn
 // check Message for details in that case.
 if (result.Success)
     Console.WriteLine("Unsubscribed successfully");
+```
+
+`SingleEvents = false` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `subscription.SingleEvents` is the mode the channel was created with (`null` when the response does not carry it).
+
+```csharp
+WebhookSubscribeResponse seriesMode = await client.Webhooks.SubscribeWebhookAsync(new WebhookSubscribeData
+{
+    Provider     = Provider.Google,
+    CalendarId   = "work@company.com",
+    SingleEvents = false,
+});
 ```
 
 ### Verify webhook deliveries

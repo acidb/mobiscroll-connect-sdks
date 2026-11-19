@@ -17,7 +17,10 @@ type eventsService struct{ api *apiClient }
 // params. Pass nil for default behavior (events for all connected calendars,
 // server-default page size). The CalendarIDs map is serialized as a single
 // JSON-encoded query parameter (e.g. calendarIds={"google":["primary"]}),
-// matching the wire format of the other SDKs.
+// matching the wire format of the other SDKs. EventIDs is encoded the same
+// way (eventIds={"google":{"ana@example.com":["abc123"]}}) and is sent whenever
+// it is non-nil, including an empty map ({}), so the server rejects an empty
+// filter instead of returning every event; see EventListParams for its rules.
 func (s *eventsService) List(ctx context.Context, params *EventListParams) (*EventsListResponse, error) {
 	qs := querybuilder.New()
 	if params != nil {
@@ -32,11 +35,23 @@ func (s *eventsService) List(ctx context.Context, params *EventListParams) (*Eve
 			}
 			qs.Add("calendarIds", string(encoded))
 		}
+		if params.EventIDs != nil {
+			wire := make(map[string]map[string][]string, len(params.EventIDs))
+			for k, v := range params.EventIDs {
+				wire[string(k)] = v
+			}
+			encoded, err := json.Marshal(wire)
+			if err != nil {
+				return nil, fmt.Errorf("encode eventIds: %w", err)
+			}
+			qs.Add("eventIds", string(encoded))
+		}
 		qs.Add("start", params.Start).
 			Add("end", params.End).
 			Add("pageSize", params.PageSize).
 			Add("nextPageToken", params.NextPageToken).
-			Add("singleEvents", params.SingleEvents)
+			Add("singleEvents", params.SingleEvents).
+			Add("includeCancelled", params.IncludeCancelled)
 	}
 	out := &EventsListResponse{}
 	if err := s.api.do(ctx, http.MethodGet, "/events", qs.Encode(), nil, out); err != nil {

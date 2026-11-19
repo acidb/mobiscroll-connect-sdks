@@ -19,4 +19,10 @@ public sealed class WebhookSubscribeResponse
     public WebhookSubscription Subscription { get; set; } = new();
     public string ServerWebhookUrl { get; set; } = string.Empty;
     public string ChannelId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The mode the channel was created with: <c>false</c> is series mode, <c>true</c> is every occurrence.
+    /// <c>null</c> when the response does not carry it (unknown, not series mode).
+    /// </summary>
+    public bool? SingleEvents { get; set; }
 }

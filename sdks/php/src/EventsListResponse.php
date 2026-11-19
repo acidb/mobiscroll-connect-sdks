@@ -8,11 +8,15 @@ class EventsListResponse
 {
     /**
      * @param CalendarEvent[] $events
+     * @param array<string, string>|null $info Messages keyed by provider name, set when a provider could not be
+     *   read and, with `eventIds`, when no connected account can read a calendar (that calendar's ids are then
+     *   left out of `events`); `null` when the response has none
      */
     public function __construct(
         public readonly array $events,
         public readonly ?int $pageSize = null,
         public readonly ?string $nextPageToken = null,
+        public readonly ?array $info = null,
     ) {
     }
 
@@ -30,6 +34,7 @@ class EventsListResponse
             $events,
             $data['pageSize'] ?? null,
             $data['nextPageToken'] ?? null,
+            isset($data['info']) && is_array($data['info']) ? $data['info'] : null,
         );
     }
 }

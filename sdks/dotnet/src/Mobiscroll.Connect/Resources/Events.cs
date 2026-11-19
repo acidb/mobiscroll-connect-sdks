@@ -17,7 +17,11 @@ public sealed class Events
         _client = client;
     }
 
-    /// <summary>List events matching the given filters.</summary>
+    /// <summary>
+    /// List events matching the given filters. <see cref="EventListParams.EventIds"/> returns only the given
+    /// events; <see cref="EventsListResponse.Info"/> carries the providers that failed and the calendars no
+    /// connected account can read.
+    /// </summary>
     public async Task<EventsListResponse> ListAsync(EventListParams? listParams = null, CancellationToken ct = default)
     {
         var path = "/events";
@@ -28,11 +32,17 @@ public sealed class Events
                 .Add("start", FormatDate(listParams.Start))
                 .Add("end", FormatDate(listParams.End))
                 .Add("nextPageToken", listParams.NextPageToken)
-                .Add("singleEvents", listParams.SingleEvents);
+                .Add("singleEvents", listParams.SingleEvents)
+                .Add("includeCancelled", listParams.IncludeCancelled);
 
             if (listParams.CalendarIds is { Count: > 0 })
             {
                 qs.Add("calendarIds", JsonSerializer.Serialize(listParams.CalendarIds, ApiClient.JsonOptions));
+            }
+
+            if (listParams.EventIds is not null)
+            {
+                qs.Add("eventIds", JsonSerializer.Serialize(listParams.EventIds, ApiClient.JsonOptions));
             }
 
             if (!qs.IsEmpty)

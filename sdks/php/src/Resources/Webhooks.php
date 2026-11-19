@@ -30,7 +30,15 @@ class Webhooks
      *     'primary' creates a duplicate subscription
      *   - channelId?: string Client-supplied channel ID (auto-generated server-side if omitted)
      *   - expiration?: int Provider-specific expiration timestamp (ms epoch)
-     * @return SubscribeWebhookResponse
+     *   - singleEvents?: bool The channel's webhook mode, named like the `events()->list()` parameter. `false` is
+     *     series mode: for a Google calendar, a changed recurring series is delivered as its master event
+     *     instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the
+     *     series master in both modes. When omitted (or `null`), the channel keeps the mode of the subscription
+     *     it replaces, otherwise the project's setting (set on the dashboard) applies. A non-boolean value is
+     *     rejected with a `ValidationError`
+     * @return SubscribeWebhookResponse Subscription details, including the channel ID needed to unsubscribe later
+     *   and `singleEvents`, the mode the channel was created with (`false` is series mode; `null` when the
+     *   response does not carry it)
      * @throws \Mobiscroll\Connect\Exceptions\MobiscrollConnectException When a `channelId` you supplied is
      *   already in use by another user (HTTP 409)
      */
@@ -40,6 +48,10 @@ class Webhooks
             if (!isset($params[$required]) || $params[$required] === '') {
                 throw new \InvalidArgumentException("{$required} is required to subscribe to a webhook.");
             }
+        }
+
+        if (array_key_exists('singleEvents', $params) && $params['singleEvents'] === null) {
+            unset($params['singleEvents']);
         }
 
         $response = $this->apiClient->post('/subscribe-webhook', $params);

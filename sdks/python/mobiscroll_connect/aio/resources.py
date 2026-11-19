@@ -207,7 +207,10 @@ class AsyncEvents:
         page_size: int | None = None,
         next_page_token: str | None = None,
         single_events: bool | None = None,
+        include_cancelled: bool | None = None,
+        event_ids: Mapping[str, Mapping[str, Iterable[str]]] | None = None,
     ) -> EventsListResponse:
+        """Async variant of :meth:`mobiscroll_connect.resources.Events.list`."""
         query = build_list_events_query(
             start=start,
             end=end,
@@ -215,6 +218,8 @@ class AsyncEvents:
             page_size=page_size,
             next_page_token=next_page_token,
             single_events=single_events,
+            include_cancelled=include_cancelled,
+            event_ids=event_ids,
         )
         data = await self._api.get("events", params=query or None)
         return EventsListResponse.from_dict(data if isinstance(data, Mapping) else {})
@@ -227,6 +232,8 @@ class AsyncEvents:
         calendar_ids: Mapping[str, Iterable[str]] | None = None,
         page_size: int | None = None,
         single_events: bool | None = None,
+        include_cancelled: bool | None = None,
+        event_ids: Mapping[str, Mapping[str, Iterable[str]]] | None = None,
     ) -> AsyncIterator[CalendarEvent]:
         token: str | None = None
         while True:
@@ -237,6 +244,8 @@ class AsyncEvents:
                 page_size=page_size,
                 next_page_token=token,
                 single_events=single_events,
+                include_cancelled=include_cancelled,
+                event_ids=event_ids,
             )
             for event in page.events:
                 yield event
@@ -273,7 +282,9 @@ class AsyncWebhooks:
         *,
         channel_id: str | None = None,
         expiration: int | None = None,
+        single_events: bool | None = None,
     ) -> SubscribeWebhookResponse:
+        """Async variant of :meth:`mobiscroll_connect.resources.Webhooks.subscribe_webhook`."""
         payload: dict[str, Any] = {
             "provider": str(provider.value if isinstance(provider, Provider) else provider),
             "calendarId": calendar_id,
@@ -282,6 +293,8 @@ class AsyncWebhooks:
             payload["channelId"] = channel_id
         if expiration is not None:
             payload["expiration"] = expiration
+        if single_events is not None:
+            payload["singleEvents"] = single_events
 
         data = await self._api.post("subscribe-webhook", json=payload)
         return SubscribeWebhookResponse.from_dict(data if isinstance(data, Mapping) else {})

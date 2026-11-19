@@ -365,13 +365,47 @@ export type EventListParams = {
    * @deprecated Apple paging state is encoded in nextPageToken; this field is ignored.
    */
   appleToken?: Record<string, { lastIndex?: number }>;
+  /**
+   * `true` (default) expands recurring events into their occurrences within `start` and `end`;
+   * `false` returns each series once, as its master event.
+   */
   singleEvents?: boolean;
+  /**
+   * With `singleEvents: true`, also returns the deleted occurrences of series that still exist,
+   * as events with `status: 'cancelled'`. Default `false`. Ignored with `singleEvents: false`.
+   * Applies to the normal list and to `eventIds`.
+   */
+  includeCancelled?: boolean;
+  /**
+   * Returns only these events, given as event ids per provider and calendar id, and sent
+   * JSON-encoded like `calendarIds`. At most 40 ids per request (more is rejected with a
+   * `ValidationError`). Cannot be combined with `calendarIds` (`ValidationError`) and is not
+   * available with the `free-busy` scope (HTTP 403, an `AuthenticationError`).
+   *
+   * With `singleEvents: false`, each event itself comes back (a series' master, or an
+   * occurrence), in the order of the ids, without a time window. With `singleEvents: true`
+   * (default), each id returns what the list returns for it inside `start` and `end`: the
+   * occurrences of a series, never its master, or a single event when it overlaps the window.
+   * Missing or deleted ids are left out, without an error.
+   *
+   * A `nextPageToken` from such a request is only valid with the same `eventIds`,
+   * `singleEvents`, `includeCancelled`, `start` and `end`.
+   */
+  eventIds?: {
+    [key in ProviderName]?: Record<string, string[]>;
+  };
 };
 
 export interface EventsListResponse {
   events: CalendarEvent[];
   pageSize?: number;
   nextPageToken?: string;
+  /**
+   * Messages keyed by provider name, present when a provider could not be read, and, with
+   * `eventIds`, when no connected account can read a calendar (that calendar's ids are then left
+   * out of `events`).
+   */
+  info?: Partial<Record<ProviderName, string>>;
 }
 
 /**
@@ -530,6 +564,15 @@ export interface SubscribeWebhookParams {
   channelId?: string;
   /** Provider-specific expiration timestamp (ms epoch). */
   expiration?: number;
+  /**
+   * The channel's webhook mode, named like the `events.list()` parameter. `false` is series mode:
+   * for a Google calendar, a changed recurring series is delivered as its master event instead of
+   * every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the
+   * series master in both modes. When omitted, the channel keeps the mode of the subscription it
+   * replaces, otherwise the project's setting (set on the dashboard) applies. A non-boolean value
+   * is rejected with a `ValidationError`.
+   */
+  singleEvents?: boolean;
 }
 
 export interface WebhookSubscription {
@@ -546,6 +589,8 @@ export interface SubscribeWebhookResponse {
   subscription: WebhookSubscription;
   serverWebhookUrl: string;
   channelId: string;
+  /** The mode the channel was created with: `false` is series mode, `true` is every occurrence. */
+  singleEvents?: boolean;
 }
 
 /**

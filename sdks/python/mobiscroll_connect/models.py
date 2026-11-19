@@ -185,11 +185,17 @@ class EventsListResponse:
 
     Iterate ``events`` directly, then call ``client.events.list(next_page_token=...)``
     to fetch the next page if ``next_page_token`` is set.
+
+    ``info`` maps a provider name to a message, and is ``None`` when the response has
+    none. It is present when a provider could not be read and, with ``event_ids``, when no
+    connected account can read a calendar (that calendar's ids are then left out of
+    ``events``).
     """
 
     events: list[CalendarEvent]
     page_size: int | None = None
     next_page_token: str | None = None
+    info: dict[str, str] | None = None
 
     def __iter__(self) -> Iterator[CalendarEvent]:
         return iter(self.events)
@@ -204,10 +210,14 @@ class EventsListResponse:
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> EventsListResponse:
         events_raw = data.get("events", []) or []
+        info_raw = data.get("info")
         return cls(
             events=[CalendarEvent.from_dict(e) for e in events_raw],
             page_size=data.get("pageSize"),
             next_page_token=data.get("nextPageToken"),
+            info={str(k): str(v) for k, v in info_raw.items()}
+            if isinstance(info_raw, Mapping)
+            else None,
         )
 
 
@@ -311,15 +321,24 @@ class WebhookSubscription:
 
 @dataclass(frozen=True)
 class SubscribeWebhookResponse:
+    """Response from ``POST /subscribe-webhook``.
+
+    ``single_events`` is the mode the channel was created with: ``False`` is series mode,
+    ``True`` is every occurrence. It is ``None`` when the response does not carry it, which
+    means unknown, not series mode.
+    """
+
     success: bool
     provider: str
     subscription: WebhookSubscription
     server_webhook_url: str
     channel_id: str
+    single_events: bool | None = None
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> SubscribeWebhookResponse:
         subscription_raw = data.get("subscription")
+        single_events = data.get("singleEvents")
         return cls(
             success=bool(data.get("success", False)),
             provider=data.get("provider", ""),
@@ -328,6 +347,7 @@ class SubscribeWebhookResponse:
             ),
             server_webhook_url=data.get("serverWebhookUrl", ""),
             channel_id=data.get("channelId", ""),
+            single_events=single_events if isinstance(single_events, bool) else None,
         )
 
 

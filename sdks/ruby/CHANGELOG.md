@@ -4,6 +4,15 @@ All notable changes to the Mobiscroll Connect Ruby SDK (RubyGems: `mobiscroll-co
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK's major.minor always matches the Connect API's (for example API 1.5.x → SDK 1.5.x): each release bumps only the patch, including releases with breaking changes. Patch numbers are independent per SDK, so this file covers the Ruby SDK only.
 
+## [Unreleased]
+
+### Added
+
+- `events.list` accepts `event_ids:`, event ids per provider and calendar id (at most 40), and returns only those events. It cannot be combined with `calendar_ids:`.
+- `events.list` accepts `include_cancelled:`: with `single_events: true`, it also returns the deleted occurrences of series that still exist, as events with `status` `'cancelled'`.
+- `EventsListResponse` has an optional `info` attribute: messages keyed by provider name, set when a provider could not be read or, with `event_ids:`, when no connected account can read a calendar.
+- `webhooks.subscribe_webhook` accepts `single_events:`: `false` creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. The response has `single_events`, the mode the channel was created with.
+
 ## [1.6.1] — 2026-11-11
 
 ### Fixed

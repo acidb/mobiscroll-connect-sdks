@@ -53,6 +53,63 @@ public class WebhooksTests
         Assert.Equal(1735689600000, body.RootElement.GetProperty("expiration").GetInt64());
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SubscribeWebhookAsync_SendsSingleEventsAndReadsItFromTheResponse(bool singleEvents)
+    {
+        var responseJson = $$"""
+        {
+          "success": true,
+          "provider": "google",
+          "subscription": {"channelId": "chan-1"},
+          "serverWebhookUrl": "https://connect.mobiscroll.com/api/webhook-callback",
+          "channelId": "chan-1",
+          "singleEvents": {{(singleEvents ? "true" : "false")}}
+        }
+        """;
+        var handler = new FakeHttpMessageHandler().Enqueue(HttpStatusCode.OK, responseJson);
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        var result = await client.Webhooks.SubscribeWebhookAsync(new WebhookSubscribeData
+        {
+            Provider = Provider.Google,
+            CalendarId = "work@company.com",
+            SingleEvents = singleEvents,
+        });
+
+        var body = JsonDocument.Parse(handler.Requests[0].Body!);
+        Assert.Equal(singleEvents, body.RootElement.GetProperty("singleEvents").GetBoolean());
+        Assert.Equal(singleEvents, result.SingleEvents);
+    }
+
+    [Fact]
+    public async Task SubscribeWebhookAsync_OmitsSingleEventsWhenUnsetAndReadsMissingResponseFieldAsNull()
+    {
+        var responseJson = """
+        {
+          "success": true,
+          "provider": "google",
+          "subscription": {"channelId": "chan-1"},
+          "serverWebhookUrl": "https://connect.mobiscroll.com/api/webhook-callback",
+          "channelId": "chan-1"
+        }
+        """;
+        var handler = new FakeHttpMessageHandler().Enqueue(HttpStatusCode.OK, responseJson);
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        var result = await client.Webhooks.SubscribeWebhookAsync(new WebhookSubscribeData
+        {
+            Provider = Provider.Google,
+            CalendarId = "work@company.com",
+        });
+
+        Assert.Equal("""{"provider":"google","calendarId":"work@company.com"}""", handler.Requests[0].Body);
+        Assert.Null(result.SingleEvents);
+    }
+
     [Fact]
     public async Task SubscribeWebhookAsync_OmitsOptionalFieldsWhenNull()
     {

@@ -20,6 +20,14 @@ type webhooksService struct{ api *apiClient }
 // as "primary" creates a duplicate subscription. A ChannelID you supply that
 // another user already holds is rejected with an HTTP 409 error (a
 // MobiscrollError with code "MOBISCROLL_ERROR").
+//
+// SingleEvents false creates the channel in series mode: for a Google
+// calendar, a changed recurring series is delivered as its master event
+// instead of every occurrence. true delivers every occurrence. Outlook, iCloud
+// and CalDAV deliver the series master in both modes. When nil, the channel
+// keeps the mode of the subscription it replaces, otherwise the project's
+// setting applies. The response's SingleEvents is the mode the channel was
+// created with (false is series mode), nil when unknown.
 func (s *webhooksService) SubscribeWebhook(ctx context.Context, params *SubscribeWebhookParams) (*SubscribeWebhookResponse, error) {
 	if params == nil {
 		return nil, errors.New("mobiscroll: SubscribeWebhookParams must not be nil")

@@ -84,6 +84,55 @@ class WebhooksTest {
         assertThat(body).doesNotContain("expiration");
     }
 
+    @Test void subscribeWebhookSendsSingleEventsFalseAndReadsTheResponseMode() throws Exception {
+        server.enqueue(new MockResponse().setBody(
+                "{\"success\":true,\"provider\":\"google\",\"subscription\":{\"channelId\":\"chan-1\"},"
+                        + "\"serverWebhookUrl\":\"https://connect.example/hooks/google\",\"channelId\":\"chan-1\","
+                        + "\"singleEvents\":false}"));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+
+        WebhookSubscribeResponse resp = client.webhooks().subscribeWebhook(WebhookSubscribeParams.builder()
+                .provider(Provider.GOOGLE)
+                .calendarId("work@company.com")
+                .singleEvents(false)
+                .build());
+
+        assertThat(resp.getSingleEvents()).isFalse();
+        assertThat(server.takeRequest().getBody().readUtf8())
+                .isEqualTo("{\"provider\":\"google\",\"calendarId\":\"work@company.com\",\"singleEvents\":false}");
+    }
+
+    @Test void subscribeWebhookSendsSingleEventsTrue() throws Exception {
+        server.enqueue(new MockResponse().setBody("{\"success\":true,\"singleEvents\":true}"));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+
+        WebhookSubscribeResponse resp = client.webhooks().subscribeWebhook(WebhookSubscribeParams.builder()
+                .provider(Provider.GOOGLE)
+                .calendarId("work@company.com")
+                .singleEvents(true)
+                .build());
+
+        assertThat(resp.getSingleEvents()).isTrue();
+        assertThat(server.takeRequest().getBody().readUtf8())
+                .isEqualTo("{\"provider\":\"google\",\"calendarId\":\"work@company.com\",\"singleEvents\":true}");
+    }
+
+    @Test void subscribeWebhookOmitsSingleEventsWhenUnsetAndReadsAbsentAsNull() throws Exception {
+        server.enqueue(new MockResponse().setBody("{\"success\":true,\"provider\":\"google\"}"));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+
+        WebhookSubscribeResponse resp = client.webhooks().subscribeWebhook(WebhookSubscribeParams.builder()
+                .provider(Provider.GOOGLE)
+                .calendarId("work@company.com")
+                .build());
+
+        // not sent as null, not sent as false
+        assertThat(server.takeRequest().getBody().readUtf8())
+                .isEqualTo("{\"provider\":\"google\",\"calendarId\":\"work@company.com\"}");
+        // unknown, never false (false would mean series mode)
+        assertThat(resp.getSingleEvents()).isNull();
+    }
+
     @Test void unsubscribeWebhookSendsJsonBodyAndParsesResponse() throws Exception {
         server.enqueue(new MockResponse().setBody("{\"success\":true}"));
         MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);

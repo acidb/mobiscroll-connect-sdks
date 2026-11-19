@@ -34,6 +34,8 @@ def build_list_events_query(
     page_size: int | None = None,
     next_page_token: str | None = None,
     single_events: bool | None = None,
+    include_cancelled: bool | None = None,
+    event_ids: Mapping[str, Mapping[str, Iterable[str]]] | None = None,
 ) -> dict[str, str]:
     """Build the query string for ``GET /events``. All values are stringified."""
     query: dict[str, str] = {}
@@ -53,6 +55,14 @@ def build_list_events_query(
     if single_events is not None:
         # API expects string booleans in query string.
         query["singleEvents"] = "true" if single_events else "false"
+    if include_cancelled is not None:
+        query["includeCancelled"] = "true" if include_cancelled else "false"
+    if event_ids is not None:
+        normalized_ids = {
+            provider: {calendar_id: list(ids) for calendar_id, ids in calendars.items()}
+            for provider, calendars in event_ids.items()
+        }
+        query["eventIds"] = json.dumps(normalized_ids, separators=(",", ":"))
 
     return query
 

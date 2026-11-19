@@ -85,6 +85,31 @@ _, err = client.Webhooks().UnsubscribeWebhook(ctx, &mobiscroll.UnsubscribeWebhoo
 
 The `mobiscroll.Ptr` helper exists so you can fill in optional `*T` fields inline without declaring a local variable just to take its address.
 
+## List events by ID and event options
+
+`IncludeCancelled: mobiscroll.Ptr(true)` also returns the deleted occurrences of series that still exist, as events with `Status` `"cancelled"` (with `SingleEvents` true, the default). `EventIDs` returns only the given events: at most 40 IDs per request, given per provider and calendar ID, and not combinable with `CalendarIDs`. With `SingleEvents` false each ID returns the event itself, in the order of the IDs, without a time window; with `SingleEvents` true it returns what the list returns for that ID between `Start` and `End`. IDs that no longer exist are left out. `result.Info`, when not nil, maps a provider to a message about a provider that could not be read, or about calendars no connected account can read.
+
+```go
+result, err := client.Events().List(ctx, &mobiscroll.EventListParams{
+    EventIDs: map[mobiscroll.Provider]map[string][]string{
+        mobiscroll.ProviderGoogle: {"ana@example.com": {"abc123", "def456"}},
+    },
+    SingleEvents: mobiscroll.Ptr(false),
+})
+```
+
+## Webhook series mode
+
+`SingleEvents: mobiscroll.Ptr(false)` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When nil, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `sub.SingleEvents` is the mode the channel was created with, and nil when the response does not carry it.
+
+```go
+sub, err := client.Webhooks().SubscribeWebhook(ctx, &mobiscroll.SubscribeWebhookParams{
+    Provider:     mobiscroll.ProviderGoogle,
+    CalendarID:   "work@company.com",
+    SingleEvents: mobiscroll.Ptr(false),
+})
+```
+
 ## Connection management
 
 ```go

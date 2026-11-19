@@ -171,3 +171,57 @@ def test_unsubscribe_webhook_server_error(client):
     )
     with pytest.raises(ServerError):
         client.webhooks.unsubscribe_webhook("google", "chan-1")
+
+
+@respx.mock
+def test_subscribe_webhook_sends_single_events_false_and_reads_response(client):
+    route = respx.post("https://connect.mobiscroll.com/api/subscribe-webhook").mock(
+        return_value=httpx.Response(200, json={
+            "success": True,
+            "provider": "google",
+            "subscription": {"channelId": "chan-1", "resourceId": "res-1"},
+            "serverWebhookUrl": "https://connect.mobiscroll.com/api/webhook-callback",
+            "channelId": "chan-1",
+            "singleEvents": False,
+        })
+    )
+    response = client.webhooks.subscribe_webhook("google", "work@company.com", single_events=False)
+
+    body = json.loads(route.calls.last.request.content)
+    assert body == {"provider": "google", "calendarId": "work@company.com", "singleEvents": False}
+    assert response.single_events is False
+
+
+@respx.mock
+def test_subscribe_webhook_sends_single_events_true(client):
+    route = respx.post("https://connect.mobiscroll.com/api/subscribe-webhook").mock(
+        return_value=httpx.Response(200, json={
+            "success": True,
+            "provider": "google",
+            "subscription": {"channelId": "chan-1", "resourceId": "res-1"},
+            "serverWebhookUrl": "https://connect.mobiscroll.com/api/webhook-callback",
+            "channelId": "chan-1",
+            "singleEvents": True,
+        })
+    )
+    response = client.webhooks.subscribe_webhook("google", "work@company.com", single_events=True)
+
+    assert json.loads(route.calls.last.request.content)["singleEvents"] is True
+    assert response.single_events is True
+
+
+@respx.mock
+def test_subscribe_webhook_omits_single_events_when_unset(client):
+    route = respx.post("https://connect.mobiscroll.com/api/subscribe-webhook").mock(
+        return_value=httpx.Response(200, json={
+            "success": True,
+            "provider": "google",
+            "subscription": {"channelId": "chan-1", "resourceId": "res-1"},
+            "serverWebhookUrl": "https://connect.mobiscroll.com/api/webhook-callback",
+            "channelId": "chan-1",
+        })
+    )
+    response = client.webhooks.subscribe_webhook("google", "work@company.com")
+
+    assert route.calls.last.request.content == b'{"provider":"google","calendarId":"work@company.com"}'
+    assert response.single_events is None

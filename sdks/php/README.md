@@ -147,6 +147,15 @@ if (!empty($response['nextPageToken'])) {
 }
 ```
 
+`eventIds` returns only the given events, as event ids per provider and calendar id (at most 40, and it cannot be combined with `calendarIds`). With `singleEvents` set to `false` each id returns the event itself, in the order of the ids, without a time window; with `true` it returns what the list returns for that id between `start` and `end`. Ids that no longer exist are left out. `includeCancelled` (with `singleEvents` `true`) also returns the deleted occurrences of series that still exist, as events with `status` `'cancelled'`. `$response['info']`, when present, maps a provider name to a message about a provider that could not be read, or about calendars no connected account can read.
+
+```php
+$response = $client->events()->list([
+    'eventIds' => ['google' => ['ana@example.com' => ['abc123', 'def456']]],
+    'singleEvents' => false,
+]);
+```
+
 #### Create an event
 
 ```php
@@ -228,6 +237,16 @@ $client->webhooks()->unsubscribeWebhook([
     'provider' => 'google',
     'channelId' => $subscription->channelId,
     'resourceId' => $subscription->subscription->resourceId,
+]);
+```
+
+`singleEvents` set to `false` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `$subscription->singleEvents` is the mode the channel was created with, or `null` when the response does not carry it.
+
+```php
+$subscription = $client->webhooks()->subscribeWebhook([
+    'provider' => 'google',
+    'calendarId' => 'work@company.com',
+    'singleEvents' => false,
 ]);
 ```
 

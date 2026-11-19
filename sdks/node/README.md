@@ -97,6 +97,15 @@ const result = await client.events.list({
 console.log(result.events);
 ```
 
+`includeCancelled: true` also returns the deleted occurrences of series that still exist, as events with `status: 'cancelled'` (with `singleEvents: true`, the default). `eventIds` returns only the given events: at most 40 ids per request, given per provider and calendar id, and not combinable with `calendarIds`. With `singleEvents: false` each id returns the event itself, in the order of the ids, without a time window; with `singleEvents: true` it returns what the list returns for that id between `start` and `end`. Ids that no longer exist are left out. `result.info`, when present, maps a provider name to a message about a provider that could not be read, or about calendars no connected account can read.
+
+```ts
+const result = await client.events.list({
+	eventIds: { google: { 'ana@example.com': ['abc123', 'def456'] } },
+	singleEvents: false,
+});
+```
+
 ### Create event
 
 ```ts
@@ -141,6 +150,16 @@ const subscription = await client.webhooks.subscribeWebhook({
 });
 
 console.log(subscription.channelId);
+```
+
+`singleEvents: false` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `subscription.singleEvents` is the mode the channel was created with.
+
+```ts
+const subscription = await client.webhooks.subscribeWebhook({
+	provider: 'google',
+	calendarId: 'work@company.com',
+	singleEvents: false,
+});
 ```
 
 ### Unsubscribe from webhook notifications

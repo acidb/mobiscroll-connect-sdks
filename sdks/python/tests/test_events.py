@@ -1,3 +1,4 @@
+import json
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -5,6 +6,8 @@ import pytest
 import respx
 
 from mobiscroll_connect import (
+    AuthenticationError,
+    CalendarPermissionError,
     MobiscrollConnectClient,
     ServerError,
     TokenResponse,
@@ -188,3 +191,99 @@ def test_delete_validates_required():
     with pytest.raises(ValueError, match="event_id"):
         c.events.delete({"provider": "google", "calendar_id": "primary"})
     c.close()
+
+
+@respx.mock
+def test_events_list_event_ids_json_encoded(client):
+    route = respx.get("https://connect.mobiscroll.com/api/events").mock(
+        return_value=httpx.Response(200, json={"events": []})
+    )
+    event_ids = {
+        "google": {"ana@example.com": ["abc123", "def456"]},
+        "microsoft": {"AAMk": ["x1"]},
+    }
+    client.events.list(event_ids=event_ids)
+    params = parse_qs(urlparse(str(route.calls.last.request.url)).query)
+    assert json.loads(params["eventIds"][0]) == event_ids
+    assert "calendarIds" not in params
+
+
+@respx.mock
+def test_events_list_event_ids_with_single_events_false(client):
+    route = respx.get("https://connect.mobiscroll.com/api/events").mock(
+        return_value=httpx.Response(200, json={"events": []})
+    )
+    client.events.list(
+        event_ids={"google": {"ana@example.com": ["abc123"]}}, single_events=False
+    )
+    params = parse_qs(urlparse(str(route.calls.last.request.url)).query)
+    assert params["singleEvents"] == ["false"]
+    assert json.loads(params["eventIds"][0]) == {"google": {"ana@example.com": ["abc123"]}}
+
+
+@respx.mock
+def test_events_list_include_cancelled_sent_and_unset_not_sent(client):
+    route = respx.get("https://connect.mobiscroll.com/api/events").mock(
+        return_value=httpx.Response(200, json={"events": []})
+    )
+    client.events.list(include_cancelled=True)
+    assert parse_qs(urlparse(str(route.calls.last.request.url)).query) == {
+        "includeCancelled": ["true"]
+    }
+    client.events.list(include_cancelled=False)
+    assert parse_qs(urlparse(str(route.calls.last.request.url)).query) == {
+        "includeCancelled": ["false"]
+    }
+    client.events.list(single_events=True, include_cancelled=None, event_ids=None)
+    assert parse_qs(urlparse(str(route.calls.last.request.url)).query) == {
+        "singleEvents": ["true"]
+    }
+
+
+@respx.mock
+def test_events_list_info_present_and_absent(client):
+    respx.get("https://connect.mobiscroll.com/api/events").mock(
+        side_effect=[
+            httpx.Response(200, json={
+                "events": [],
+                "info": {"google": "No connected account can read calendar ana@example.com"},
+            }),
+            httpx.Response(200, json={"events": []}),
+        ]
+    )
+    with_info = client.events.list(event_ids={"google": {"ana@example.com": ["abc123"]}})
+    assert with_info.info == {"google": "No connected account can read calendar ana@example.com"}
+    assert client.events.list().info is None
+
+
+@respx.mock
+def test_events_list_event_ids_free_busy_403_is_authentication_error(client):
+    respx.get("https://connect.mobiscroll.com/api/events").mock(
+        return_value=httpx.Response(403, json={"error": "free-busy scope cannot read events"})
+    )
+    with pytest.raises(AuthenticationError) as excinfo:
+        client.events.list(event_ids={"google": {"ana@example.com": ["abc123"]}})
+    assert not isinstance(excinfo.value, CalendarPermissionError)
+
+
+@respx.mock
+def test_events_iter_all_passes_event_ids_and_include_cancelled(client):
+    route = respx.get("https://connect.mobiscroll.com/api/events").mock(
+        side_effect=[
+            httpx.Response(200, json={
+                "events": [{"provider": "google", "id": "1", "calendarId": "c"}],
+                "nextPageToken": "p2",
+            }),
+            httpx.Response(200, json={
+                "events": [{"provider": "google", "id": "2", "calendarId": "c"}],
+            }),
+        ]
+    )
+    ids = [e.id for e in client.events.iter_all(
+        event_ids={"google": {"c": ["1", "2"]}}, include_cancelled=True
+    )]
+    assert ids == ["1", "2"]
+    for call in route.calls:
+        params = parse_qs(urlparse(str(call.request.url)).query)
+        assert json.loads(params["eventIds"][0]) == {"google": {"c": ["1", "2"]}}
+        assert params["includeCancelled"] == ["true"]

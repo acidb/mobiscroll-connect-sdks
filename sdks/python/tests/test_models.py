@@ -8,6 +8,7 @@ from mobiscroll_connect.models import (
     ConnectionStatusResponse,
     DisconnectResponse,
     EventsListResponse,
+    SubscribeWebhookResponse,
     TokenResponse,
 )
 
@@ -122,6 +123,38 @@ class TestEventsListResponse:
             "futureListField": 5,
         })
         assert [(e.id, e.provider) for e in r] == [("1", "zoho")]
+
+    def test_info_present(self):
+        r = EventsListResponse.from_dict({
+            "events": [],
+            "info": {"google": "No connected account can read calendar ana@example.com"},
+        })
+        assert r.info == {"google": "No connected account can read calendar ana@example.com"}
+
+    def test_info_absent_or_null_is_none(self):
+        assert EventsListResponse.from_dict({"events": []}).info is None
+        assert EventsListResponse.from_dict({"events": [], "info": None}).info is None
+
+
+BODY = {
+    "success": True,
+    "provider": "google",
+    "subscription": {"channelId": "chan-1", "resourceId": "res-1"},
+    "serverWebhookUrl": "https://connect.mobiscroll.com/api/webhook-callback",
+    "channelId": "chan-1",
+}
+
+
+class TestSubscribeWebhookResponse:
+    def test_single_events_false_and_true_read(self):
+        off = SubscribeWebhookResponse.from_dict({**BODY, "singleEvents": False})
+        on = SubscribeWebhookResponse.from_dict({**BODY, "singleEvents": True})
+        assert off.single_events is False
+        assert on.single_events is True
+
+    def test_single_events_absent_is_none_not_false(self):
+        r = SubscribeWebhookResponse.from_dict(BODY)
+        assert r.single_events is None
 
 
 class TestConnectionStatusResponse:

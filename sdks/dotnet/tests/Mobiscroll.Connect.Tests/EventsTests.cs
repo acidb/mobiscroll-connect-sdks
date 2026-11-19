@@ -60,6 +60,123 @@ public class EventsTests
     }
 
     [Fact]
+    public async Task ListAsync_SendsEventIdsJsonEncodedInTheQuery()
+    {
+        var handler = new FakeHttpMessageHandler().Enqueue(HttpStatusCode.OK, """{"events":[]}""");
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        await client.Events.ListAsync(new EventListParams
+        {
+            EventIds = new Dictionary<string, Dictionary<string, List<string>>>
+            {
+                ["google"] = new() { ["ana@example.com"] = new() { "abc123", "def456" } },
+                ["microsoft"] = new() { ["AAMk"] = new() { "x1" } },
+            },
+        });
+
+        var query = HttpUtility.ParseQueryString(handler.Requests[0].Uri.Query);
+        var eventIds = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, List<string>>>>(query["eventIds"]!);
+        Assert.NotNull(eventIds);
+        Assert.Equal(new[] { "abc123", "def456" }, eventIds!["google"]["ana@example.com"]);
+        Assert.Equal(new[] { "x1" }, eventIds["microsoft"]["AAMk"]);
+        Assert.Null(query["calendarIds"]);
+        Assert.Single(query.AllKeys);
+    }
+
+    [Fact]
+    public async Task ListAsync_SendsAnEmptyEventIds()
+    {
+        var handler = new FakeHttpMessageHandler().Enqueue(HttpStatusCode.OK, """{"events":[]}""");
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        await client.Events.ListAsync(new EventListParams
+        {
+            EventIds = new Dictionary<string, Dictionary<string, List<string>>>(),
+        });
+
+        var query = HttpUtility.ParseQueryString(handler.Requests[0].Uri.Query);
+        Assert.Equal("{}", query["eventIds"]);
+    }
+
+    [Fact]
+    public async Task ListAsync_SendsEventIdsWithSingleEventsFalse()
+    {
+        var handler = new FakeHttpMessageHandler().Enqueue(HttpStatusCode.OK, """{"events":[]}""");
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        await client.Events.ListAsync(new EventListParams
+        {
+            SingleEvents = false,
+            EventIds = new Dictionary<string, Dictionary<string, List<string>>>
+            {
+                ["google"] = new() { ["ana@example.com"] = new() { "abc123" } },
+            },
+        });
+
+        var query = HttpUtility.ParseQueryString(handler.Requests[0].Uri.Query);
+        Assert.Equal("false", query["singleEvents"]);
+        var eventIds = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, List<string>>>>(query["eventIds"]!);
+        Assert.Equal(new[] { "abc123" }, eventIds!["google"]["ana@example.com"]);
+        Assert.Null(query["calendarIds"]);
+    }
+
+    [Theory]
+    [InlineData(true, "includeCancelled=true")]
+    [InlineData(false, "includeCancelled=false")]
+    public async Task ListAsync_SendsIncludeCancelledWhenSet(bool value, string expectedQuery)
+    {
+        var handler = new FakeHttpMessageHandler().Enqueue(HttpStatusCode.OK, """{"events":[]}""");
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        await client.Events.ListAsync(new EventListParams { IncludeCancelled = value });
+
+        Assert.Equal("?" + expectedQuery, handler.Requests[0].Uri.Query);
+    }
+
+    [Fact]
+    public async Task ListAsync_DoesNotSendIncludeCancelledOrEventIdsWhenUnset()
+    {
+        var handler = new FakeHttpMessageHandler().Enqueue(HttpStatusCode.OK, """{"events":[]}""");
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        await client.Events.ListAsync(new EventListParams { SingleEvents = true });
+
+        Assert.Equal("?singleEvents=true", handler.Requests[0].Uri.Query);
+    }
+
+    [Fact]
+    public async Task ListAsync_ReadsInfoWhenPresent()
+    {
+        var handler = new FakeHttpMessageHandler().Enqueue(HttpStatusCode.OK, """
+        {"events":[],"info":{"google":"No connected account can read calendar ana@example.com"}}
+        """);
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        var result = await client.Events.ListAsync();
+
+        Assert.NotNull(result.Info);
+        Assert.Equal("No connected account can read calendar ana@example.com", result.Info!["google"]);
+    }
+
+    [Fact]
+    public async Task ListAsync_InfoIsNullWhenAbsent()
+    {
+        var handler = new FakeHttpMessageHandler().Enqueue(HttpStatusCode.OK, """{"events":[]}""");
+        using var client = ClientFactory.Create(handler);
+        client.SetCredentials(new TokenResponse { AccessToken = "at" });
+
+        var result = await client.Events.ListAsync();
+
+        Assert.Null(result.Info);
+    }
+
+    [Fact]
     public async Task CreateAsync_PostsCamelCaseJsonAndParsesResponse()
     {
         var responseJson = """

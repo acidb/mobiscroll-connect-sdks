@@ -22,8 +22,15 @@ export class Webhooks {
    * Pass the calendar's real id from `calendars.list()`, not an alias such as `primary`: an alias
    * creates a separate, duplicate subscription.
    *
-   * @param params - Subscription parameters including provider and calendar
-   * @returns Subscription details, including the channel id needed to unsubscribe later
+   * `singleEvents: false` creates the channel in series mode: for a Google calendar, a changed
+   * recurring series is delivered as its master event instead of every occurrence. `true`
+   * delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes.
+   * When omitted, the channel keeps the mode of the subscription it replaces, otherwise the
+   * project's setting applies.
+   *
+   * @param params - Subscription parameters including provider, calendar and optionally `singleEvents`
+   * @returns Subscription details, including the channel id needed to unsubscribe later and
+   * `singleEvents`, the mode the channel was created with (`false` is series mode)
    * @throws {MobiscrollConnectError} When a `channelId` you supplied is already in use by another
    * user (HTTP 409)
    *
@@ -35,6 +42,15 @@ export class Webhooks {
    * });
    *
    * console.log(subscription.channelId);
+   *
+   * // Series mode: a changed Google series arrives as its master, not as every occurrence
+   * const seriesMode = await client.webhooks.subscribeWebhook({
+   *   provider: 'google',
+   *   calendarId: 'work@company.com',
+   *   singleEvents: false,
+   * });
+   *
+   * console.log(seriesMode.singleEvents); // false
    * ```
    */
   async subscribeWebhook(params: SubscribeWebhookParams): Promise<SubscribeWebhookResponse> {

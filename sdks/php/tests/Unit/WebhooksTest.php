@@ -111,6 +111,92 @@ class WebhooksTest extends BaseTestCase
         $this->assertSame(1234567890, $sentBody['expiration']);
     }
 
+    public function testSubscribeWebhookSendsSingleEventsFalseAndReadsResponse(): void
+    {
+        $body = (string)json_encode([
+            'success' => true,
+            'provider' => 'google',
+            'subscription' => ['channelId' => 'chan-1'],
+            'serverWebhookUrl' => 'https://connect.mobiscroll.com/api/webhook/google',
+            'channelId' => 'chan-1',
+            'singleEvents' => false,
+        ]);
+
+        $mockHandler = $this->mockHttpClient([new Response(200, [], $body)]);
+
+        $result = $this->client->webhooks()->subscribeWebhook([
+            'provider' => 'google',
+            'calendarId' => 'work@company.com',
+            'singleEvents' => false,
+        ]);
+
+        $lastRequest = $mockHandler->getLastRequest();
+        $this->assertNotNull($lastRequest);
+        $this->assertSame(
+            '{"provider":"google","calendarId":"work@company.com","singleEvents":false}',
+            (string)$lastRequest->getBody(),
+        );
+        $this->assertFalse($result->singleEvents);
+    }
+
+    public function testSubscribeWebhookSendsSingleEventsTrue(): void
+    {
+        $body = (string)json_encode([
+            'success' => true,
+            'provider' => 'google',
+            'subscription' => ['channelId' => 'chan-1'],
+            'serverWebhookUrl' => '',
+            'channelId' => 'chan-1',
+            'singleEvents' => true,
+        ]);
+
+        $mockHandler = $this->mockHttpClient([new Response(200, [], $body)]);
+
+        $result = $this->client->webhooks()->subscribeWebhook([
+            'provider' => 'google',
+            'calendarId' => 'work@company.com',
+            'singleEvents' => true,
+        ]);
+
+        $lastRequest = $mockHandler->getLastRequest();
+        $this->assertNotNull($lastRequest);
+        /** @var array<string, mixed> $sentBody */
+        $sentBody = json_decode((string)$lastRequest->getBody(), true);
+        $this->assertTrue($sentBody['singleEvents']);
+        $this->assertTrue($result->singleEvents);
+    }
+
+    public function testSubscribeWebhookOmitsSingleEventsWhenUnsetOrNull(): void
+    {
+        $body = (string)json_encode([
+            'success' => true,
+            'provider' => 'google',
+            'subscription' => ['channelId' => 'chan-1'],
+            'serverWebhookUrl' => '',
+            'channelId' => 'chan-1',
+        ]);
+
+        $mockHandler = $this->mockHttpClient([new Response(200, [], $body), new Response(200, [], $body)]);
+
+        $result = $this->client->webhooks()->subscribeWebhook([
+            'provider' => 'google',
+            'calendarId' => 'work@company.com',
+        ]);
+        $first = $mockHandler->getLastRequest();
+        $this->assertNotNull($first);
+        $this->assertSame('{"provider":"google","calendarId":"work@company.com"}', (string)$first->getBody());
+        $this->assertNull($result->singleEvents);
+
+        $this->client->webhooks()->subscribeWebhook([
+            'provider' => 'google',
+            'calendarId' => 'work@company.com',
+            'singleEvents' => null,
+        ]);
+        $second = $mockHandler->getLastRequest();
+        $this->assertNotNull($second);
+        $this->assertSame('{"provider":"google","calendarId":"work@company.com"}', (string)$second->getBody());
+    }
+
     public function testSubscribeWebhookMissingProviderThrows(): void
     {
         $this->expectException(\InvalidArgumentException::class);

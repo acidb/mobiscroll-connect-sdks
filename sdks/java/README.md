@@ -69,6 +69,21 @@ client.events().create(EventCreateData.builder()
     .build());
 ```
 
+## List events
+
+`singleEvents(true)` is the default and expands recurring events into occurrences; `false` returns the series masters. `includeCancelled(true)` also returns the deleted occurrences of series that still exist, as events with `status` `"cancelled"` (with `singleEvents(true)`, the default). `eventIds` returns only the given events: at most 40 ids per request, given per provider and calendar id, and not combinable with `calendarIds`. With `singleEvents(false)` each id returns the event itself, in the order of the ids, without a time window; with `singleEvents(true)` it returns what the list returns for that id between `start` and `end`. Ids that no longer exist are left out. `getInfo()`, when not `null`, maps a provider name to a message about a provider that could not be read, or about calendars no connected account can read.
+
+```java
+import com.mobiscroll.connect.models.EventListParams;
+import com.mobiscroll.connect.models.EventsListResponse;
+import java.util.Map;
+
+EventsListResponse result = client.events().list(EventListParams.builder()
+    .eventIds(Map.of(Provider.GOOGLE, Map.of("ana@example.com", List.of("abc123", "def456"))))
+    .singleEvents(false)
+    .build());
+```
+
 ## Disconnect and revoke
 
 ```java
@@ -110,6 +125,16 @@ client.webhooks().unsubscribeWebhook(WebhookUnsubscribeParams.builder()
     .provider(Provider.GOOGLE)
     .channelId(subscription.getChannelId())
     .resourceId(subscription.getSubscription().getResourceId())
+    .build());
+```
+
+`singleEvents(false)` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `subscription.getSingleEvents()` is the mode the channel was created with, or `null` when the response does not carry it.
+
+```java
+WebhookSubscribeResponse seriesMode = client.webhooks().subscribeWebhook(WebhookSubscribeParams.builder()
+    .provider(Provider.GOOGLE)
+    .calendarId("work@company.com")
+    .singleEvents(false)
     .build());
 ```
 

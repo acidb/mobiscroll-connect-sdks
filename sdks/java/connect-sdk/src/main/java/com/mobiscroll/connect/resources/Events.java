@@ -31,6 +31,21 @@ public final class Events {
      * List events across the supplied calendars (or all connected calendars if none specified).
      * The {@code calendarIds} map is JSON-encoded into a single query parameter, matching the
      * wire format used by the other SDKs (e.g. {@code calendarIds={"google":["primary"]}}).
+     *
+     * <p>{@code singleEvents} (default {@code true}) expands recurring events into occurrences;
+     * {@code false} returns the series masters. {@code includeCancelled} also returns deleted
+     * occurrences, as events with {@code status} {@code "cancelled"}, with {@code singleEvents(true)}.
+     * {@code eventIds} returns only the given events, at most 40 ids, and cannot be combined with
+     * {@code calendarIds}; see {@link EventListParams#getEventIds()}. {@link EventsListResponse#getInfo()}
+     * carries the providers that failed and the calendars no connected account can read.
+     *
+     * <pre>{@code
+     * // Fetch two events by id, each as the event itself (a series' master, or an occurrence)
+     * EventsListResponse result = client.events().list(EventListParams.builder()
+     *     .eventIds(Map.of(Provider.GOOGLE, Map.of("ana@example.com", List.of("abc123", "def456"))))
+     *     .singleEvents(false)
+     *     .build());
+     * }</pre>
      */
     public EventsListResponse list(EventListParams params) {
         QueryStringBuilder qs = new QueryStringBuilder();
@@ -51,7 +66,22 @@ public final class Events {
               .add("end", params.getEnd())
               .add("pageSize", params.getPageSize())
               .add("nextPageToken", params.getNextPageToken())
-              .add("singleEvents", params.getSingleEvents());
+              .add("singleEvents", params.getSingleEvents())
+              .add("includeCancelled", params.getIncludeCancelled());
+            // Sent whenever set, even empty ({}): the server answers 400, whereas dropping it would
+            // turn the filter into a list of every event.
+            Map<Provider, Map<String, List<String>>> eventIds = params.getEventIds();
+            if (eventIds != null) {
+                Map<String, Map<String, List<String>>> wire = new LinkedHashMap<>();
+                for (Map.Entry<Provider, Map<String, List<String>>> e : eventIds.entrySet()) {
+                    wire.put(e.getKey().wireValue(), e.getValue());
+                }
+                try {
+                    qs.add("eventIds", JsonMapperHolder.get().writeValueAsString(wire));
+                } catch (JsonProcessingException e) {
+                    throw new MobiscrollConnectException("Failed to encode eventIds", e);
+                }
+            }
         }
         return api.get("/events", qs.isEmpty() ? null : qs.build(),
                 new TypeReference<EventsListResponse>() {});

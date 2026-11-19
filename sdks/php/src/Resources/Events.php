@@ -104,6 +104,15 @@ class Events
             $query['singleEvents'] = $params['singleEvents'] ? 'true' : 'false';
         }
 
+        if (isset($params['includeCancelled'])) {
+            $query['includeCancelled'] = $params['includeCancelled'] ? 'true' : 'false';
+        }
+
+        if (isset($params['eventIds'])) {
+            $encoded = json_encode($params['eventIds']);
+            $query['eventIds'] = $encoded !== false ? $encoded : '{}';
+        }
+
         return $query;
     }
 
@@ -116,8 +125,26 @@ class Events
      *   - calendars: string[] Array of calendar IDs
      *   - pageSize: int Events per page (default: 250, max: 1000)
      *   - nextPageToken: string For pagination
-     *   - singleEvents: bool Expand recurring events (default: true)
-     * @return array<string, mixed>
+     *   - singleEvents: bool `true` (default) expands recurring events into their occurrences within `start`
+     *     and `end`; `false` returns each series once, as its master event
+     *   - includeCancelled: bool With `singleEvents: true`, also returns the deleted occurrences of series that
+     *     still exist, as events with `status` `'cancelled'`. Default `false`. Ignored with `singleEvents: false`.
+     *     Applies to the normal list and to `eventIds`
+     *   - eventIds: array<string, array<string, string[]>> Returns only these events, given as event ids per
+     *     provider and calendar id (`['google' => ['ana@example.com' => ['abc123']]]`), and sent JSON-encoded
+     *     like `calendarIds`. At most 40 ids per request (more is rejected with a `ValidationError`). Cannot be
+     *     combined with `calendarIds` (`ValidationError`) and is not available with the `free-busy` scope
+     *     (HTTP 403, an `AuthenticationError`, not a `CalendarPermissionError`).
+     *     With `singleEvents: false`, each event itself comes back (a series' master, or an occurrence), in the
+     *     order of the ids, without a time window. With `singleEvents: true` (default), each id returns what the
+     *     list returns for it inside `start` and `end`: the occurrences of a series, never its master, or a
+     *     single event when it overlaps the window. Missing or deleted ids are left out, without an error.
+     *     A `nextPageToken` from such a request is only valid with the same `eventIds`, `singleEvents`,
+     *     `includeCancelled`, `start` and `end`
+     * @return array<string, mixed> The decoded response: `events`, `pageSize`, `nextPageToken` when more events
+     *   follow, and `info` when set. `info` maps a provider name to a message, present when a provider could not
+     *   be read and, with `eventIds`, when no connected account can read a calendar (that calendar's ids are
+     *   then left out of `events`)
      */
     public function list(?array $params = null): array
     {

@@ -209,16 +209,20 @@ module Mobiscroll
       end
     end
 
-    # Paginated response from Events#list.
-    EventsListResponse = Struct.new(:events, :page_size, :next_page_token, keyword_init: true) do
+    # Paginated response from Events#list. `info` is a Hash of provider name (String) => message
+    # String, present when a provider could not be read and, with `event_ids`, when no connected
+    # account can read a calendar (that calendar's ids are then left out of `events`); nil when
+    # the response has none.
+    EventsListResponse = Struct.new(:events, :page_size, :next_page_token, :info, keyword_init: true) do
       def self.from_h(hash)
-        return new(events: [], page_size: nil, next_page_token: nil) if hash.nil?
+        return new(events: [], page_size: nil, next_page_token: nil, info: nil) if hash.nil?
 
         events = (hash['events'] || hash[:events] || []).map { |e| CalendarEvent.from_h(e) }
         new(
           events: events,
           page_size: hash['pageSize'] || hash[:pageSize],
-          next_page_token: hash['nextPageToken'] || hash[:nextPageToken]
+          next_page_token: hash['nextPageToken'] || hash[:nextPageToken],
+          info: hash['info'] || hash[:info]
         )
       end
     end
@@ -237,9 +241,12 @@ module Mobiscroll
       end
     end
 
-    # Response from Webhooks#subscribe_webhook.
+    # Response from Webhooks#subscribe_webhook. `single_events` is the mode the channel was created
+    # with (false is series mode, true is every occurrence); nil when the response does not carry
+    # it, which is unknown, not series mode.
     SubscribeWebhookResponse = Struct.new(
-      :success, :provider, :subscription, :server_webhook_url, :channel_id, keyword_init: true
+      :success, :provider, :subscription, :server_webhook_url, :channel_id, :single_events,
+      keyword_init: true
     ) do
       def self.from_h(hash)
         return nil if hash.nil?
@@ -249,7 +256,8 @@ module Mobiscroll
           provider: hash['provider'] || hash[:provider],
           subscription: WebhookSubscription.from_h(hash['subscription'] || hash[:subscription]),
           server_webhook_url: hash['serverWebhookUrl'] || hash[:serverWebhookUrl],
-          channel_id: hash['channelId'] || hash[:channelId]
+          channel_id: hash['channelId'] || hash[:channelId],
+          single_events: hash.fetch('singleEvents') { hash[:singleEvents] }
         )
       end
     end

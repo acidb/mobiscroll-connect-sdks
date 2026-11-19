@@ -16,8 +16,40 @@ module Mobiscroll
           conferenceData: :conference_data
         }.freeze
 
+        # Lists calendar events.
+        #
+        # `single_events` (default true) expands recurring events into occurrences; false returns the
+        # series masters. `include_cancelled` (default false) also returns the deleted occurrences of
+        # series that still exist, as events with `status` 'cancelled', with `single_events: true`;
+        # it is ignored with `single_events: false` and applies to the normal list and to `event_ids`.
+        #
+        # `event_ids` returns only the given events: a Hash of event id Arrays per provider and
+        # calendar id, such as { 'google' => { 'ana@example.com' => ['abc123'] } }, JSON-encoded into
+        # the `eventIds` query parameter like `calendar_ids`. It is sent whenever it is not nil, an
+        # empty Hash included (sent as `{}`, which the server rejects with a 400, never as an
+        # unfiltered list). At most 40 ids per request (more raises ValidationError). It cannot be
+        # combined with `calendar_ids` (ValidationError) and is not available with the `free-busy`
+        # scope (HTTP 403, AuthenticationError).
+        #
+        # With `single_events: false`, each event itself comes back (a series' master, or an
+        # occurrence), in the order of the ids, without a time window. With `single_events: true`
+        # (default), each id returns what the list returns for it inside `start` and `end`: the
+        # occurrences of a series, never its master, or a single event when it overlaps the window.
+        # Missing or deleted ids are left out, without an error.
+        #
+        # A `next_page_token` from such a request is only valid with the same `event_ids`,
+        # `single_events`, `include_cancelled`, `start` and `end` (anything else raises
+        # ValidationError).
+        #
+        # Returns an EventsListResponse: the events of this page, `page_size`, `next_page_token` when
+        # more events follow, and `info` when set.
+        #
+        #   result = client.events.list(
+        #     event_ids: { 'google' => { 'ana@example.com' => %w[abc123 def456] } },
+        #     single_events: false
+        #   )
         def list(start: nil, end: nil, calendar_ids: nil, page_size: nil,
-                 next_page_token: nil, single_events: nil)
+                 next_page_token: nil, single_events: nil, include_cancelled: nil, event_ids: nil)
           end_time = binding.local_variable_get(:end)
           query = {}
           query['start'] = start if start
@@ -25,11 +57,15 @@ module Mobiscroll
           query['pageSize'] = page_size if page_size
           query['nextPageToken'] = next_page_token if next_page_token
           query['singleEvents'] = single_events.to_s unless single_events.nil?
+          query['includeCancelled'] = include_cancelled.to_s unless include_cancelled.nil?
 
           if calendar_ids && !calendar_ids.empty?
             wire = calendar_ids.transform_keys(&:to_s)
             query['calendarIds'] = JSON.generate(wire)
           end
+
+          # Never dropped when empty: the server answers 400, where dropping it would list every event.
+          query['eventIds'] = JSON.generate(event_ids.transform_keys(&:to_s)) unless event_ids.nil?
 
           parsed = @api_client.get('/events', query: query)
           EventsListResponse.from_h(parsed)

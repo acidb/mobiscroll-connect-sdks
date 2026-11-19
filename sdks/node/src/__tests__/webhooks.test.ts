@@ -86,6 +86,69 @@ describe('Webhooks Resource', () => {
       expect(result).toEqual(mockResponse);
     });
 
+    it('should send singleEvents: false and return the response singleEvents', async () => {
+      const params: SubscribeWebhookParams = {
+        provider: ProviderEnum.Google,
+        calendarId: 'work@company.com',
+        singleEvents: false,
+      };
+
+      const mockResponse: SubscribeWebhookResponse = {
+        success: true,
+        provider: 'google',
+        subscription: { channelId: 'channel-123', resourceId: 'resource-456' },
+        serverWebhookUrl: 'https://connect.mobiscroll.com/api/webhook-callback',
+        channelId: 'channel-123',
+        singleEvents: false,
+      };
+
+      mockApiClient.post.mockResolvedValue({ data: mockResponse, status: 200, headers: {} });
+
+      const result = await webhooks.subscribeWebhook(params);
+
+      const body = mockApiClient.post.mock.calls[0][1] as Record<string, unknown>;
+      expect(mockApiClient.post).toHaveBeenCalledWith('/subscribe-webhook', params);
+      expect(body.singleEvents).toBe(false);
+      expect(result.singleEvents).toBe(false);
+    });
+
+    it('should send singleEvents: true', async () => {
+      const params: SubscribeWebhookParams = {
+        provider: ProviderEnum.Google,
+        calendarId: 'work@company.com',
+        singleEvents: true,
+      };
+
+      mockApiClient.post.mockResolvedValue({
+        data: { success: true, singleEvents: true },
+        status: 200,
+        headers: {},
+      });
+
+      const result = await webhooks.subscribeWebhook(params);
+
+      expect(mockApiClient.post).toHaveBeenCalledWith('/subscribe-webhook', params);
+      expect(result.singleEvents).toBe(true);
+    });
+
+    it('should omit singleEvents from the body when it is undefined', async () => {
+      mockApiClient.post.mockResolvedValue({
+        data: { success: true, provider: 'google' },
+        status: 200,
+        headers: {},
+      });
+
+      const result = await webhooks.subscribeWebhook({
+        provider: ProviderEnum.Google,
+        calendarId: 'work@company.com',
+        singleEvents: undefined,
+      });
+
+      const body = mockApiClient.post.mock.calls[0][1];
+      expect(JSON.stringify(body)).toBe('{"provider":"google","calendarId":"work@company.com"}');
+      expect(result.singleEvents).toBeUndefined();
+    });
+
     it('should propagate a ValidationError for a missing provider/calendarId (400)', async () => {
       const params = { calendarId: 'primary' } as unknown as SubscribeWebhookParams;
       mockApiClient.post.mockRejectedValue(new ValidationError('provider is required'));

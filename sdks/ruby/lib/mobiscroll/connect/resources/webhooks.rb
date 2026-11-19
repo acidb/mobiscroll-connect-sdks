@@ -21,10 +21,25 @@ module Mobiscroll
         # server-side when omitted; one that another user already holds is rejected with
         # Mobiscroll::Connect::Error (HTTP 409). `expiration` is a provider-specific timestamp
         # (ms epoch) the caller can suggest.
-        def subscribe_webhook(provider:, calendar_id:, channel_id: nil, expiration: nil)
+        #
+        # `single_events: false` creates the channel in series mode: for a Google calendar, a changed
+        # recurring series is delivered as its master event instead of every occurrence. `true`
+        # delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both
+        # modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise
+        # the project's setting (set on the dashboard) applies. A non-boolean value is rejected with
+        # Mobiscroll::Connect::ValidationError (HTTP 400).
+        #
+        # Returns a SubscribeWebhookResponse, including the channel id needed to unsubscribe later
+        # and `single_events`, the mode the channel was created with (false is series mode, nil when
+        # the response does not carry it).
+        #
+        #   client.webhooks.subscribe_webhook(provider: 'google', calendar_id: 'work@company.com',
+        #                                     single_events: false)
+        def subscribe_webhook(provider:, calendar_id:, channel_id: nil, expiration: nil, single_events: nil)
           body = { 'provider' => provider, 'calendarId' => calendar_id }
           body['channelId'] = channel_id if channel_id
           body['expiration'] = expiration if expiration
+          body['singleEvents'] = single_events unless single_events.nil?
 
           parsed = @api_client.post('/subscribe-webhook', body: JSON.generate(body))
           SubscribeWebhookResponse.from_h(parsed)

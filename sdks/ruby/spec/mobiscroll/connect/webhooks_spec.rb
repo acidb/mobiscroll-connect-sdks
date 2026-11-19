@@ -69,6 +69,52 @@ RSpec.describe Mobiscroll::Connect::Resources::Webhooks do
       expect(stub).to have_been_requested
     end
 
+    it 'sends single_events: false as singleEvents and returns the response single_events' do
+      expected_body = { 'provider' => 'google', 'calendarId' => 'primary', 'singleEvents' => false }
+      stub = WebMock.stub_request(:post, "#{MockServer::BASE_URL}/subscribe-webhook")
+                    .with { |req| JSON.parse(req.body) == expected_body }
+                    .to_return(
+                      status: 200,
+                      body: JSON.generate({ 'success' => true, 'channelId' => 'chan-1', 'singleEvents' => false }),
+                      headers: { 'Content-Type' => 'application/json' }
+                    )
+
+      result = client.webhooks.subscribe_webhook(provider: 'google', calendar_id: 'primary', single_events: false)
+
+      expect(stub).to have_been_requested
+      expect(result.single_events).to be(false)
+    end
+
+    it 'sends single_events: true and returns the response single_events' do
+      stub = WebMock.stub_request(:post, "#{MockServer::BASE_URL}/subscribe-webhook")
+                    .with { |req| JSON.parse(req.body)['singleEvents'] == true }
+                    .to_return(
+                      status: 200,
+                      body: JSON.generate({ 'success' => true, 'singleEvents' => true }),
+                      headers: { 'Content-Type' => 'application/json' }
+                    )
+
+      result = client.webhooks.subscribe_webhook(provider: 'google', calendar_id: 'primary', single_events: true)
+
+      expect(stub).to have_been_requested
+      expect(result.single_events).to be(true)
+    end
+
+    it 'omits singleEvents from the body when single_events is nil, and reads it as nil when absent' do
+      stub = WebMock.stub_request(:post, "#{MockServer::BASE_URL}/subscribe-webhook")
+                    .with { |req| req.body == '{"provider":"google","calendarId":"primary"}' }
+                    .to_return(
+                      status: 200,
+                      body: JSON.generate({ 'success' => true, 'provider' => 'google' }),
+                      headers: { 'Content-Type' => 'application/json' }
+                    )
+
+      result = client.webhooks.subscribe_webhook(provider: 'google', calendar_id: 'primary', single_events: nil)
+
+      expect(stub).to have_been_requested
+      expect(result.single_events).to be_nil
+    end
+
     it 'raises ValidationError for a 400 (missing provider/calendarId)' do
       MockServer.stub_json(:post, '/subscribe-webhook', { 'message' => 'calendarId is required' }, status: 400)
 

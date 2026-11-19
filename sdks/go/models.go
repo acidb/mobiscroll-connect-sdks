@@ -171,7 +171,36 @@ type EventListParams struct {
 	CalendarIDs   map[Provider][]string // provider → calendar IDs; JSON-encoded as a single query param
 	PageSize      *int                  // capped at 1000 server-side
 	NextPageToken string                // pagination cursor
-	SingleEvents  *bool                 // expand recurring series
+	// SingleEvents is true by default: recurring events are expanded into their
+	// occurrences within Start and End. false returns each series once, as its
+	// master event. Nil is not sent.
+	SingleEvents *bool
+	// IncludeCancelled, with SingleEvents true, also returns the deleted
+	// occurrences of series that still exist, as events with Status
+	// "cancelled". Default false. Ignored with SingleEvents false. Applies to
+	// the normal list and to EventIDs. Nil is not sent; an explicit false is.
+	IncludeCancelled *bool
+	// EventIDs returns only these events, given as event IDs per provider and
+	// calendar ID, and sent JSON-encoded in a single query parameter like
+	// CalendarIDs (for example {"google":{"ana@example.com":["abc123"]}}).
+	// At most 40 IDs per request (more is rejected with a *ValidationError).
+	// Cannot be combined with CalendarIDs (*ValidationError) and is not
+	// available with the free-busy scope (HTTP 403, an *AuthenticationError).
+	//
+	// With SingleEvents false, each event itself comes back (a series' master,
+	// or an occurrence), in the order of the IDs, without a time window. With
+	// SingleEvents true (default), each ID returns what the list returns for
+	// it inside Start and End: the occurrences of a series, never its master,
+	// or a single event when it overlaps the window. Missing or deleted IDs
+	// are left out, without an error.
+	//
+	// A NextPageToken from such a request is only valid with the same
+	// EventIDs, SingleEvents, IncludeCancelled, Start and End.
+	//
+	// A nil map is not sent. A non-nil empty map is sent as {}, which the
+	// server rejects with a *ValidationError, so an empty filter never turns
+	// into an unfiltered list.
+	EventIDs map[Provider]map[string][]string
 }
 
 // EventsListResponse is the paginated response from Events.List.
@@ -179,6 +208,10 @@ type EventsListResponse struct {
 	Events        []CalendarEvent `json:"events"`
 	PageSize      *int            `json:"pageSize,omitempty"`
 	NextPageToken string          `json:"nextPageToken,omitempty"`
+	// Info holds messages keyed by provider, present when a provider could not
+	// be read and, with EventIDs, when no connected account can read a calendar
+	// (that calendar's IDs are then left out of Events). Nil when absent.
+	Info map[Provider]string `json:"info,omitempty"`
 }
 
 // EventCreateData is the body for Events.Create.
@@ -260,6 +293,15 @@ type SubscribeWebhookParams struct {
 	ChannelID string `json:"channelId,omitempty"`
 	// Expiration is a provider-specific timestamp (ms epoch).
 	Expiration *int64 `json:"expiration,omitempty"`
+	// SingleEvents is the channel's webhook mode, named like the
+	// EventListParams field. false is series mode: for a Google calendar, a
+	// changed recurring series is delivered as its master event instead of
+	// every occurrence. true delivers every occurrence. Outlook, iCloud and
+	// CalDAV deliver the series master in both modes. When nil (omitted from
+	// the body), the channel keeps the mode of the subscription it replaces,
+	// otherwise the project's setting (set on the dashboard) applies. A
+	// non-boolean value is rejected with a *ValidationError.
+	SingleEvents *bool `json:"singleEvents,omitempty"`
 }
 
 // WebhookSubscription describes the provider-side subscription created by
@@ -279,6 +321,10 @@ type SubscribeWebhookResponse struct {
 	Subscription     WebhookSubscription `json:"subscription"`
 	ServerWebhookURL string              `json:"serverWebhookUrl"`
 	ChannelID        string              `json:"channelId"`
+	// SingleEvents is the mode the channel was created with: false is series
+	// mode, true is every occurrence. Nil when the response does not carry it
+	// (unknown, not series mode).
+	SingleEvents *bool `json:"singleEvents,omitempty"`
 }
 
 // UnsubscribeWebhookParams is the body for Webhooks.UnsubscribeWebhook.

@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.mobiscroll.connect.models.CalendarEvent;
@@ -62,6 +63,88 @@ class EventsTest {
                 .isEqualTo("{\"google\":[\"c1\",\"c2\"]}");
         assertThat(req.getPath()).contains("singleEvents=true");
         assertThat(req.getPath()).contains("pageSize=50");
+    }
+
+    private static final String EMPTY_LIST = "{\"events\":[]}";
+
+    @Test void listSendsEventIdsJsonEncodedInTheQuery() throws Exception {
+        server.enqueue(new MockResponse().setBody(EMPTY_LIST));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+
+        Map<Provider, Map<String, List<String>>> ids = new LinkedHashMap<>();
+        Map<String, List<String>> google = new LinkedHashMap<>();
+        google.put("ana@example.com", Arrays.asList("abc123", "def456"));
+        ids.put(Provider.GOOGLE, google);
+        ids.put(Provider.MICROSOFT, Map.of("AAMk", List.of("x1")));
+        client.events().list(EventListParams.builder().eventIds(ids).build());
+
+        RecordedRequest req = server.takeRequest();
+        assertThat(req.getRequestUrl().queryParameter("eventIds")).isEqualTo(
+                "{\"google\":{\"ana@example.com\":[\"abc123\",\"def456\"]},\"microsoft\":{\"AAMk\":[\"x1\"]}}");
+        assertThat(req.getRequestUrl().querySize()).isEqualTo(1);
+    }
+
+    @Test void listSendsEventIdsWithSingleEventsFalse() throws Exception {
+        server.enqueue(new MockResponse().setBody(EMPTY_LIST));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+
+        client.events().list(EventListParams.builder()
+                .eventIds(Map.of(Provider.GOOGLE, Map.of("ana@example.com", List.of("abc123"))))
+                .singleEvents(false)
+                .build());
+
+        RecordedRequest req = server.takeRequest();
+        assertThat(req.getRequestUrl().queryParameter("singleEvents")).isEqualTo("false");
+        assertThat(req.getRequestUrl().queryParameter("eventIds"))
+                .isEqualTo("{\"google\":{\"ana@example.com\":[\"abc123\"]}}");
+        assertThat(req.getRequestUrl().queryParameterNames()).doesNotContain("calendarIds");
+    }
+
+    @Test void listSendsAnEmptyEventIdsMapAsEmptyObject() throws Exception {
+        server.enqueue(new MockResponse().setBody(EMPTY_LIST));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+
+        client.events().list(EventListParams.builder().eventIds(new LinkedHashMap<>()).build());
+
+        // never dropped: dropping it would turn the filter into a list of every event
+        RecordedRequest req = server.takeRequest();
+        assertThat(req.getPath()).isEqualTo("/api/events?eventIds=%7B%7D");
+        assertThat(req.getRequestUrl().queryParameter("eventIds")).isEqualTo("{}");
+    }
+
+    @Test void listSendsIncludeCancelledTrueAndFalse() throws Exception {
+        server.enqueue(new MockResponse().setBody(EMPTY_LIST));
+        server.enqueue(new MockResponse().setBody(EMPTY_LIST));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+
+        client.events().list(EventListParams.builder().includeCancelled(true).build());
+        client.events().list(EventListParams.builder().includeCancelled(false).build());
+
+        assertThat(server.takeRequest().getPath()).isEqualTo("/api/events?includeCancelled=true");
+        assertThat(server.takeRequest().getPath()).isEqualTo("/api/events?includeCancelled=false");
+    }
+
+    @Test void listDoesNotSendIncludeCancelledOrEventIdsWhenUnset() throws Exception {
+        server.enqueue(new MockResponse().setBody(EMPTY_LIST));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+
+        client.events().list(EventListParams.builder().singleEvents(true).build());
+
+        assertThat(server.takeRequest().getPath()).isEqualTo("/api/events?singleEvents=true");
+    }
+
+    @Test void listReturnsInfoWhenPresentAndNullWhenAbsent() throws Exception {
+        server.enqueue(new MockResponse().setBody(
+                "{\"events\":[],\"info\":{\"google\":\"No connected account can read calendar ana@example.com\"}}"));
+        server.enqueue(new MockResponse().setBody(EMPTY_LIST));
+        MobiscrollConnectClient client = ClientFactory.withMockAndCredentials(server);
+
+        EventsListResponse withInfo = client.events().list(EventListParams.builder().build());
+        EventsListResponse withoutInfo = client.events().list(EventListParams.builder().build());
+
+        assertThat(withInfo.getInfo())
+                .containsExactly(Map.entry("google", "No connected account can read calendar ana@example.com"));
+        assertThat(withoutInfo.getInfo()).isNull();
     }
 
     @Test void createSendsJsonBody() throws Exception {

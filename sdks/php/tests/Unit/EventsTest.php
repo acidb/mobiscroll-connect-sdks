@@ -229,4 +229,78 @@ class EventsTest extends BaseTestCase
 
         $this->assertSame('false', $query['singleEvents']);
     }
+
+    /**
+     * @param array<string, mixed> $params
+     * @return array<string, string>
+     */
+    private function listQuery(array $params): array
+    {
+        $eventsResource = $this->client->events();
+        $method = (new \ReflectionObject($eventsResource))->getMethod('buildListQuery');
+
+        /** @var array<string, string> $query */
+        $query = $method->invoke($eventsResource, $params);
+        return $query;
+    }
+
+    public function testEventListSendsEventIdsJsonEncoded(): void
+    {
+        $eventIds = [
+            'google' => ['ana@example.com' => ['abc123', 'def456']],
+            'microsoft' => ['AAMk' => ['x1']],
+        ];
+
+        $query = $this->listQuery(['eventIds' => $eventIds]);
+
+        $this->assertSame(['eventIds'], array_keys($query));
+        $this->assertSame($eventIds, json_decode($query['eventIds'], true));
+    }
+
+    public function testEventListSendsEventIdsWithSingleEventsFalse(): void
+    {
+        $query = $this->listQuery([
+            'eventIds' => ['google' => ['ana@example.com' => ['abc123']]],
+            'singleEvents' => false,
+        ]);
+
+        $this->assertSame('false', $query['singleEvents']);
+        $this->assertSame(
+            ['google' => ['ana@example.com' => ['abc123']]],
+            json_decode($query['eventIds'], true),
+        );
+        $this->assertArrayNotHasKey('calendarIds', $query);
+    }
+
+    public function testEventListSendsIncludeCancelledTrueAndFalse(): void
+    {
+        $this->assertSame('true', $this->listQuery(['includeCancelled' => true])['includeCancelled']);
+        $this->assertSame('false', $this->listQuery(['includeCancelled' => false])['includeCancelled']);
+    }
+
+    public function testEventListOmitsIncludeCancelledAndEventIdsWhenUnset(): void
+    {
+        $query = $this->listQuery(['singleEvents' => true, 'includeCancelled' => null, 'eventIds' => null]);
+
+        $this->assertSame(['singleEvents' => 'true'], $query);
+        $this->assertSame([], $this->listQuery([]));
+    }
+
+    public function testEventsListResponseReadsInfo(): void
+    {
+        $response = EventsListResponse::fromArray([
+            'events' => [],
+            'info' => ['google' => 'No connected account can read calendar ana@example.com'],
+        ]);
+
+        $this->assertSame(
+            ['google' => 'No connected account can read calendar ana@example.com'],
+            $response->info,
+        );
+    }
+
+    public function testEventsListResponseInfoIsNullWhenAbsent(): void
+    {
+        $this->assertNull(EventsListResponse::fromArray(['events' => []])->info);
+    }
 }

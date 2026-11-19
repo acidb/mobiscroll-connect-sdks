@@ -4,6 +4,15 @@ All notable changes to the Mobiscroll Connect Go SDK (module: `github.com/acidb/
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this SDK's major.minor always matches the Connect API's (for example API 1.5.x → SDK 1.5.x): each release bumps only the patch, including releases with breaking changes. Patch numbers are independent per SDK, so this file covers the Go SDK only. Release tags use the `sdks/go/vX.Y.Z` form the Go module proxy requires.
 
+## [Unreleased]
+
+### Added
+
+- `Events().List()` accepts `EventIDs` in `EventListParams`, event IDs per provider and calendar ID (at most 40), and returns only those events. It cannot be combined with `CalendarIDs`.
+- `Events().List()` accepts `IncludeCancelled` in `EventListParams`: with `SingleEvents` true, it also returns the deleted occurrences of series that still exist, as events with `Status` `"cancelled"`.
+- `EventsListResponse` has an optional `Info` field: messages keyed by provider, set when a provider could not be read or, with `EventIDs`, when no connected account can read a calendar.
+- `Webhooks().SubscribeWebhook()` accepts `SingleEvents` in `SubscribeWebhookParams`: false creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. The response has `SingleEvents`, the mode the channel was created with.
+
 ## [1.6.1] — 2026-11-11
 
 ### Fixed

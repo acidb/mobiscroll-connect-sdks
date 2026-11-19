@@ -73,6 +73,97 @@ RSpec.describe Mobiscroll::Connect::Resources::Events do
       expect(stub).to have_been_requested
       _ = result
     end
+
+    describe 'event_ids, include_cancelled and info' do
+      let(:empty_page) { { 'events' => [] } }
+
+      def stub_events
+        WebMock.stub_request(:get, /\A#{Regexp.escape("#{MockServer::BASE_URL}/events")}/)
+               .to_return(
+                 status: 200,
+                 body: JSON.generate(empty_page),
+                 headers: { 'Content-Type' => 'application/json' }
+               )
+      end
+
+      def query_of(request)
+        URI.decode_www_form(request.uri.query).to_h
+      end
+
+      it 'sends event_ids JSON-encoded as the eventIds query param' do
+        stub_events
+        event_ids = {
+          'google' => { 'ana@example.com' => %w[abc123 def456] },
+          'microsoft' => { 'AAMk' => ['x1'] }
+        }
+
+        client.events.list(event_ids: event_ids)
+
+        expect(WebMock).to(have_requested(:get, /events/).with do |req|
+          query = query_of(req)
+          query.keys == ['eventIds'] && JSON.parse(query['eventIds']) == event_ids
+        end)
+      end
+
+      it 'sends event_ids together with single_events: false' do
+        stub_events
+
+        client.events.list(event_ids: { 'google' => { 'ana@example.com' => ['abc123'] } }, single_events: false)
+
+        expect(WebMock).to(have_requested(:get, /events/).with do |req|
+          query = query_of(req)
+          query['singleEvents'] == 'false' &&
+            JSON.parse(query['eventIds']) == { 'google' => { 'ana@example.com' => ['abc123'] } } &&
+            !query.key?('calendarIds')
+        end)
+      end
+
+      it 'sends an empty event_ids as {} instead of dropping it' do
+        stub_events
+
+        client.events.list(event_ids: {})
+
+        expect(WebMock).to(have_requested(:get, /events/).with { |req| query_of(req) == { 'eventIds' => '{}' } })
+      end
+
+      it 'sends include_cancelled: true and include_cancelled: false' do
+        stub_events
+
+        client.events.list(include_cancelled: true)
+        client.events.list(include_cancelled: false)
+
+        expect(WebMock).to have_requested(:get, "#{MockServer::BASE_URL}/events")
+          .with(query: { 'includeCancelled' => 'true' }).once
+        expect(WebMock).to have_requested(:get, "#{MockServer::BASE_URL}/events")
+          .with(query: { 'includeCancelled' => 'false' }).once
+      end
+
+      it 'does not send include_cancelled or event_ids when they are nil' do
+        stub_events
+
+        client.events.list(single_events: true, include_cancelled: nil, event_ids: nil)
+
+        expect(WebMock).to have_requested(:get, "#{MockServer::BASE_URL}/events")
+          .with(query: { 'singleEvents' => 'true' })
+      end
+
+      it 'returns info from the response' do
+        MockServer.stub_json(:get, '/events', {
+                               'events' => [],
+                               'info' => { 'google' => 'No connected account can read calendar ana@example.com' }
+                             })
+
+        result = client.events.list(event_ids: { 'google' => { 'ana@example.com' => ['abc123'] } })
+
+        expect(result.info).to eq({ 'google' => 'No connected account can read calendar ana@example.com' })
+      end
+
+      it 'reads info as nil when the response has none' do
+        MockServer.stub_json(:get, '/events', { 'events' => [] })
+
+        expect(client.events.list.info).to be_nil
+      end
+    end
   end
 
   describe '#create' do

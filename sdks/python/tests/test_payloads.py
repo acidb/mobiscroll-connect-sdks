@@ -113,3 +113,35 @@ class TestBuildDeleteQuery:
     def test_missing_required_raises(self):
         with pytest.raises(ValueError, match="event_id is required"):
             build_delete_query({"provider": "google", "calendar_id": "primary"})
+
+
+class TestBuildListEventsQueryEventIdsAndIncludeCancelled:
+    def test_event_ids_json_encoded(self):
+        event_ids = {
+            "google": {"ana@example.com": ["abc123", "def456"]},
+            "microsoft": {"AAMk": ("x1",)},
+        }
+        q = build_list_events_query(event_ids=event_ids)
+        assert json.loads(q["eventIds"]) == {
+            "google": {"ana@example.com": ["abc123", "def456"]},
+            "microsoft": {"AAMk": ["x1"]},
+        }
+        assert q["eventIds"] == (
+            '{"google":{"ana@example.com":["abc123","def456"]},"microsoft":{"AAMk":["x1"]}}'
+        )
+        assert "calendarIds" not in q
+
+    def test_event_ids_with_single_events_false(self):
+        q = build_list_events_query(
+            event_ids={"google": {"ana@example.com": ["abc123"]}}, single_events=False
+        )
+        assert q["singleEvents"] == "false"
+        assert json.loads(q["eventIds"]) == {"google": {"ana@example.com": ["abc123"]}}
+
+    def test_include_cancelled_true_and_false_sent(self):
+        assert build_list_events_query(include_cancelled=True) == {"includeCancelled": "true"}
+        assert build_list_events_query(include_cancelled=False) == {"includeCancelled": "false"}
+
+    def test_unset_not_sent(self):
+        q = build_list_events_query(single_events=True, include_cancelled=None, event_ids=None)
+        assert q == {"singleEvents": "true"}

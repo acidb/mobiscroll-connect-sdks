@@ -149,6 +149,15 @@ result.events.each { |e| puts e.title }
 # result.next_page_token for pagination
 ```
 
+`event_ids` returns only the given events, as event ids per provider and calendar id (at most 40), and cannot be combined with `calendar_ids`. With `single_events: false` each id returns the event itself, in the order of the ids, without a time window; with `single_events: true` it returns what the list returns for that id between `start` and `end`. Ids that no longer exist are left out. `result.info`, when present, maps a provider name to a message about a provider that could not be read, or about calendars no connected account can read. `include_cancelled: true`, with `single_events: true`, also returns the deleted occurrences of series that still exist, as events with `status` `'cancelled'`.
+
+```ruby
+result = client.events.list(
+  event_ids:     { 'google' => { 'ana@example.com' => %w[abc123 def456] } },
+  single_events: false
+)
+```
+
 ### Create an event
 
 ```ruby
@@ -204,6 +213,16 @@ result = client.webhooks.subscribe_webhook(
 )
 puts result.channel_id
 puts result.server_webhook_url
+```
+
+`single_events: false` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `result.single_events` is the mode the channel was created with.
+
+```ruby
+result = client.webhooks.subscribe_webhook(
+  provider:      'google',
+  calendar_id:   'work@company.com',
+  single_events: false
+)
 ```
 
 ### Unsubscribe

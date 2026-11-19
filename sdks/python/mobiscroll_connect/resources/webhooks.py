@@ -39,6 +39,7 @@ class Webhooks:
         *,
         channel_id: str | None = None,
         expiration: int | None = None,
+        single_events: bool | None = None,
     ) -> SubscribeWebhookResponse:
         """Subscribe to change notifications for a calendar.
 
@@ -50,6 +51,16 @@ class Webhooks:
         :param channel_id: Client-supplied channel identifier. Auto-generated
             server-side when omitted.
         :param expiration: Provider-specific expiration timestamp (ms epoch).
+        :param single_events: The channel's webhook mode, named like the ``events.list()``
+            parameter. ``False`` is series mode: for a Google calendar, a changed recurring
+            series is delivered as its master event instead of every occurrence. ``True``
+            delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master
+            in both modes. When omitted, the channel keeps the mode of the subscription it
+            replaces, otherwise the project's setting (set on the dashboard) applies. A
+            non-boolean value is rejected with a ``ValidationError``.
+        :returns: Subscription details, including the channel id needed to unsubscribe
+            later and ``single_events``, the mode the channel was created with (``False``
+            is series mode; ``None`` when the response does not carry it).
         :raises MobiscrollConnectError: When a ``channel_id`` you supplied is already in
             use by another user (HTTP 409).
         """
@@ -61,6 +72,8 @@ class Webhooks:
             payload["channelId"] = channel_id
         if expiration is not None:
             payload["expiration"] = expiration
+        if single_events is not None:
+            payload["singleEvents"] = single_events
 
         data = self._api.post("subscribe-webhook", json=payload)
         return SubscribeWebhookResponse.from_dict(data if isinstance(data, Mapping) else {})

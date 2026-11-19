@@ -39,6 +39,22 @@ public final class Webhooks {
      * Subscribe to change notifications for a calendar. Pass the calendar's real ID from
      * {@code calendars().list()}; an alias such as {@code primary} creates a duplicate subscription.
      *
+     * <p>{@code singleEvents(false)} creates the channel in series mode: for a Google calendar, a changed
+     * recurring series is delivered as its master event instead of every occurrence. {@code true}
+     * delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes.
+     * When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's
+     * setting applies. The response's {@code getSingleEvents()} is the mode the channel was created with
+     * ({@code false} is series mode).
+     *
+     * <pre>{@code
+     * // Series mode: a changed Google series arrives as its master, not as every occurrence
+     * WebhookSubscribeResponse seriesMode = client.webhooks().subscribeWebhook(WebhookSubscribeParams.builder()
+     *     .provider(Provider.GOOGLE)
+     *     .calendarId("work@company.com")
+     *     .singleEvents(false)
+     *     .build());
+     * }</pre>
+     *
      * @throws MobiscrollConnectException when a {@code channelId} you supplied is already in use by another
      *                                    user (HTTP 409)
      */
