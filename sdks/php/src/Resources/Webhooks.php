@@ -34,7 +34,7 @@ class Webhooks
      *     series mode: for a Google calendar, a changed recurring series is delivered as its master event
      *     instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the
      *     series master in both modes. When omitted (or `null`), the channel keeps the mode of the subscription
-     *     it replaces, otherwise the project's setting (set on the dashboard) applies. A non-boolean value is
+     *     it replaces, otherwise the application's setting (set on the dashboard) applies. A non-boolean value is
      *     rejected with a `ValidationError`
      * @return SubscribeWebhookResponse Subscription details, including the channel ID needed to unsubscribe later
      *   and `singleEvents`, the mode the channel was created with (`false` is series mode; `null` when the

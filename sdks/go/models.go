@@ -299,7 +299,7 @@ type SubscribeWebhookParams struct {
 	// every occurrence. true delivers every occurrence. Outlook, iCloud and
 	// CalDAV deliver the series master in both modes. When nil (omitted from
 	// the body), the channel keeps the mode of the subscription it replaces,
-	// otherwise the project's setting (set on the dashboard) applies. A
+	// otherwise the application's setting (set on the dashboard) applies. A
 	// non-boolean value is rejected with a *ValidationError.
 	SingleEvents *bool `json:"singleEvents,omitempty"`
 }

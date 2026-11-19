@@ -569,7 +569,7 @@ export interface SubscribeWebhookParams {
    * for a Google calendar, a changed recurring series is delivered as its master event instead of
    * every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the
    * series master in both modes. When omitted, the channel keeps the mode of the subscription it
-   * replaces, otherwise the project's setting (set on the dashboard) applies. A non-boolean value
+   * replaces, otherwise the application's setting (set on the dashboard) applies. A non-boolean value
    * is rejected with a `ValidationError`.
    */
   singleEvents?: boolean;

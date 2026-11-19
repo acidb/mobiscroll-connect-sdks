@@ -26,7 +26,7 @@ module Mobiscroll
         # recurring series is delivered as its master event instead of every occurrence. `true`
         # delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both
         # modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise
-        # the project's setting (set on the dashboard) applies. A non-boolean value is rejected with
+        # the application's setting (set on the dashboard) applies. A non-boolean value is rejected with
         # Mobiscroll::Connect::ValidationError (HTTP 400).
         #
         # Returns a SubscribeWebhookResponse, including the channel id needed to unsubscribe later

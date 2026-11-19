@@ -100,7 +100,7 @@ result, err := client.Events().List(ctx, &mobiscroll.EventListParams{
 
 ## Webhook series mode
 
-`SingleEvents: mobiscroll.Ptr(false)` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When nil, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `sub.SingleEvents` is the mode the channel was created with, and nil when the response does not carry it.
+`SingleEvents: mobiscroll.Ptr(false)` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When nil, the channel keeps the mode of the subscription it replaces, otherwise the application's setting applies. `sub.SingleEvents` is the mode the channel was created with, and nil when the response does not carry it.
 
 ```go
 sub, err := client.Webhooks().SubscribeWebhook(ctx, &mobiscroll.SubscribeWebhookParams{

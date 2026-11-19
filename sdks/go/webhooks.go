@@ -25,7 +25,7 @@ type webhooksService struct{ api *apiClient }
 // calendar, a changed recurring series is delivered as its master event
 // instead of every occurrence. true delivers every occurrence. Outlook, iCloud
 // and CalDAV deliver the series master in both modes. When nil, the channel
-// keeps the mode of the subscription it replaces, otherwise the project's
+// keeps the mode of the subscription it replaces, otherwise the application's
 // setting applies. The response's SingleEvents is the mode the channel was
 // created with (false is series mode), nil when unknown.
 func (s *webhooksService) SubscribeWebhook(ctx context.Context, params *SubscribeWebhookParams) (*SubscribeWebhookResponse, error) {

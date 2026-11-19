@@ -215,7 +215,7 @@ puts result.channel_id
 puts result.server_webhook_url
 ```
 
-`single_events: false` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `result.single_events` is the mode the channel was created with.
+`single_events: false` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the application's setting applies. `result.single_events` is the mode the channel was created with.
 
 ```ruby
 result = client.webhooks.subscribe_webhook(

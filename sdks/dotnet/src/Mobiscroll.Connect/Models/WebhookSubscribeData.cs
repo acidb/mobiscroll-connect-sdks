@@ -17,7 +17,7 @@ public sealed class WebhookSubscribeData
     /// mode: for a Google calendar, a changed recurring series is delivered as its master event instead of
     /// every occurrence. <c>true</c> delivers every occurrence. Outlook, iCloud and CalDAV deliver the series
     /// master in both modes. When <c>null</c> it is omitted from the body: the channel keeps the mode of the
-    /// subscription it replaces, otherwise the project's setting (set on the dashboard) applies. An explicit
+    /// subscription it replaces, otherwise the application's setting (set on the dashboard) applies. An explicit
     /// <c>false</c> is sent.
     /// </summary>
     public bool? SingleEvents { get; set; }

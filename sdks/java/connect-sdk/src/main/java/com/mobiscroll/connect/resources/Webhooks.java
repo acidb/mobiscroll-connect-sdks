@@ -42,7 +42,7 @@ public final class Webhooks {
      * <p>{@code singleEvents(false)} creates the channel in series mode: for a Google calendar, a changed
      * recurring series is delivered as its master event instead of every occurrence. {@code true}
      * delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes.
-     * When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's
+     * When omitted, the channel keeps the mode of the subscription it replaces, otherwise the application's
      * setting applies. The response's {@code getSingleEvents()} is the mode the channel was created with
      * ({@code false} is series mode).
      *

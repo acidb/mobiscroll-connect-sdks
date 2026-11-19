@@ -240,7 +240,7 @@ $client->webhooks()->unsubscribeWebhook([
 ]);
 ```
 
-`singleEvents` set to `false` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `$subscription->singleEvents` is the mode the channel was created with, or `null` when the response does not carry it.
+`singleEvents` set to `false` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the application's setting applies. `$subscription->singleEvents` is the mode the channel was created with, or `null` when the response does not carry it.
 
 ```php
 $subscription = $client->webhooks()->subscribeWebhook([

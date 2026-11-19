@@ -35,7 +35,7 @@ public final class WebhookSubscribeParams {
      * mode: for a Google calendar, a changed recurring series is delivered as its master event instead
      * of every occurrence. {@code true} delivers every occurrence. Outlook, iCloud and CalDAV deliver
      * the series master in both modes. When {@code null} it is left out of the request body, and the
-     * channel keeps the mode of the subscription it replaces, otherwise the project's setting (set on
+     * channel keeps the mode of the subscription it replaces, otherwise the application's setting (set on
      * the dashboard) applies. A non-boolean value is rejected with a {@code ValidationException}.
      */
     @JsonProperty("singleEvents") public Boolean getSingleEvents() { return singleEvents; }

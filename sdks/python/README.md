@@ -224,7 +224,7 @@ client.webhooks.unsubscribe_webhook(
 )
 ```
 
-`single_events=False` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `True` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `subscription.single_events` is the mode the channel was created with, or `None` when the response does not carry it.
+`single_events=False` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `True` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the application's setting applies. `subscription.single_events` is the mode the channel was created with, or `None` when the response does not carry it.
 
 ```python
 subscription = client.webhooks.subscribe_webhook(

@@ -26,7 +26,7 @@ export class Webhooks {
    * recurring series is delivered as its master event instead of every occurrence. `true`
    * delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes.
    * When omitted, the channel keeps the mode of the subscription it replaces, otherwise the
-   * project's setting applies.
+   * application's setting applies.
    *
    * @param params - Subscription parameters including provider, calendar and optionally `singleEvents`
    * @returns Subscription details, including the channel id needed to unsubscribe later and

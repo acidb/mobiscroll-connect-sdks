@@ -152,7 +152,7 @@ const subscription = await client.webhooks.subscribeWebhook({
 console.log(subscription.channelId);
 ```
 
-`singleEvents: false` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the project's setting applies. `subscription.singleEvents` is the mode the channel was created with.
+`singleEvents: false` creates the channel in series mode: a changed Google series is delivered as its master event instead of every occurrence. `true` delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the application's setting applies. `subscription.singleEvents` is the mode the channel was created with.
 
 ```ts
 const subscription = await client.webhooks.subscribeWebhook({

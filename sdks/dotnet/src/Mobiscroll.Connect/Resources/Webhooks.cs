@@ -29,7 +29,7 @@ public sealed class Webhooks
     /// Google calendar, a changed recurring series is delivered as its master event instead of every
     /// occurrence. <c>true</c> delivers every occurrence. Outlook, iCloud and CalDAV deliver the series master
     /// in both modes. When omitted, the channel keeps the mode of the subscription it replaces, otherwise the
-    /// project's setting applies. <see cref="WebhookSubscribeResponse.SingleEvents"/> is the mode the channel
+    /// application's setting applies. <see cref="WebhookSubscribeResponse.SingleEvents"/> is the mode the channel
     /// was created with (<c>false</c> is series mode).
     /// </para>
     /// </summary>
