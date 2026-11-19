@@ -8,8 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- <!-- Events --> `Events().List()` accepts `EventIDs` and `IncludeCancelled` in `EventListParams`. `EventsListResponse` has an `Info` field with messages about providers that could not be read. See [the events reference](https://mobiscroll.com/docs/connect/integration/go-sdk#events-list).
-- <!-- Webhooks --> `Webhooks().SubscribeWebhook()` accepts `SingleEvents` in `SubscribeWebhookParams`, so a subscription can deliver one master event per changed Google series instead of every occurrence. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/go-sdk#webhooks-subscribe-webhook).
+- <!-- Events --> `Events().List()` accepts `EventIDs`, which reads specific events by ID, and `IncludeCancelled`, which adds the deleted occurrences of a series. `EventsListResponse` has an `Info` field with messages about providers that could not be read. See [the events reference](https://mobiscroll.com/docs/connect/integration/go-sdk#events-list).
+- <!-- Webhooks --> `Webhooks().SubscribeWebhook()` accepts `SingleEvents` in `SubscribeWebhookParams`, so a subscription can deliver one master event per changed Google series instead of every occurrence. A subscription created without it follows the application's delivery mode. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/go-sdk#webhooks-subscribe-webhook).
 
 ## [1.6.1] — 2026-11-11
 

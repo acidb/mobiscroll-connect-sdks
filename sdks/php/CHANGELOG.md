@@ -8,8 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- <!-- Events --> `events()->list()` accepts `eventIds` and `includeCancelled`. The result has an `info` entry with messages about providers that could not be read. See [the events reference](https://mobiscroll.com/docs/connect/integration/php-sdk#events-list).
-- <!-- Webhooks --> `webhooks()->subscribeWebhook()` accepts `singleEvents`, so a subscription can deliver one master event per changed Google series instead of every occurrence. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/php-sdk#webhooks-subscribe-webhook).
+- <!-- Events --> `events()->list()` accepts `eventIds`, which reads specific events by ID, and `includeCancelled`, which adds the deleted occurrences of a series. The result has an `info` entry with messages about providers that could not be read. See [the events reference](https://mobiscroll.com/docs/connect/integration/php-sdk#events-list).
+- <!-- Webhooks --> `webhooks()->subscribeWebhook()` accepts `singleEvents`, so a subscription can deliver one master event per changed Google series instead of every occurrence. A subscription created without it follows the application's delivery mode. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/php-sdk#webhooks-subscribe-webhook).
 
 ## [1.6.1] — 2026-11-11
 
