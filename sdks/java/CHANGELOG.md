@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `events().list()` accepts `eventIds` on `EventListParams`, event ids per provider and calendar id (at most 40), and returns only those events. It cannot be combined with `calendarIds`.
-- `events().list()` accepts `includeCancelled` on `EventListParams`: with `singleEvents(true)`, it also returns the deleted occurrences of series that still exist, as events with `status` `"cancelled"`.
-- `EventsListResponse` has an optional `getInfo()`: messages keyed by provider name, set when a provider could not be read or, with `eventIds`, when no connected account can read a calendar. It is `null` when absent.
-- `webhooks().subscribeWebhook()` accepts `singleEvents` on `WebhookSubscribeParams`: `false` creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. `WebhookSubscribeResponse.getSingleEvents()` is the mode the channel was created with, or `null` when the response does not carry it.
+- <!-- Events --> `events().list()` accepts `eventIds` on `EventListParams`, event ids per provider and calendar id (at most 40), and returns only those events. It cannot be combined with `calendarIds`. See [the events reference](https://mobiscroll.com/docs/connect/integration/java-sdk#events-list).
+- <!-- Events --> `events().list()` accepts `includeCancelled` on `EventListParams`: with `singleEvents(true)`, it also returns the deleted occurrences of series that still exist, as events with `status` `"cancelled"`. See [the events reference](https://mobiscroll.com/docs/connect/integration/java-sdk#events-list).
+- <!-- Events --> `EventsListResponse` has an optional `getInfo()`: messages keyed by provider name, set when a provider could not be read or, with `eventIds`, when no connected account can read a calendar. It is `null` when absent. See [the events reference](https://mobiscroll.com/docs/connect/integration/java-sdk#events-list).
+- <!-- Webhooks --> `webhooks().subscribeWebhook()` accepts `singleEvents` on `WebhookSubscribeParams`: `false` creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. `WebhookSubscribeResponse.getSingleEvents()` is the mode the channel was created with, or `null` when the response does not carry it. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/java-sdk#webhooks-subscribe-webhook).
 
 ## [1.6.1] — 2026-11-11
 

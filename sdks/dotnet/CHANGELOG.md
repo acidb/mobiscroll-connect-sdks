@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `Events.ListAsync()` accepts `EventIds`, event IDs per provider and calendar ID (at most 40), and returns only those events. It cannot be combined with `CalendarIds`.
-- `Events.ListAsync()` accepts `IncludeCancelled`: with `SingleEvents = true`, it also returns the deleted occurrences of series that still exist, as events with `Status = "cancelled"`.
-- `EventsListResponse` has an optional `Info` property: messages keyed by provider wire string, set when a provider could not be read or, with `EventIds`, when no connected account can read a calendar.
-- `Webhooks.SubscribeWebhookAsync()` accepts `SingleEvents`: `false` creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. `WebhookSubscribeResponse` has `SingleEvents`, the mode the channel was created with (`null` when the response does not carry it).
+- <!-- Events --> `Events.ListAsync()` accepts `EventIds`, event IDs per provider and calendar ID (at most 40), and returns only those events. It cannot be combined with `CalendarIds`. See [the events reference](https://mobiscroll.com/docs/connect/integration/dotnet-sdk#events-list).
+- <!-- Events --> `Events.ListAsync()` accepts `IncludeCancelled`: with `SingleEvents = true`, it also returns the deleted occurrences of series that still exist, as events with `Status = "cancelled"`. See [the events reference](https://mobiscroll.com/docs/connect/integration/dotnet-sdk#events-list).
+- <!-- Events --> `EventsListResponse` has an optional `Info` property: messages keyed by provider wire string, set when a provider could not be read or, with `EventIds`, when no connected account can read a calendar. See [the events reference](https://mobiscroll.com/docs/connect/integration/dotnet-sdk#events-list).
+- <!-- Webhooks --> `Webhooks.SubscribeWebhookAsync()` accepts `SingleEvents`: `false` creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. `WebhookSubscribeResponse` has `SingleEvents`, the mode the channel was created with (`null` when the response does not carry it). See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/dotnet-sdk#webhooks-subscribe-webhook).
 
 ## [1.6.1] — 2026-11-11
 

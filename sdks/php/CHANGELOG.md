@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `events()->list()` accepts `eventIds`, event ids per provider and calendar id (at most 40), and returns only those events. It cannot be combined with `calendarIds`.
-- `events()->list()` accepts `includeCancelled`: with `singleEvents` set to `true`, it also returns the deleted occurrences of series that still exist, as events with `status` `'cancelled'`.
-- The `events()->list()` result has an optional `info` entry, and `EventsListResponse` an optional `$info` property: messages keyed by provider name, set when a provider could not be read or, with `eventIds`, when no connected account can read a calendar.
-- `webhooks()->subscribeWebhook()` accepts `singleEvents`: `false` creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. `SubscribeWebhookResponse` has `$singleEvents`, the mode the channel was created with (`null` when the response does not carry it).
+- <!-- Events --> `events()->list()` accepts `eventIds`, event ids per provider and calendar id (at most 40), and returns only those events. It cannot be combined with `calendarIds`. See [the events reference](https://mobiscroll.com/docs/connect/integration/php-sdk#events-list).
+- <!-- Events --> `events()->list()` accepts `includeCancelled`: with `singleEvents` set to `true`, it also returns the deleted occurrences of series that still exist, as events with `status` `'cancelled'`. See [the events reference](https://mobiscroll.com/docs/connect/integration/php-sdk#events-list).
+- <!-- Events --> The `events()->list()` result has an optional `info` entry, and `EventsListResponse` an optional `$info` property: messages keyed by provider name, set when a provider could not be read or, with `eventIds`, when no connected account can read a calendar. See [the events reference](https://mobiscroll.com/docs/connect/integration/php-sdk#events-list).
+- <!-- Webhooks --> `webhooks()->subscribeWebhook()` accepts `singleEvents`: `false` creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. `SubscribeWebhookResponse` has `$singleEvents`, the mode the channel was created with (`null` when the response does not carry it). See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/php-sdk#webhooks-subscribe-webhook).
 
 ## [1.6.1] — 2026-11-11
 
