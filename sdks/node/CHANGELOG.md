@@ -8,10 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- <!-- Events --> `events.list()` accepts `eventIds`, event ids per provider and calendar id (at most 40), and returns only those events. It cannot be combined with `calendarIds`. See [the events reference](https://mobiscroll.com/docs/connect/integration/node-sdk#events-list).
-- <!-- Events --> `events.list()` accepts `includeCancelled`: with `singleEvents: true`, it also returns the deleted occurrences of series that still exist, as events with `status: 'cancelled'`. See [the events reference](https://mobiscroll.com/docs/connect/integration/node-sdk#events-list).
-- <!-- Events --> `EventsListResponse` has an optional `info` field: messages keyed by provider name, set when a provider could not be read or, with `eventIds`, when no connected account can read a calendar. See [the events reference](https://mobiscroll.com/docs/connect/integration/node-sdk#events-list).
-- <!-- Webhooks --> `webhooks.subscribeWebhook()` accepts `singleEvents`: `false` creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. The response has `singleEvents`, the mode the channel was created with. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/node-sdk#webhooks-subscribe-webhook).
+- <!-- Events --> `events.list()` accepts `eventIds` and `includeCancelled`. `EventsListResponse` has an `info` field with messages about providers that could not be read. See [the events reference](https://mobiscroll.com/docs/connect/integration/node-sdk#events-list).
+- <!-- Webhooks --> `webhooks.subscribeWebhook()` accepts `singleEvents`, so a subscription can deliver one master event per changed Google series instead of every occurrence. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/node-sdk#webhooks-subscribe-webhook).
 
 ## [1.6.1] — 2026-11-11
 

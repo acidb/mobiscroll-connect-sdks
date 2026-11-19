@@ -8,10 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- <!-- Events --> `events.list` accepts `event_ids:`, event ids per provider and calendar id (at most 40), and returns only those events. It cannot be combined with `calendar_ids:`. See [the events reference](https://mobiscroll.com/docs/connect/integration/ruby-sdk#events-list).
-- <!-- Events --> `events.list` accepts `include_cancelled:`: with `single_events: true`, it also returns the deleted occurrences of series that still exist, as events with `status` `'cancelled'`. See [the events reference](https://mobiscroll.com/docs/connect/integration/ruby-sdk#events-list).
-- <!-- Events --> `EventsListResponse` has an optional `info` attribute: messages keyed by provider name, set when a provider could not be read or, with `event_ids:`, when no connected account can read a calendar. See [the events reference](https://mobiscroll.com/docs/connect/integration/ruby-sdk#events-list).
-- <!-- Webhooks --> `webhooks.subscribe_webhook` accepts `single_events:`: `false` creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. The response has `single_events`, the mode the channel was created with. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/ruby-sdk#webhooks-subscribe-webhook).
+- <!-- Events --> `events.list` accepts `event_ids:` and `include_cancelled:`. `EventsListResponse` has an `info` attribute with messages about providers that could not be read. See [the events reference](https://mobiscroll.com/docs/connect/integration/ruby-sdk#events-list).
+- <!-- Webhooks --> `webhooks.subscribe_webhook` accepts `single_events:`, so a subscription can deliver one master event per changed Google series instead of every occurrence. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/ruby-sdk#webhooks-subscribe-webhook).
 
 ## [1.6.1] — 2026-11-11
 

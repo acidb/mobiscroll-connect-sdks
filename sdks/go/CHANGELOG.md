@@ -8,10 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- <!-- Events --> `Events().List()` accepts `EventIDs` in `EventListParams`, event IDs per provider and calendar ID (at most 40), and returns only those events. It cannot be combined with `CalendarIDs`. See [the events reference](https://mobiscroll.com/docs/connect/integration/go-sdk#events-list).
-- <!-- Events --> `Events().List()` accepts `IncludeCancelled` in `EventListParams`: with `SingleEvents` true, it also returns the deleted occurrences of series that still exist, as events with `Status` `"cancelled"`. See [the events reference](https://mobiscroll.com/docs/connect/integration/go-sdk#events-list).
-- <!-- Events --> `EventsListResponse` has an optional `Info` field: messages keyed by provider, set when a provider could not be read or, with `EventIDs`, when no connected account can read a calendar. See [the events reference](https://mobiscroll.com/docs/connect/integration/go-sdk#events-list).
-- <!-- Webhooks --> `Webhooks().SubscribeWebhook()` accepts `SingleEvents` in `SubscribeWebhookParams`: false creates the channel in series mode, where a changed Google series is delivered as its master event instead of every occurrence. The response has `SingleEvents`, the mode the channel was created with. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/go-sdk#webhooks-subscribe-webhook).
+- <!-- Events --> `Events().List()` accepts `EventIDs` and `IncludeCancelled` in `EventListParams`. `EventsListResponse` has an `Info` field with messages about providers that could not be read. See [the events reference](https://mobiscroll.com/docs/connect/integration/go-sdk#events-list).
+- <!-- Webhooks --> `Webhooks().SubscribeWebhook()` accepts `SingleEvents` in `SubscribeWebhookParams`, so a subscription can deliver one master event per changed Google series instead of every occurrence. See [the webhooks reference](https://mobiscroll.com/docs/connect/integration/go-sdk#webhooks-subscribe-webhook).
 
 ## [1.6.1] — 2026-11-11
 

@@ -1,7 +1,7 @@
 ### Event lookup
 
-Event lists can now return specific events by their IDs, given per provider and calendar. They can also include the removed occurrences of a series, and the response carries messages from the providers that could not be read.
+Event lists can now return specific events by their IDs. They can also include the removed occurrences of a series, and the response carries messages about providers the API could not read.
 
 ### Webhook mode
 
-A subscription can ask for series mode, which delivers one master event per changed Google series rather than one event per occurrence. The response reports the mode the subscription was created with.
+A subscription can ask for series mode, which delivers a single master event for each changed Google series rather than one event per occurrence. Subscriptions that do not ask follow the application's default setting.
