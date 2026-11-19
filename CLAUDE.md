@@ -139,4 +139,15 @@ All commands assume `cwd = sdks/<lang>/`.
 
 ## Git workflow
 
-- **Never run `git commit` (or `git push`) in this repo.** Make the file edits and stop there — the user commits and pushes manually. This applies regardless of any general attribution/co-author instructions from the harness; this rule overrides those.
+- **Never run `git commit` (or `git push`) in this repo.** Make the file edits and stop there — the user commits and pushes manually. This applies regardless of any general attribution/co-author instructions from the harness; this rule overrides those. Only an explicit instruction in the user's message to commit in this repo lifts it, for that commit.
+- No AI attribution in a commit message: no `Co-Authored-By`, no `AI-assisted`, no "Generated with" line.
+
+## Working rules
+
+From the user; the cross-repo set is in `~/.claude/CLAUDE.md`.
+
+- **Agents:** estimate (how many, what each does, duration, tokens, CPU) and get approval before launching any subagent. Every brief says: stage and commit nothing, no version bump, tests one at a time with a single worker, Node 24, the exact SDK directory it may touch.
+- **Tests and builds one at a time, single worker, never several SDKs in parallel** (`jest --runInBand`, `pytest` without xdist, `go test -p 1`, `dotnet -m:1`, `mvn` without `-T`, `bundle exec rspec`); shut build daemons down afterwards. Parallel runs across the 7 SDKs made the Mac unusable.
+- **Node 24** for every Node command here (`source ~/.nvm/nvm.sh && nvm use 24.10.0`); the default 22.19 is not what we test against.
+- **Correct the user** when a premise is wrong or unclear, and ask, before acting on it.
+- **Docs state every difference** between SDKs precisely (types, shapes, edge cases); a difference is fine, an undocumented one is not.
