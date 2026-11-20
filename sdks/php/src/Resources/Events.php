@@ -135,8 +135,8 @@ class Events
      *     like `calendarIds`. At most 40 ids per request (more is rejected with a `ValidationError`). Cannot be
      *     combined with `calendarIds` (`ValidationError`) and is not available with the `free-busy` scope
      *     (HTTP 403, an `AuthenticationError`, not a `CalendarPermissionError`).
-     *     With `singleEvents: false`, each event itself comes back (a series' master, or an occurrence), in the
-     *     order of the ids, without a time window. With `singleEvents: true` (default), each id returns what the
+     *     With `singleEvents: false`, each series master or single event comes back (never an occurrence,
+     *     modified or not), in the order of the ids, without a time window. With `singleEvents: true` (default), each id returns what the
      *     list returns for it inside `start` and `end`: the occurrences of a series, never its master, or a
      *     single event when it overlaps the window. Missing or deleted ids are left out, without an error.
      *     A `nextPageToken` from such a request is only valid with the same `eventIds`, `singleEvents`,

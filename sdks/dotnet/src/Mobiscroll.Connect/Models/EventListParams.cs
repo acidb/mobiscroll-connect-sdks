@@ -45,8 +45,8 @@ public sealed class EventListParams
     /// Cannot be combined with <see cref="CalendarIds"/> (<see cref="Exceptions.ValidationException"/>) and is
     /// not available with the <c>free-busy</c> scope (HTTP 403, an <see cref="Exceptions.AuthenticationException"/>).
     /// <para>
-    /// With <c>SingleEvents = false</c>, each event itself comes back (a series' master, or an occurrence), in
-    /// the order of the IDs, without a time window. With <c>SingleEvents = true</c> (default), each ID returns
+    /// With <c>SingleEvents = false</c>, each series master or single event comes back (never an
+    /// occurrence, modified or not), in the order of the IDs, without a time window. With <c>SingleEvents = true</c> (default), each ID returns
     /// what the list returns for it inside <see cref="Start"/> and <see cref="End"/>: the occurrences of a
     /// series, never its master, or a single event when it overlaps the window. Missing or deleted IDs are
     /// left out, without an error.

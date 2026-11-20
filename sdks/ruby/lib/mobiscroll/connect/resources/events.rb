@@ -31,8 +31,8 @@ module Mobiscroll
         # combined with `calendar_ids` (ValidationError) and is not available with the `free-busy`
         # scope (HTTP 403, AuthenticationError).
         #
-        # With `single_events: false`, each event itself comes back (a series' master, or an
-        # occurrence), in the order of the ids, without a time window. With `single_events: true`
+        # With `single_events: false`, each series master or single event comes back (never an occurrence,
+        # modified or not), in the order of the ids, without a time window. With `single_events: true`
         # (default), each id returns what the list returns for it inside `start` and `end`: the
         # occurrences of a series, never its master, or a single event when it overlaps the window.
         # Missing or deleted ids are left out, without an error.

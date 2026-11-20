@@ -187,8 +187,8 @@ type EventListParams struct {
 	// Cannot be combined with CalendarIDs (*ValidationError) and is not
 	// available with the free-busy scope (HTTP 403, an *AuthenticationError).
 	//
-	// With SingleEvents false, each event itself comes back (a series' master,
-	// or an occurrence), in the order of the IDs, without a time window. With
+	// With SingleEvents false, each series master or single event comes back (never an
+	// occurrence, modified or not), in the order of the IDs, without a time window. With
 	// SingleEvents true (default), each ID returns what the list returns for
 	// it inside Start and End: the occurrences of a series, never its master,
 	// or a single event when it overlaps the window. Missing or deleted IDs

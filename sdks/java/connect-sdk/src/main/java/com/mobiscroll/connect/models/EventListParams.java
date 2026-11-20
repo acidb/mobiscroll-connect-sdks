@@ -43,8 +43,8 @@ public final class EventListParams {
      * combined with {@code calendarIds} ({@code ValidationException}) and is not available with the
      * {@code free-busy} scope (HTTP 403, an {@code AuthenticationException}).
      *
-     * <p>With {@code singleEvents(false)}, each event itself comes back (a series' master, or an
-     * occurrence), in the order of the ids, without a time window. With {@code singleEvents(true)}
+     * <p>With {@code singleEvents(false)}, each series master or single event comes back (never an occurrence,
+     * modified or not), in the order of the ids, without a time window. With {@code singleEvents(true)}
      * (default), each id returns what the list returns for it inside {@code start} and {@code end}:
      * the occurrences of a series, never its master, or a single event when it overlaps the window.
      * Missing or deleted ids are left out, without an error.
