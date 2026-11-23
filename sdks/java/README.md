@@ -19,14 +19,14 @@ Java client for [Mobiscroll Connect](https://mobiscroll.com/connect), the calend
 <dependency>
   <groupId>com.mobiscroll</groupId>
   <artifactId>connect-sdk</artifactId>
-  <version>1.0.0</version>
+  <version>1.7.0</version>
 </dependency>
 ```
 
 **Gradle**
 
 ```kotlin
-implementation("com.mobiscroll:connect-sdk:1.0.0")
+implementation("com.mobiscroll:connect-sdk:1.7.0")
 ```
 
 ## Quick start

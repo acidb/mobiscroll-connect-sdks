@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.7.0] — 2026-11-24
+
 ### Added
 
 - <!-- Events --> [`events()->list()`](https://mobiscroll.com/docs/connect/integration/php-sdk#events-list) accepts `eventIds`, which reads specific events by ID, and `includeCancelled`, which adds the deleted occurrences of a series. The result has an `info` entry with messages about providers that could not be read.
