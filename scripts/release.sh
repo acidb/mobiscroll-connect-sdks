@@ -33,6 +33,16 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 cd "$ROOT"
 
+# The script commits on HEAD and pushes HEAD. On a detached checkout (for example
+# the node-v<version> tag checked out for the manual npm publish) the commit and
+# tag are made and the push then fails, so refuse before anything changes.
+BRANCH="$(git symbolic-ref --short -q HEAD || true)"
+if [[ "$BRANCH" != "main" ]]; then
+  echo "error: run release.sh from a checkout on 'main' (found: ${BRANCH:-detached HEAD})." >&2
+  echo "       Use a separate worktree if this checkout is busy: git worktree add <path> main" >&2
+  exit 1
+fi
+
 if [[ -n "$(git status --porcelain)" ]]; then
   echo "error: working tree is not clean. Commit or stash changes first." >&2
   exit 1
