@@ -149,6 +149,37 @@ describe('Auth Resource', () => {
       expect(result.connections.microsoft[0].syncState).toBe('reauth_required');
     });
 
+    it('should return a Microsoft account without a mailbox as mailbox_unavailable', async () => {
+      const mockResponse: ConnectionStatusResponse = {
+        connections: {
+          google: [],
+          microsoft: [
+            {
+              id: 'user@contoso.com',
+              display: 'user@contoso.com',
+              grantedScopes: ['openid', 'profile', 'https://graph.microsoft.com/Calendars.ReadWrite'],
+              calendarPermissionGranted: true,
+              syncState: 'mailbox_unavailable',
+              syncStateUpdatedAt: '2026-11-24T12:28:03.233Z',
+            },
+          ],
+          apple: [],
+          caldav: [],
+        },
+        limitReached: false,
+      };
+
+      mockApiClient.get.mockResolvedValue({
+        data: mockResponse,
+        status: 200,
+        headers: {},
+      });
+
+      const result = await auth.getConnectionStatus();
+
+      expect(result.connections.microsoft[0].syncState).toBe('mailbox_unavailable');
+    });
+
     it('should surface accounts that withheld calendar permission', async () => {
       const mockResponse: ConnectionStatusResponse = {
         connections: {

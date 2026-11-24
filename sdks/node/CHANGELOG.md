@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- <!-- OAuth --> We added the missing `mailbox_unavailable` value to the `syncState` type of [`auth.getConnectionStatus()`](https://mobiscroll.com/docs/connect/integration/node-sdk#auth-api). Connect API 1.7.1 reports it for a Microsoft account that signed in but has no mailbox, so it lists no calendars.
+
 ## [1.7.0] — 2026-11-24
 
 ### Added

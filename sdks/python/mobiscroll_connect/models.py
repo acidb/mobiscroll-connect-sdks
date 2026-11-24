@@ -239,6 +239,12 @@ class ConnectedAccount:
     ``"active"`` otherwise. ``calendar_permission_granted`` records what was agreed at
     consent time and never changes afterwards, so it cannot report a revoked grant.
     Neither can be repaired server-side — the user must run the connect flow again.
+
+    ``sync_state`` is ``"mailbox_unavailable"`` (Microsoft only, from Connect 1.7.1) when
+    the account signed in but has no mailbox Microsoft will serve, for example a work
+    account without an Exchange Online licence, so it lists no calendars. Reconnecting
+    does not help: the user's IT admin has to give the account a mailbox. It returns to
+    ``"active"`` once the account's calendars can be listed.
     """
 
     id: str

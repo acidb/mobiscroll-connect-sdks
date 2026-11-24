@@ -22,6 +22,12 @@ class ConnectionStatusResponse
      * time and never changes afterwards. Neither is repairable server-side; the user has
      * to run the connect flow again.
      *
+     * `syncState` reads `mailbox_unavailable` (Microsoft only, from Connect 1.7.1) when the
+     * account signed in but has no mailbox Microsoft will serve, for example a work account
+     * without an Exchange Online licence, so it lists no calendars. Reconnecting does not
+     * help: the user's IT admin has to give the account a mailbox. It returns to `active`
+     * once the account's calendars can be listed.
+     *
      * @param array<string, array<array{id: string, display?: string, grantedScopes: list<string>, calendarPermissionGranted: bool|null, syncState: string, syncStateUpdatedAt: string|null}>> $connections
      */
     public function __construct(

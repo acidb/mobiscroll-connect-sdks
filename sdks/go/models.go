@@ -68,6 +68,12 @@ type ConnectedAccount struct {
 	// from CalendarPermissionGranted, which records what was agreed at consent time and
 	// never changes afterwards. An account with no observed failure is "active". It cannot
 	// be repaired server-side — the user must run the connect flow again.
+	//
+	// "mailbox_unavailable" (Microsoft only, from Connect 1.7.1) means the account signed
+	// in but has no mailbox Microsoft will serve, for example a work account without an
+	// Exchange Online licence, so it lists no calendars. Reconnecting does not help: the
+	// user's IT admin has to give the account a mailbox. It returns to "active" once the
+	// account's calendars can be listed.
 	SyncState string `json:"syncState,omitempty"`
 
 	// SyncStateUpdatedAt is the ISO 8601 time SyncState last changed, empty if never.

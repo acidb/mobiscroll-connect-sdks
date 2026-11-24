@@ -504,13 +504,18 @@ export interface ConnectedAccount {
    *
    * `reauth_required` means the provider has rejected them — the user revoked access, an
    * administrator withdrew consent, or the credentials were invalidated — so the account's
-   * calendars have stopped syncing. Distinct from `calendarPermissionGranted`, which records
-   * what was agreed at consent time and never changes afterwards. An account with no observed
-   * failure is `active`.
+   * calendars have stopped syncing. It cannot be repaired from your backend; send the user
+   * through the connect flow again.
    *
-   * It cannot be repaired from your backend; send the user through the connect flow again.
+   * `mailbox_unavailable` (Microsoft only, from Connect 1.7.1) means the account signed in but
+   * has no mailbox Microsoft will serve, for example a work account without an Exchange Online
+   * licence, so it lists no calendars. Reconnecting does not help: the user's IT admin has to
+   * give the account a mailbox. It returns to `active` once the account's calendars can be listed.
+   *
+   * Distinct from `calendarPermissionGranted`, which records what was agreed at consent time and
+   * never changes afterwards. An account with no observed failure is `active`.
    */
-  syncState: 'active' | 'reauth_required';
+  syncState: 'active' | 'reauth_required' | 'mailbox_unavailable';
 
   /** ISO 8601 timestamp of the last `syncState` change, or `null` if it has never changed. */
   syncStateUpdatedAt: string | null;

@@ -62,6 +62,12 @@ public final class ConnectedAccount {
      * was agreed at consent time and never changes afterwards — so it cannot report a
      * grant the user revoked later. Neither is repairable server-side; the user must run
      * the connect flow again.
+     *
+     * <p>{@code "mailbox_unavailable"} (Microsoft only, from Connect 1.7.1) means the account
+     * signed in but has no mailbox Microsoft will serve, for example a work account without
+     * an Exchange Online licence, so it lists no calendars. Reconnecting does not help: the
+     * user's IT admin has to give the account a mailbox. It returns to {@code "active"} once
+     * the account's calendars can be listed.
      */
     public String getSyncState() { return syncState; }
 

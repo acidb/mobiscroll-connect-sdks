@@ -62,6 +62,11 @@ module Mobiscroll
     # from `calendar_permission_granted`, which records what was agreed at consent time and
     # never changes afterwards. An account with no observed failure is 'active'. Recovery is
     # the same reconnect — it cannot be repaired server-side.
+    # `sync_state` is 'mailbox_unavailable' (Microsoft only, from Connect 1.7.1) when the
+    # account signed in but has no mailbox Microsoft will serve, for example a work account
+    # without an Exchange Online licence, so it lists no calendars. Reconnecting does not
+    # help: the user's IT admin has to give the account a mailbox. It returns to 'active'
+    # once the account's calendars can be listed.
     ConnectedAccount = Struct.new(
       :id, :display, :granted_scopes, :calendar_permission_granted, :sync_state, :sync_state_updated_at,
       keyword_init: true
