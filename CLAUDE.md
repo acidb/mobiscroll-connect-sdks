@@ -92,19 +92,25 @@ All seven SDKs implement the **same public surface** against the same backend. W
 scripts/release.sh <sdk> <version>   # bumps version files, commits, tags, pushes
 ```
 
+**⛔ Run `release.sh` only from a checkout that is on `main`.** It commits on `HEAD` and pushes `HEAD`, so on a detached checkout (for example the `node-v<version>` tag the Node publish needs) the commit and tag are made and the push fails. When that checkout is in use, run the other releases from a separate worktree: `git worktree add <path> main`, then `<path>/scripts/release.sh ...`. Run the Node publish after the other six, or from its own worktree.
+
 **⛔ Release reminder — the MCP is separate.** An SDK release does not update or deploy the MCP server. When you prepare or run a release, tell the user in the same message that the MCP pack still has to be regenerated after the tags exist (`cd ../mobiscroll-web/MobiscrollMCPServer && npm run generate:connect`; the pack names untagged versions in `manifest.notes`) and then deployed on its own. Never skip the reminder, and never deploy the MCP as part of the release.
 
 The matching `.github/workflows/release-<sdk>.yml` workflow (added once the GitHub repo is set up) picks up the tag and publishes to the registry.
 
-**⛔ Publishing Node by hand (when the workflow fails with `EOTP`).** Mobiscroll developers' `~/.npmrc` maps the `@mobiscroll` scope to `https://npm.mobiscroll.com`, the private Verdaccio registry, and the scope mapping wins over `--registry`. A plain `npm publish` therefore uploads `@mobiscroll/connect-sdk` there, not to npmjs (this happened with 1.6.1). From a checkout of the `node-v<version>` tag, in `sdks/node`:
+**⛔ Node is always published by hand (hard rule, 2026-11-24).** Never rely on `release-node.yml` to publish `@mobiscroll/connect-sdk`: its npm step fails with `EOTP` (the token needs a one-time code), and its failure is expected, not something to rerun or debug. `scripts/release.sh node <version>` creates the tag; the user then publishes from a checkout of `node-v<version>` and does the authentication (`npm login`, the one-time code) themselves. Claude prepares the release and gives these steps, but never runs `npm publish`, and never asks for a token or a code. Always on Node 24 (`source ~/.nvm/nvm.sh && nvm use 24.10.0`):
 
 ```bash
-npm whoami --registry https://registry.npmjs.org      # if E401: npm login --registry https://registry.npmjs.org
-npm ci && npm run build
+npm whoami --registry https://registry.npmjs.org      # must print the npmjs username; on E401: npm login --registry https://registry.npmjs.org
+cd sdks/node && npm ci && npm run build
 npm publish --access public --@mobiscroll:registry=https://registry.npmjs.org --otp=<code>
 ```
 
-Do not run `npm i` or `npm audit fix` there; they rewrite `package-lock.json`. On `npm.mobiscroll.com`, `@mobiscroll/connect-sdk` is only a proxy of npmjs (`mobiscroll-npm/Server/Config/config-aws.yaml`), so a version published there by mistake should be removed with `npm unpublish @mobiscroll/connect-sdk@<version> --@mobiscroll:registry=https://npm.mobiscroll.com` once npmjs has it.
+- **The flag is `--@mobiscroll:registry=` (a colon).** Mobiscroll developers' `~/.npmrc` maps the `@mobiscroll` scope to `https://npm.mobiscroll.com`, the private Verdaccio registry, and the scope mapping wins over `--registry`. Without the exact flag, the package is uploaded there, not to npmjs (this happened with 1.6.1 and 1.7.0, the second time through a mistyped flag). The output must say `Publishing to https://registry.npmjs.org`; if it names `npm.mobiscroll.com`, stop.
+- **Check npmjs with `curl`, not `npm view`:** `curl -fsS https://registry.npmjs.org/@mobiscroll%2fconnect-sdk` and read `dist-tags.latest`. `npm view` obeys the scope mapping too, so `npm view @mobiscroll/connect-sdk --registry https://registry.npmjs.org` answers from the private registry.
+- A `404` on the `PUT` means npmjs rejected the login (check `npm whoami --registry https://registry.npmjs.org`), not a missing package.
+- Do not run `npm i` or `npm audit fix` there; they rewrite `package-lock.json`.
+- **Published to the private registry by mistake:** publish to npmjs first, then remove the private copy. On `npm.mobiscroll.com`, `@mobiscroll/connect-sdk` is only a proxy of npmjs (`mobiscroll-npm/Server/Config/config-aws.yaml`), so `npm unpublish @mobiscroll/connect-sdk@<version> --@mobiscroll:registry=https://npm.mobiscroll.com` makes it serve the npmjs version.
 
 **Java: `central-publishing-maven-plugin` must be 0.12.0 or later.** With Maven 3.10 (the GitHub runners since November 2026), 0.11.x puts `maven-metadata-local.xml` and `_remote.repositories` into the Central bundle, and Central rejects it with "Bundle has content that does NOT have a .pom file". To check a bundle without publishing, run the deploy with a dummy `central` server in a throwaway `settings.xml` and `-Dgpg.skip=true`: the upload fails, and `connect-sdk/target/central-publishing/central-bundle.zip` must hold only `com/mobiscroll/connect-sdk/<version>/` files.
 
